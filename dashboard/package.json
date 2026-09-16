@@ -1,0 +1,8 @@
+{
+  "name": "assistente-financeiro-dashboard",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "test": "node --test"
+  }
+}

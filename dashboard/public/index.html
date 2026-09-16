@@ -1,0 +1,70 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="theme-color" content="#162a26">
+  <title>Financeiro do Ni</title>
+  <link rel="stylesheet" href="/styles.css">
+  <script type="module" src="/app.js"></script>
+</head>
+<body>
+  <main>
+    <section id="login-view" class="login-shell" hidden>
+      <div class="login-card">
+        <div class="brand-mark">ni<span>.</span></div>
+        <p class="eyebrow">Seu dinheiro, com clareza</p>
+        <h1>Seu financeiro em um só lugar.</h1>
+        <p class="muted">Acompanhe e organize os lançamentos do seu assistente no Telegram.</p>
+        <form id="login-form">
+          <label for="password">Senha de acesso</label>
+          <input id="password" type="password" autocomplete="current-password" required minlength="12" placeholder="Digite sua senha">
+          <button class="button primary full" type="submit">Entrar</button>
+        </form>
+        <p id="login-error" class="message error" role="alert" hidden></p>
+      </div>
+    </section>
+
+    <section id="dashboard-view" class="dashboard" hidden>
+      <header class="topbar">
+        <div class="topbar-inner">
+          <div class="brand"><div class="brand-mark small">ni<span>.</span></div><span>Financeiro</span></div>
+          <div class="top-actions"><span id="user-name" class="muted"></span><button id="logout" class="button ghost" type="button">Sair</button></div>
+        </div>
+      </header>
+      <div class="content">
+        <div class="heading-row">
+          <div><p class="eyebrow">Visão geral</p><h1>Seu mês, sem complicação.</h1><p class="muted">Os dados aqui são os mesmos registrados pelo bot.</p></div>
+          <div class="heading-actions"><label class="month-label" for="month">Mês</label><input id="month" type="month"><button id="new-transaction" class="button primary" type="button">+ Novo lançamento</button></div>
+        </div>
+        <p id="page-message" class="message" role="status" hidden></p>
+        <section class="cards" aria-label="Resumo mensal">
+          <article class="card"><span>Receitas</span><strong id="income-total">R$ 0,00</strong><small>Entradas do mês</small></article>
+          <article class="card"><span>Despesas</span><strong id="expense-total">R$ 0,00</strong><small>Saídas do mês</small></article>
+          <article class="card balance"><span>Saldo</span><strong id="balance-total">R$ 0,00</strong><small>Receitas menos despesas</small></article>
+        </section>
+        <div class="columns">
+          <section class="panel transactions-panel"><div class="panel-heading"><div><p class="eyebrow">Movimentações</p><h2>Lançamentos</h2></div><span id="transaction-count" class="count">0 registros</span></div>
+            <div class="table-wrap"><table><thead><tr><th>Descrição</th><th>Categoria</th><th>Data</th><th class="right">Valor</th><th class="right">Ações</th></tr></thead><tbody id="transaction-rows"></tbody></table></div>
+            <p id="empty-state" class="empty" hidden>Nenhum lançamento neste mês. Que tal adicionar o primeiro?</p>
+          </section>
+          <section class="panel category-panel"><div class="panel-heading"><div><p class="eyebrow">Onde saiu</p><h2>Por categoria</h2></div></div><div id="category-list" class="category-list"></div></section>
+        </div>
+      </div>
+    </section>
+  </main>
+
+  <dialog id="transaction-dialog" aria-labelledby="dialog-title">
+    <form id="transaction-form" class="dialog-body">
+      <div class="dialog-heading"><div><p class="eyebrow">Organize seus dados</p><h2 id="dialog-title">Novo lançamento</h2></div><button id="close-dialog" class="icon-button" type="button" aria-label="Fechar">×</button></div>
+      <input id="transaction-id" type="hidden">
+      <div class="field-grid"><div><label for="transaction-type">Tipo</label><select id="transaction-type" required><option value="despesa">Despesa</option><option value="receita">Receita</option></select></div><div><label for="amount">Valor (R$)</label><input id="amount" type="number" min="0.01" max="100000000" step="0.01" inputmode="decimal" required placeholder="0,00"></div></div>
+      <div><label for="category">Categoria</label><select id="category" required></select></div>
+      <div><label for="description">Descrição</label><input id="description" type="text" maxlength="180" required placeholder="Ex.: almoço, salário, aluguel"></div>
+      <div><label for="transaction-date">Data</label><input id="transaction-date" type="date" required></div>
+      <p id="form-error" class="message error" role="alert" hidden></p>
+      <div class="dialog-actions"><button id="cancel-dialog" class="button ghost" type="button">Cancelar</button><button id="save-transaction" class="button primary" type="submit">Salvar lançamento</button></div>
+    </form>
+  </dialog>
+</body>
+</html>
