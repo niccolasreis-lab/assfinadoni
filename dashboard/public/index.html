@@ -44,9 +44,20 @@
           <article class="card balance"><span>Saldo</span><strong id="balance-total">R$ 0,00</strong><small>Receitas menos despesas</small></article>
         </section>
         <div class="columns">
-          <section class="panel transactions-panel"><div class="panel-heading"><h2>Lançamentos</h2><span id="transaction-count" class="count">0 registros</span></div>
+          <section class="panel transactions-panel" aria-label="Lançamentos e lixeira">
+            <div class="panel-heading"><div class="view-switch" role="group" aria-label="Visualizar lançamentos"><button id="active-view" class="view-button" type="button" aria-pressed="true">Lançamentos</button><button id="trash-view" class="view-button" type="button" aria-pressed="false">Lixeira</button></div><span id="transaction-count" class="count">0 registros</span></div>
+            <form id="filter-form" class="filters" aria-label="Filtrar lançamentos">
+              <div class="filter-search"><label for="filter-search">Buscar descrição</label><div class="search-control"><input id="filter-search" type="search" maxlength="120" placeholder="Ex.: mercado"><button class="button ghost" type="submit">Buscar</button></div></div>
+              <div><label for="filter-category">Categoria</label><select id="filter-category"><option value="">Todas</option></select></div>
+              <div><label for="filter-type">Tipo</label><select id="filter-type"><option value="">Todos</option><option value="despesa">Despesas</option><option value="receita">Receitas</option></select></div>
+              <div><label for="filter-from">De</label><input id="filter-from" type="date"></div>
+              <div><label for="filter-to">Até</label><input id="filter-to" type="date"></div>
+              <button id="clear-filters" class="button subtle" type="button">Limpar filtros</button>
+            </form>
+            <p id="list-context" class="list-context muted"></p>
             <div class="table-wrap"><table><thead><tr><th>Descrição</th><th>Categoria</th><th>Data</th><th class="right">Valor</th><th class="right">Ações</th></tr></thead><tbody id="transaction-rows"></tbody></table></div>
-            <p id="empty-state" class="empty" hidden>Nenhum lançamento neste mês. Que tal adicionar o primeiro?</p>
+            <p id="empty-state" class="empty" hidden></p>
+            <nav id="pagination" class="pagination" aria-label="Páginas de lançamentos" hidden><button id="previous-page" class="button ghost" type="button">Anterior</button><span id="page-number" aria-live="polite">Página 1</span><button id="next-page" class="button ghost" type="button">Próxima</button></nav>
           </section>
           <section class="panel category-panel"><div class="panel-heading"><h2>Por categoria</h2></div><div id="category-list" class="category-list"></div></section>
         </div>

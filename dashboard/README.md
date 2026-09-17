@@ -1,10 +1,10 @@
 # Dashboard Financeiro do Ni
 
-Dashboard simples para Vercel, ligado às tabelas `finance_users` e `finance_transactions` do mesmo Supabase usado pelo bot. Mostra receitas, despesas, saldo, divisão por categoria e permite criar, editar e excluir lançamentos.
+Dashboard simples para Vercel, ligado às tabelas `finance_users` e `finance_transactions` do mesmo Supabase usado pelo bot. Mostra receitas, despesas, saldo, divisão por categoria e permite criar, editar, filtrar, excluir e restaurar lançamentos.
 
 ## Segurança e escopo
 
-Esta versão é **para um único chat do Telegram**. Uma senha protege a sessão; o servidor fixa `TELEGRAM_CHAT_ID` e filtra toda leitura, edição e exclusão pelo `user_id` correspondente. A chave `service role` fica somente nas variáveis do servidor. Não use a chave em arquivos públicos nem em variáveis `NEXT_PUBLIC_*`. Excluir é definitivo e exige confirmação na interface.
+Esta versão é **para um único chat do Telegram**. Uma senha protege a sessão; o servidor fixa `TELEGRAM_CHAT_ID` e filtra toda leitura, edição, exclusão e restauração pelo `user_id` correspondente. A chave `service role` fica somente nas variáveis do servidor. Não use a chave em arquivos públicos nem em variáveis `NEXT_PUBLIC_*`. Excluir move o lançamento para a lixeira por 30 dias e exige confirmação na interface.
 
 ## Configurar na Vercel
 
@@ -17,7 +17,7 @@ Esta versão é **para um único chat do Telegram**. Uma senha protege a sessão
    - `DASHBOARD_PASSWORD`: senha forte de pelo menos 12 caracteres.
    - `SESSION_SECRET`: segredo aleatório de pelo menos 32 caracteres, diferente da senha.
 
-3. Faça o deploy. Não há dependências npm externas nem migração adicional para este dashboard.
+3. Aplique as migrações em `supabase/migrations` e faça o deploy. Não há dependências npm externas.
 
 O usuário precisa ter concluído o onboarding no Telegram antes de acessar o dashboard, pois o app localiza a linha existente em `finance_users`.
 
@@ -31,4 +31,4 @@ Use `npm test` (ou `node --test`) dentro desta pasta. Para testar a UI com funç
 
 - Não há cadastro multiusuário. Para expandir, será preciso autenticação individual e associação segura entre contas web e chats Telegram.
 - O dashboard não faz leitura de PDFs, imagens ou áudios; isso ocorre pelo bot.
-- Não há restauração de lançamentos excluídos. Faça backup do Supabase conforme sua política de retenção.
+- A lixeira guarda lançamentos por 30 dias; depois disso, a limpeza agendada os remove e mantém apenas a chave técnica de deduplicação do update do Telegram.

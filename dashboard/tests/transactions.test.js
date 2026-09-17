@@ -25,7 +25,6 @@ test('todas as operações REST permanecem vinculadas ao chat configurado', asyn
     calls.push({ url: String(url), method: options.method, body: options.body });
     const data = String(url).includes('finance_users') ? [{ id: ownerId, name: 'Ni' }]
       : options.method === 'GET' ? [{ id: transactionId, transaction_type: 'despesa', amount: 20, category: 'Transporte', description: 'Ônibus', transaction_date: '2026-09-15' }]
-      : options.method === 'DELETE' ? [{ id: transactionId }]
       : [{ id: transactionId }];
     return { ok: true, status: 200, json: async () => data };
   };
@@ -36,6 +35,8 @@ test('todas as operações REST permanecem vinculadas ao chat configurado', asyn
     assert.equal(get.statusCode, 200);
     assert.match(calls[0].url, /telegram_chat_id=eq\.123456789/);
     assert.match(calls[1].url, new RegExp(`user_id=eq\\.${ownerId}`));
+    assert.equal(get.body.summary.expense, 20);
+    assert.equal(get.body.pagination.pageSize, 50);
     const values = { transaction_type: 'despesa', amount: 20, category: 'Transporte', description: 'Ônibus', transaction_date: '2026-09-15' };
     const post = response();
     await handler({ ...base, method: 'POST', body: values }, post);
@@ -46,9 +47,13 @@ test('todas as operações REST permanecem vinculadas ao chat configurado', asyn
     await handler({ ...base, method: 'PATCH', body: { ...values, id: transactionId } }, patch);
     assert.equal(patch.statusCode, 200);
     assert.match(calls.at(-1).url, new RegExp(`id=eq\\.${transactionId}.*user_id=eq\\.${ownerId}`));
+    assert.match(calls.at(-1).url, /deleted_at=is.null/);
     const remove = response();
     await handler({ ...base, method: 'DELETE', body: { id: transactionId } }, remove);
     assert.equal(remove.statusCode, 200);
     assert.match(calls.at(-1).url, new RegExp(`id=eq\\.${transactionId}.*user_id=eq\\.${ownerId}`));
+    assert.match(calls.at(-1).url, /deleted_at=is.null/);
+    assert.equal(calls.at(-1).method, 'PATCH');
+    assert.match(JSON.parse(calls.at(-1).body).deleted_at, /^\d{4}-\d{2}-\d{2}T/);
   } finally { globalThis.fetch = originalFetch; }
 });
