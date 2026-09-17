@@ -1,7 +1,7 @@
 const categories = ['Alimentação', 'Transporte', 'Moradia', 'Saúde', 'Educação', 'Lazer', 'Assinaturas', 'Outros'];
 const $ = (id) => document.getElementById(id);
 const money = (value) => Number(value || 0).toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' });
-const state = { transactions: [], month: '', loading: false };
+const state = { transactions: [], month: '', loadId: 0, deleting: new Set() };
 
 function saoPauloToday() {
   const parts = Object.fromEntries(new Intl.DateTimeFormat('en-US', { timeZone: 'America/Sao_Paulo', year: 'numeric', month: '2-digit', day: '2-digit' }).formatToParts(new Date()).map((p) => [p.type, p.value]));
@@ -23,6 +23,7 @@ async function request(path, options = {}) {
 }
 
 function showDashboard(authenticated) {
+  $('initial-status').hidden = true;
   $('login-view').hidden = authenticated;
   $('dashboard-view').hidden = !authenticated;
 }
@@ -53,9 +54,9 @@ function render() {
     const actions = document.createElement('td');
     actions.className = 'right row-actions';
     const edit = document.createElement('button');
-    edit.type = 'button'; edit.className = 'text-button'; edit.textContent = 'Editar'; edit.addEventListener('click', () => openForm(row));
+    edit.type = 'button'; edit.className = 'text-button'; edit.textContent = 'Editar'; edit.setAttribute('aria-label', `Editar ${row.description}, ${money(row.amount)}`); edit.disabled = state.deleting.has(row.id); edit.addEventListener('click', () => openForm(row));
     const remove = document.createElement('button');
-    remove.type = 'button'; remove.className = 'text-button danger'; remove.textContent = 'Excluir'; remove.addEventListener('click', () => deleteTransaction(row));
+    remove.type = 'button'; remove.className = 'text-button danger'; remove.textContent = 'Excluir'; remove.setAttribute('aria-label', `Excluir ${row.description}, ${money(row.amount)}`); remove.disabled = state.deleting.has(row.id); remove.addEventListener('click', () => deleteTransaction(row));
     actions.append(edit, remove);
     tr.append(description, category, date, amount, actions);
     body.append(tr);
@@ -77,18 +78,23 @@ function render() {
 }
 
 async function loadTransactions() {
-  if (state.loading) return;
-  state.loading = true;
+  const loadId = ++state.loadId;
+  const month = $('month').value;
+  $('dashboard-view').setAttribute('aria-busy', 'true');
   message('page-message', 'Carregando lançamentos...');
   try {
-    state.month = $('month').value;
-    const data = await request(`/api/transactions?month=${encodeURIComponent(state.month)}`);
+    const data = await request(`/api/transactions?month=${encodeURIComponent(month)}`);
+    if (loadId !== state.loadId || month !== $('month').value) return;
+    state.month = month;
     state.transactions = data.transactions;
     $('user-name').textContent = data.user?.name || 'Minha conta';
     render();
     message('page-message', '');
-  } catch (error) { message('page-message', error.message, true); }
-  finally { state.loading = false; }
+  } catch (error) {
+    if (loadId === state.loadId) message('page-message', `${error.message} Tente selecionar o mês novamente.`, true);
+  } finally {
+    if (loadId === state.loadId) $('dashboard-view').removeAttribute('aria-busy');
+  }
 }
 
 function openForm(row = null) {
@@ -96,6 +102,7 @@ function openForm(row = null) {
   message('form-error', '');
   $('transaction-id').value = row?.id || '';
   $('dialog-title').textContent = row ? 'Editar lançamento' : 'Novo lançamento';
+  $('save-transaction').textContent = row ? 'Salvar alterações' : 'Adicionar lançamento';
   $('transaction-type').value = row?.transaction_type || 'despesa';
   $('amount').value = row?.amount || '';
   $('category').value = row?.category || categories[0];
@@ -111,6 +118,7 @@ async function saveTransaction(event) {
   const body = { transaction_type: $('transaction-type').value, amount: Number($('amount').value), category: $('category').value, description: $('description').value.trim(), transaction_date: $('transaction-date').value };
   if (id) body.id = id;
   const button = $('save-transaction'); button.disabled = true;
+  button.textContent = id ? 'Salvando alterações...' : 'Adicionando...';
   try {
     await request('/api/transactions', { method: id ? 'PATCH' : 'POST', body: JSON.stringify(body) });
     $('transaction-dialog').close();
@@ -119,16 +127,21 @@ async function saveTransaction(event) {
     await loadTransactions();
     message('page-message', id ? 'Lançamento atualizado.' : 'Lançamento adicionado.');
   } catch (error) { message('form-error', error.message, true); }
-  finally { button.disabled = false; }
+  finally { button.disabled = false; button.textContent = id ? 'Salvar alterações' : 'Adicionar lançamento'; }
 }
 
 async function deleteTransaction(row) {
+  if (state.deleting.has(row.id)) return;
   if (!window.confirm(`Excluir definitivamente “${row.description}” (${money(row.amount)})? Esta ação não pode ser desfeita.`)) return;
+  state.deleting.add(row.id);
+  render();
+  message('page-message', 'Excluindo lançamento...');
   try {
     await request('/api/transactions', { method: 'DELETE', body: JSON.stringify({ id: row.id }) });
     await loadTransactions();
     message('page-message', 'Lançamento excluído.');
   } catch (error) { message('page-message', error.message, true); }
+  finally { state.deleting.delete(row.id); render(); }
 }
 
 async function init() {
@@ -139,7 +152,16 @@ async function init() {
     try { await request('/api/session', { method: 'POST', body: JSON.stringify({ password: $('password').value }) }); $('password').value = ''; showDashboard(true); await loadTransactions(); }
     catch (error) { message('login-error', error.message, true); }
   });
-  $('logout').addEventListener('click', async () => { await request('/api/session', { method: 'DELETE' }); showDashboard(false); state.transactions = []; });
+  $('logout').addEventListener('click', async () => {
+    const button = $('logout'); button.disabled = true;
+    try {
+      await request('/api/session', { method: 'DELETE' });
+      state.loadId++;
+      state.transactions = [];
+      showDashboard(false);
+    } catch (error) { message('page-message', `${error.message} Sua sessão continua aberta.`, true); }
+    finally { button.disabled = false; }
+  });
   $('month').addEventListener('change', loadTransactions);
   $('new-transaction').addEventListener('click', () => openForm());
   $('transaction-form').addEventListener('submit', saveTransaction);
