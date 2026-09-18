@@ -3,8 +3,8 @@
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
-  <meta name="theme-color" content="#162a26">
-  <title>Assistente de Finanças · Nicolas &amp; Ionara</title>
+  <meta name="theme-color" content="#080B12">
+  <title>Assistente de Finanças — Nicolas &amp; Ionara</title>
   <link rel="stylesheet" href="/styles.css">
   <link rel="stylesheet" href="/react.css">
   <link rel="manifest" href="/manifest.webmanifest">
@@ -15,37 +15,59 @@
   <script type="module" src="/loading-island.js"></script>
 </head>
 <body>
+  <a class="skip-link" href="#workspace-heading">Pular para o conteúdo</a>
   <main>
     <div id="initial-status" class="initial-status" role="status">Preparando seu financeiro...</div>
     <section id="login-view" class="login-shell" hidden>
+      <div class="login-art" aria-hidden="true">
+        <div class="art-heading">Mais clareza.<br>Mais espaço para<br><em>seus planos.</em></div>
+        <div class="finance-composition">
+          <div class="art-orbit"></div>
+          <div class="art-wallet"><span>Seu mês em perspectiva</span><strong>Saldo mensal</strong><div class="art-amount">R$ ••••,••</div><svg viewBox="0 0 360 110" fill="none"><path d="M0 90C40 90 35 60 70 65S120 100 155 52 190 80 230 35 290 60 360 8" stroke="currentColor" stroke-width="3"/><path d="M0 105H360M0 55H360" stroke="currentColor" stroke-opacity=".12"/></svg><div class="art-wallet-footer"><span>Organização, todos os dias</span><span data-icon="wallet"></span></div></div>
+          <div class="art-chip art-income"><span data-icon="up"></span><div>Receitas<strong>Tudo no seu lugar</strong></div></div>
+          <div class="art-chip art-expense"><span data-icon="down"></span><div>Despesas<strong>Uma visão mais clara</strong></div></div>
+        </div>
+        <p class="art-caption">Seu dia a dia, conectado.<br>Na web e pelo assistente no Telegram.</p>
+      </div>
       <div class="login-card">
         <div id="login-brand" class="login-brand"><img class="brand-logo login-logo" src="/logo.png" width="1536" height="1024" alt="Assistente de Finanças — Nicolas e Ionara"></div>
+        <p class="brand-caption">Nicolas &amp; Ionara</p>
         <h1>Seu financeiro em um só lugar.</h1>
         <p class="muted">Organize suas receitas e despesas, aqui ou pelo assistente no Telegram.</p>
         <form id="login-form">
           <label for="username">Usuário</label>
-          <input id="username" name="username" type="text" autocomplete="username" autocapitalize="none" spellcheck="false" required maxlength="64" placeholder="Digite seu usuário">
+          <div class="input-with-icon"><span data-icon="user"></span><input id="username" name="username" type="text" autocomplete="username" autocapitalize="none" spellcheck="false" required maxlength="64" placeholder="Digite seu usuário"></div>
           <label for="password">Senha de acesso</label>
-          <input id="password" name="password" type="password" autocomplete="current-password" required placeholder="Digite sua senha">
-          <button class="button primary full" type="submit">Entrar</button>
+          <div class="input-with-icon"><span data-icon="lock"></span><input id="password" name="password" type="password" autocomplete="current-password" required placeholder="Digite sua senha"><button id="toggle-password" type="button" class="password-toggle" aria-label="Mostrar senha" aria-pressed="false"><span data-icon="eye"></span></button></div>
+          <button id="login-submit" class="button primary full" type="submit">Entrar <span data-icon="arrow"></span></button>
         </form>
+        <p class="login-footnote"><span data-icon="lock"></span> Seu espaço para cuidar do que importa.</p>
         <p id="login-error" class="message error" role="alert" hidden></p>
       </div>
     </section>
 
     <section id="dashboard-view" class="dashboard" hidden>
+      <aside class="sidebar">
+        <a class="sidebar-brand" href="#overview" aria-label="Assistente de Finanças — Nicolas & Ionara"><img src="/logo.png" width="1536" height="1024" alt=""><strong>Assistente de Finanças</strong><span>Nicolas &amp; Ionara</span></a>
+        <nav id="desktop-nav" aria-label="Navegação principal"></nav>
+        <div class="sidebar-footer"><span class="connection-dot"></span> Seu financeiro, conectado.<small>Web + Telegram</small></div>
+      </aside>
+      <div class="workspace">
       <header class="topbar">
         <div class="topbar-inner">
-          <div class="brand"><img class="brand-logo header-logo" src="/logo.png" width="1536" height="1024" alt="Assistente de Finanças — Nicolas e Ionara"></div>
-          <div class="top-actions"><div class="account-identity"><strong id="user-name">Minha conta</strong><span id="user-username" class="muted"></span></div><button id="logout" class="button ghost" type="button">Sair</button></div>
+          <div class="brand"><span class="brand-glyph" data-icon="wallet"></span><span>Assistente de Finanças <small>Nicolas &amp; Ionara</small></span></div>
+          <div class="top-actions"><span id="account-avatar" class="avatar" aria-hidden="true">NI</span><div class="account-identity"><strong id="user-name">Minha conta</strong><span id="user-username" class="muted"></span></div></div>
         </div>
       </header>
       <div class="content">
-        <div class="heading-row">
+        <div class="heading-row" id="workspace-heading" tabindex="-1">
           <div><h1 id="welcome-title">Seu mês, sem complicação.</h1><p id="welcome-copy" class="muted">Organize seus lançamentos e compartilhe só o que escolher.</p></div>
-          <div class="heading-actions"><label class="month-label" for="month">Mês</label><input id="month" type="month"><button id="new-transaction" class="button primary" type="button">+ Novo lançamento</button></div>
+          <div class="heading-actions"><label class="month-label" for="month">Mês</label><input id="month" type="month"><button id="new-transaction" class="button primary" type="button"><span data-icon="plus"></span> Novo lançamento</button></div>
         </div>
-        <div class="help-row"><p id="telegram-status" class="muted"></p><button id="install-app" class="button subtle" type="button">Instalar app</button><button id="open-tutorial" class="button subtle" type="button" aria-controls="tutorial-guide" aria-expanded="false">Como usar</button></div>
+        <section id="settings-panel" class="panel settings-panel" hidden aria-labelledby="settings-title">
+          <h2 id="settings-title">Sua conta e preferências</h2><p id="telegram-status" class="muted"></p>
+          <div class="help-row"><button id="install-app" class="button secondary" type="button"><span data-icon="download"></span>Instalar app</button><button id="open-tutorial" class="button secondary" type="button" aria-controls="tutorial-guide" aria-expanded="false">Como usar</button><button id="logout" class="button ghost" type="button">Sair da conta</button></div>
+        </section>
         <section id="tutorial-guide" class="tutorial-guide" aria-labelledby="tutorial-title" hidden>
           <div class="tutorial-heading"><div><h2 id="tutorial-title" tabindex="-1">Seu financeiro, passo a passo</h2><p class="muted">Um guia rápido. Você pode fechar e consultar novamente em “Como usar”.</p></div><button id="close-tutorial" class="button ghost" type="button">Fechar guia</button></div>
           <dl class="tutorial-steps">
@@ -59,15 +81,21 @@
           <div class="tutorial-actions"><button id="tutorial-new-transaction" class="button primary" type="button">Adicionar um lançamento</button><button id="finish-tutorial" class="button subtle" type="button">Entendi, continuar</button></div>
         </section>
         <p id="page-message" class="message" role="status" hidden></p>
-        <div class="summary-heading"><span class="eyebrow">Resumo mensal</span><label class="toggle-control" for="include-shared-summary"><input id="include-shared-summary" type="checkbox"><span class="toggle-track" aria-hidden="true"></span><span>Incluir compartilhados nos totais</span></label></div>
+        <div class="summary-heading"><h2>Resumo do mês</h2><label class="toggle-control" for="include-shared-summary"><input id="include-shared-summary" type="checkbox"><span class="toggle-track" aria-hidden="true"></span><span>Incluir compartilhados nos totais</span></label></div>
         <section class="cards" aria-label="Resumo mensal" aria-live="polite">
-          <article class="card"><span>Receitas</span><strong id="income-total">R$ 0,00</strong><small>Entradas do mês</small></article>
-          <article class="card"><span>Despesas</span><strong id="expense-total">R$ 0,00</strong><small>Saídas do mês</small></article>
-          <article class="card balance"><span>Saldo</span><strong id="balance-total">R$ 0,00</strong><small>Receitas menos despesas</small></article>
+          <article class="card balance"><div class="metric-label"><span>Saldo do mês</span><span data-icon="wallet"></span></div><strong id="balance-total">—</strong><small>Receitas menos despesas no período</small><p id="balance-insight" class="balance-insight">Comparando com o mês anterior...</p></article>
+          <article class="card"><div class="metric-label"><span>Receitas</span><span class="metric-icon income" data-icon="up"></span></div><strong id="income-total">—</strong><small>Entradas do mês</small></article>
+          <article class="card"><div class="metric-label"><span>Despesas</span><span class="metric-icon expense" data-icon="down"></span></div><strong id="expense-total">—</strong><small>Saídas do mês</small></article>
+        </section>
+        <div id="quick-actions" class="quick-actions"><button id="quick-income" class="button secondary" type="button"><span class="income" data-icon="plus"></span>Adicionar receita</button><button id="quick-expense" class="button secondary" type="button"><span class="expense" data-icon="plus"></span>Adicionar despesa</button><a id="open-telegram" class="button ghost" target="_blank" rel="noopener noreferrer" hidden><span data-icon="send"></span>Abrir Telegram</a><span id="telegram-link-status" class="muted">Link do assistente não configurado</span></div>
+        <section id="history-panel" class="panel history-panel" aria-labelledby="history-title">
+          <div class="panel-heading"><div><h2 id="history-title">Seu financeiro ao longo do tempo</h2><p class="muted">Receitas e despesas · últimos 6 meses</p></div><div class="chart-legend"><span class="income">Receitas</span><span class="expense">Despesas</span></div></div>
+          <div id="history-chart" class="chart-host" aria-live="polite"></div><div id="history-status" class="muted" role="status"></div><button id="retry-history" class="button ghost" type="button" hidden>Tentar novamente</button>
+          <details class="chart-details"><summary>Ver valores por mês</summary><div id="history-table" class="table-wrap"></div></details>
         </section>
         <div class="columns">
-          <section class="panel transactions-panel" aria-label="Lançamentos e lixeira">
-            <div class="panel-heading"><div class="view-switch" role="group" aria-label="Visualizar lançamentos"><button id="active-view" class="view-button" type="button" aria-pressed="true">Lançamentos</button><button id="trash-view" class="view-button" type="button" aria-pressed="false">Lixeira</button></div><span id="transaction-count" class="count">0 registros</span></div>
+          <section id="transactions-panel" class="panel transactions-panel" aria-label="Lançamentos e lixeira">
+            <div class="panel-heading"><h2 id="transactions-title">Lançamentos</h2><div class="view-switch" role="group" aria-label="Visualizar lançamentos"><button id="active-view" class="view-button" type="button" aria-pressed="true">Lançamentos</button><button id="trash-view" class="view-button" type="button" aria-pressed="false">Lixeira</button></div><span id="transaction-count" class="count">0 registros</span></div>
             <div class="scope-row"><span id="scope-label">Exibir</span><div class="scope-switch" role="group" aria-labelledby="scope-label"><button id="scope-mine" class="scope-button" type="button" data-scope="mine" aria-pressed="true">Minhas</button><button id="scope-shared" class="scope-button" type="button" data-scope="shared" aria-pressed="false">Compartilhadas comigo</button><button id="scope-all" class="scope-button" type="button" data-scope="all" aria-pressed="false">Todas</button></div></div>
             <form id="filter-form" class="filters" aria-label="Filtrar lançamentos">
               <div class="filter-search"><label for="filter-search">Buscar descrição</label><div class="search-control"><input id="filter-search" type="search" maxlength="120" placeholder="Ex.: mercado"><button class="button ghost" type="submit">Buscar</button></div></div>
@@ -82,11 +110,15 @@
             <p id="empty-state" class="empty" hidden></p>
             <nav id="pagination" class="pagination" aria-label="Páginas de lançamentos" hidden><button id="previous-page" class="button ghost" type="button">Anterior</button><span id="page-number" aria-live="polite">Página 1</span><button id="next-page" class="button ghost" type="button">Próxima</button></nav>
           </section>
-          <section class="panel category-panel"><div class="panel-heading"><h2>Por categoria</h2></div><div id="category-list" class="category-list"></div></section>
+          <section id="category-panel" class="panel category-panel"><div class="panel-heading"><h2>Despesas por categoria</h2></div><div id="category-chart" class="category-chart"></div><div id="category-list" class="category-list"></div></section>
         </div>
       </div>
+      </div>
+      <nav id="mobile-nav" class="mobile-nav" aria-label="Navegação no celular"></nav>
     </section>
   </main>
+  <dialog id="more-dialog" aria-labelledby="more-title"><div class="dialog-body"><div class="dialog-heading"><h2 id="more-title">Mais opções</h2><button class="icon-button" id="close-more" aria-label="Fechar opções" type="button"><span data-icon="close"></span></button></div><nav id="more-nav" aria-label="Outras seções"></nav></div></dialog>
+  <dialog id="confirm-dialog" aria-labelledby="confirm-title" aria-describedby="confirm-copy"><form method="dialog" class="dialog-body"><h2 id="confirm-title">Confirmar alteração</h2><p id="confirm-copy"></p><div class="dialog-actions"><button id="confirm-cancel" class="button ghost" value="cancel" autofocus>Cancelar</button><button id="confirm-accept" class="button destructive" value="confirm">Confirmar</button></div></form></dialog>
 
   <dialog id="install-help" aria-labelledby="install-help-title">
     <div class="dialog-body"><h2 id="install-help-title">Instalar Financeiro</h2>
@@ -98,7 +130,7 @@
   </dialog>
   <dialog id="transaction-dialog" aria-labelledby="dialog-title">
     <form id="transaction-form" class="dialog-body">
-      <div class="dialog-heading"><h2 id="dialog-title">Novo lançamento</h2><button id="close-dialog" class="icon-button" type="button" aria-label="Fechar formulário">×</button></div>
+      <div class="dialog-heading"><h2 id="dialog-title">Novo lançamento</h2><button id="close-dialog" class="icon-button" type="button" aria-label="Fechar formulário"><span data-icon="close"></span></button></div>
       <input id="transaction-id" type="hidden">
       <div class="field-grid"><div><label for="transaction-type">Tipo</label><select id="transaction-type" required><option value="despesa">Despesa</option><option value="receita">Receita</option></select></div><div><label for="amount">Valor (R$)</label><input id="amount" type="number" min="0.01" max="100000000" step="0.01" inputmode="decimal" required placeholder="0.00"></div></div>
       <div><label for="category">Categoria</label><select id="category" required></select></div>
@@ -111,7 +143,7 @@
 
   <dialog id="share-dialog" aria-labelledby="share-dialog-title">
     <form id="share-form" class="dialog-body">
-      <div class="dialog-heading"><h2 id="share-dialog-title">Compartilhar lançamento</h2><button id="close-share-dialog" class="icon-button" type="button" aria-label="Fechar compartilhamento">×</button></div>
+      <div class="dialog-heading"><h2 id="share-dialog-title">Compartilhar lançamento</h2><button id="close-share-dialog" class="icon-button" type="button" aria-label="Fechar compartilhamento"><span data-icon="close"></span></button></div>
       <input id="share-transaction-id" type="hidden">
       <p id="share-description" class="share-description"></p>
       <p class="muted dialog-copy">A outra pessoa poderá visualizar, editar, excluir e restaurar este lançamento.</p>

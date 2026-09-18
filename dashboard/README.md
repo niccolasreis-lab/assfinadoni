@@ -44,3 +44,21 @@ O botão “Instalar app” oferece instalação PWA (ou instruções para Safar
 - Não há cadastro público nem recuperação de senha pela interface. Provisionamento e redefinição são administrativos.
 - O dashboard não faz leitura de PDFs, imagens ou áudios; isso ocorre pelo bot.
 - A lixeira guarda lançamentos por 30 dias; depois disso, a limpeza agendada os remove e mantém apenas a chave técnica de deduplicação do update do Telegram.
+
+## Interface grafite/violeta
+
+O redesign mantém HTML/CSS/JavaScript e a ilha React de carregamento. `public/ui.js` reúne navegação e componentes visuais; `public/charts.js` contém apresentação e consultas históricas com cache exclusivamente em memória. O histórico usa seis resumos mensais da API existente; respostas obsoletas e resultados anteriores a alterações/logout são descartados. O saldo apresentado é o saldo do mês, não um saldo bancário acumulado.
+
+As seções Receitas e Despesas mantêm o tipo ao limpar filtros e trocar escopo. A visão geral mostra cinco lançamentos recentes, com acesso à lista completa. Configurações reúne vínculo Telegram, instalação, tutorial e saída. Metas e notificações permanecem fora desta versão.
+
+### Link do assistente
+
+Defina `telegramBotUrl` em `public/config.js` como `https://t.me/username_do_bot`. Esse arquivo é público: não inclua tokens, senhas ou chat IDs. Sem um endereço válido, a interface informa “Link do assistente não configurado”. Isso não altera a integração ou o vínculo existente no servidor.
+
+### Validação visual reproduzível
+
+`node --test` inclui testes dos gráficos, isolamento do histórico e concorrência. `pnpm run build` inclui typecheck. Não há script de lint configurado.
+
+Com o conteúdo de `dist` servido localmente, execute `node scripts/verify-redesign.cjs` em um ambiente com Playwright disponível. Opcionalmente use `PLAYWRIGHT_MODULE`, `CHROMIUM_EXECUTABLE`, `QA_URL` e `QA_OUTPUT` para indicar o pacote, navegador, URL e diretório de capturas. O script intercepta as APIs somente no navegador de teste e usa dados sintéticos; os fixtures nunca são servidos pelo produto. Verifica 360, 768, 1024 e 1440 px, login, visibilidade de senha, navegação, confirmação, formulários, vazio, erro e saída. A validação local usa a CSP de `vercel.json`.
+
+Inter é hospedada em `public/fonts`, com licença OFL incluída. Ícones são SVGs locais. Nenhuma dependência de execução foi acrescentada. A documentação visual está em `../DESIGN.md`.

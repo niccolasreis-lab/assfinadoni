@@ -1,9 +1,10 @@
+import './ui.js';
 const categories = ['Alimentação', 'Transporte', 'Moradia', 'Saúde', 'Educação', 'Lazer', 'Assinaturas', 'Outros'];
 const $ = (id) => document.getElementById(id);
 const money = (value) => Number(value || 0).toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' });
 const state = { transactions: [], summary: null, month: '', view: 'active', page: 1, hasMore: false, datesCustomized: false, loadId: 0, deleting: new Set() };
 state.scope = 'mine'; state.includeSharedSummary = false; state.account = null;
-state.scopeFilters = {};
+state.scopeFilters = {}; state.section = 'overview';
 function saveScopeFilters() {
   state.scopeFilters[state.scope] = { q: $('filter-search').value, category: $('filter-category').value, type: $('filter-type').value, from: $('filter-from').value, to: $('filter-to').value, customized: state.datesCustomized, page: state.page };
 }
@@ -94,6 +95,7 @@ async function request(path, options = {}) {
   const response = await fetch(path, { credentials: 'same-origin', headers: options.body ? { 'Content-Type': 'application/json' } : {}, ...options });
   const data = await response.json().catch(() => ({}));
   if (!response.ok) throw new Error(data.error || 'Não foi possível concluir a operação.');
+  if (options.method && options.method !== 'GET') window.FinanceUI?.invalidate();
   return data;
 }
 
@@ -106,15 +108,16 @@ function showDashboard(authenticated) {
   if (!authenticated) $('username').focus?.();
 }
 
+async function confirmAction(copy) { return window.FinanceUI ? window.FinanceUI.confirm(copy) : window.confirm(copy); }
+
 function render() {
   const rows = state.transactions;
-  const fallbackIncome = rows.filter((row) => row.transaction_type === 'receita').reduce((sum, row) => sum + Number(row.amount), 0);
-  const fallbackExpense = rows.filter((row) => row.transaction_type === 'despesa').reduce((sum, row) => sum + Number(row.amount), 0);
-  const income = Number(state.summary?.income ?? fallbackIncome);
-  const expense = Number(state.summary?.expense ?? fallbackExpense);
-  $('income-total').textContent = money(income);
-  $('expense-total').textContent = money(expense);
-  $('balance-total').textContent = money(state.summary?.balance ?? income - expense);
+  const summaryAvailable = state.summary && ['income','expense','balance'].every(key => (typeof state.summary[key] === 'number' || typeof state.summary[key] === 'string' && state.summary[key].trim() !== '') && Number.isFinite(Number(state.summary[key])));
+  const income = summaryAvailable ? Number(state.summary.income) : null;
+  const expense = summaryAvailable ? Number(state.summary.expense) : null;
+  $('income-total').textContent = summaryAvailable ? money(income) : '—';
+  $('expense-total').textContent = summaryAvailable ? money(expense) : '—';
+  $('balance-total').textContent = summaryAvailable ? money(state.summary.balance) : '—';
   $('transaction-count').textContent = `${rows.length} ${rows.length === 1 ? 'registro' : 'registros'}${state.hasMore ? ' nesta página' : ''}`;
   $('empty-state').hidden = rows.length > 0;
   $('empty-state').textContent = state.view === 'trash'
@@ -175,16 +178,17 @@ function render() {
       share.addEventListener('click', () => isShared(row) ? unshareTransaction(row) : openShareDialog(row));
       actions.append(edit, remove, share);
     }
+    tr.setAttribute('data-type', row.transaction_type);
     tr.append(description, category, date, amount, actions);
     body.append(tr);
   }
   const byCategory = new Map();
   if (state.summary?.byCategory && typeof state.summary.byCategory === 'object') {
     for (const [name, value] of Object.entries(state.summary.byCategory)) byCategory.set(name, Number(value));
-  } else for (const row of rows.filter((item) => item.transaction_type === 'despesa')) byCategory.set(row.category, (byCategory.get(row.category) || 0) + Number(row.amount));
+  }
   const list = $('category-list');
   list.replaceChildren();
-  if (!byCategory.size) { const p = document.createElement('p'); p.className = 'muted'; p.textContent = 'Sem despesas neste mês.'; list.append(p); }
+  if (!byCategory.size) { const p = document.createElement('p'); p.className = 'muted'; p.textContent = summaryAvailable ? 'Sem despesas neste mês.' : 'Resumo indisponível. Tente carregar novamente.'; list.append(p); }
   for (const [name, value] of [...byCategory.entries()].sort((a, b) => b[1] - a[1])) {
     const item = document.createElement('div'); item.className = 'category-item';
     const top = document.createElement('div'); top.className = 'category-top';
@@ -194,9 +198,11 @@ function render() {
     const fill = document.createElement('div'); fill.className = 'bar-fill'; fill.style.width = `${expense ? Math.round(value / expense * 100) : 0}%`;
     top.append(label, total); bar.append(fill); item.append(top, bar); list.append(item);
   }
+  window.FinanceUI?.render(state);
 }
 
 async function loadTransactions() {
+  if (state.section === 'income' || state.section === 'expense') $('filter-type').value = state.section === 'income' ? 'receita' : 'despesa';
   saveScopeFilters();
   const loadId = ++state.loadId;
   const month = $('month').value;
@@ -209,6 +215,8 @@ async function loadTransactions() {
     const from = $('filter-from').value;
     const to = $('filter-to').value;
     if (from && to && from > to) {
+      state.summary = null; state.transactions = []; state.hasMore = false; render();
+      $('dashboard-view').removeAttribute('aria-busy'); window.FinanceUI?.failed();
       message('page-message', 'A data inicial precisa ser anterior ou igual à data final.', true);
       return;
     }
@@ -218,6 +226,7 @@ async function loadTransactions() {
     if (from) params.push(`date_from=${encodeURIComponent(from)}`);
     if (to) params.push(`date_to=${encodeURIComponent(to)}`);
   }
+  window.FinanceUI?.loading();
   $('dashboard-view').setAttribute('aria-busy', 'true');
   message('page-message', state.view === 'trash' ? 'Carregando lixeira...' : 'Carregando lançamentos...');
   try {
@@ -225,13 +234,18 @@ async function loadTransactions() {
     if (loadId !== state.loadId || month !== $('month').value) return;
     state.month = month;
     state.transactions = data.transactions;
-    if (data.summary) state.summary = data.summary;
+    state.summary = data.summary || null;
     state.hasMore = Boolean(data.pagination?.hasMore);
     setIdentity(data.account || data.user);
     render();
+    window.FinanceUI?.loaded(state);
     message('page-message', '');
   } catch (error) {
-    if (loadId === state.loadId) message('page-message', `${error.message} Tente selecionar o mês novamente.`, true);
+    if (loadId === state.loadId) {
+      state.summary = null; state.transactions = []; state.hasMore = false; render();
+      window.FinanceUI?.failed();
+      message('page-message', `${error.message} Tente selecionar o mês novamente.`, true);
+    }
   } finally {
     if (loadId === state.loadId) $('dashboard-view').removeAttribute('aria-busy');
   }
@@ -256,7 +270,7 @@ async function saveTransaction(event) {
   event.preventDefault();
   const id = $('transaction-id').value;
   const row = state.transactions.find((item) => item.id === id);
-  if (row && !isOwn(row) && !window.confirm(`Este lançamento pertence a ${ownerName(row)}. A alteração afetará as duas contas. Continuar?`)) return;
+  if (row && !isOwn(row) && !await confirmAction(`Este lançamento pertence a ${ownerName(row)}. A alteração afetará as duas contas. Continuar?`)) return;
   const body = { transaction_type: $('transaction-type').value, amount: Number($('amount').value), category: $('category').value, description: $('description').value.trim(), transaction_date: $('transaction-date').value };
   if (id) body.id = id;
   const button = $('save-transaction'); button.disabled = true;
@@ -279,7 +293,7 @@ async function saveTransaction(event) {
 
 async function deleteTransaction(row) {
   if (state.deleting.has(row.id)) return;
-  if (!window.confirm(`Mover “${row.description}” (${money(row.amount)}) para a lixeira?${isShared(row) ? ' Isso afetará as duas contas.' : ''} Você poderá restaurar por até 30 dias.`)) return;
+  if (!await confirmAction(`Mover “${row.description}” (${money(row.amount)}) para a lixeira?${isShared(row) ? ' Isso afetará as duas contas.' : ''} Você poderá restaurar por até 30 dias.`)) return;
   state.deleting.add(row.id);
   render();
   message('page-message', 'Movendo para a lixeira...');
@@ -331,7 +345,7 @@ async function shareTransaction(event) {
 
 async function unshareTransaction(row) {
   if (state.deleting.has(row.id)) return;
-  if (!window.confirm(isOwn(row) ? `Parar de compartilhar “${row.description}”? A outra pessoa perderá o acesso.` : `Parar de compartilhar “${row.description}”? Você perderá o acesso a este lançamento.`)) return;
+  if (!await confirmAction(isOwn(row) ? `Parar de compartilhar “${row.description}”? A outra pessoa perderá o acesso.` : `Parar de compartilhar “${row.description}”? Você perderá o acesso a este lançamento.`)) return;
   state.deleting.add(row.id); render();
   try {
     await request('/api/shares', { method: 'DELETE', body: JSON.stringify({ transaction_id: row.id }) });
@@ -341,6 +355,18 @@ async function unshareTransaction(row) {
 }
 
 async function init() {
+  window.FinanceUI?.init({
+    request,
+    reload: loadTransactions,
+    add(type) { openForm(); $('transaction-type').value = type; },
+    navigate(section) {
+      state.section = section;
+      $('filter-search').value = ''; $('filter-category').value = '';
+      $('filter-type').value = section === 'income' ? 'receita' : section === 'expense' ? 'despesa' : '';
+      state.datesCustomized = false; syncMonthDates(); state.page = 1; state.view = 'active';
+      loadTransactions();
+    },
+  });
   const scope = remembered('finance_scope', 'mine');
   state.scope = ['mine', 'shared', 'all'].includes(scope) ? scope : 'mine';
   state.includeSharedSummary = remembered('finance_include_shared', 'false') === 'true';
@@ -353,14 +379,18 @@ async function init() {
   }
   $('login-form').addEventListener('submit', async (event) => {
     event.preventDefault(); message('login-error', '');
+    const button = $('login-submit'); if (button.disabled) return;
+    button.disabled = true; button.textContent = 'Entrando...'; $('login-form').setAttribute('aria-busy','true');
     try {
       const data = await request('/api/session', { method: 'POST', body: JSON.stringify({ username: $('username').value.trim().toLowerCase(), password: $('password').value }) });
       state.loadId++; state.transactions = []; state.summary = null; state.page = 1; state.hasMore = false;
       state.view = 'active'; state.scope = 'mine'; state.includeSharedSummary = false; state.scopeFilters = {}; state.datesCustomized = false;
       restoreScopeFilters('mine'); remember('finance_scope', 'mine'); remember('finance_include_shared', 'false');
+      state.section = 'overview'; window.FinanceUI?.reset();
       setIdentity(data.account || data.user); $('password').value = ''; render(); showDashboard(true); await loadTransactions();
     }
     catch (error) { message('login-error', error.message, true); }
+    finally { button.disabled = false; button.textContent = 'Entrar'; $('login-form').removeAttribute('aria-busy'); }
   });
   const stopLoginPulse = () => $('login-brand').removeAttribute('data-pulsing');
   for (const id of ['username', 'password']) {
@@ -376,7 +406,7 @@ async function init() {
       state.loadId++;
       state.transactions = [];
       state.summary = null;
-      state.account = null;
+      state.account = null; state.section = 'overview'; window.FinanceUI?.reset();
       state.hasMore = false; state.page = 1; render();
       $('user-name').textContent = ''; $('user-username').textContent = '';
       $('transaction-dialog').close(); $('share-dialog').close();
@@ -385,6 +415,7 @@ async function init() {
     finally { button.disabled = false; }
   });
   $('month').addEventListener('change', () => {
+    if (!/^\d{4}-(0[1-9]|1[0-2])$/.test($('month').value)) { $('month').value = state.month || saoPauloToday().slice(0,7); message('page-message', 'Selecione um mês válido.', true); return; }
     if (!state.datesCustomized) syncMonthDates();
     state.view = 'active'; state.page = 1; loadTransactions();
   });

@@ -3,7 +3,7 @@ import { readFileSync } from 'node:fs';
 import { runInNewContext } from 'node:vm';
 import test from 'node:test';
 
-const source = readFileSync(new URL('../public/app.js', import.meta.url), 'utf8');
+const source = readFileSync(new URL('../public/app.js', import.meta.url), 'utf8').replace("import './ui.js';", '');
 
 test('pulso do login termina ao focar ou preencher campos e ao concluir animação', async () => {
   for (const [id, event] of [['username', 'focus'], ['password', 'input'], ['login-brand', 'animationend']]) {
@@ -119,6 +119,37 @@ test('ações de cada lançamento possuem nomes acessíveis específicos', async
   const actions = ui.element('transaction-rows').children[0].children[4].children;
   assert.match(actions[0].getAttribute('aria-label') ?? '', /editar.*almoço/i);
   assert.match(actions[1].getAttribute('aria-label') ?? '', /excluir.*almoço/i);
+});
+
+test('intervalo inválido encerra carregamento e impede retorno de dados da consulta pendente', async () => {
+  const calls = [];
+  const ui = mount(path => {
+    if (path === '/api/session') return Promise.resolve(json({ authenticated: true }));
+    const pending = deferred();
+    calls.push({ path, pending });
+    return pending.promise;
+  });
+  await until(() => calls.length === 1);
+  assert.equal(ui.element('dashboard-view').getAttribute('aria-busy'), 'true');
+
+  ui.element('filter-from').value = '2026-09-20';
+  ui.element('filter-to').value = '2026-09-10';
+  ui.element('filter-from').dispatch('change');
+  assert.equal(calls.length, 1, 'não deve consultar a API com intervalo inválido');
+  assert.equal(ui.element('dashboard-view').getAttribute('aria-busy'), null);
+  assert.equal(ui.element('transaction-rows').children.length, 0);
+  assert.equal(ui.element('balance-total').textContent, '—');
+  assert.match(ui.element('page-message').textContent, /data inicial.*anterior/i);
+
+  calls[0].pending.resolve(json({
+    transactions: [{ id: 'old', transaction_type: 'despesa', amount: 10, category: 'Outros', description: 'Resposta obsoleta', transaction_date: '2026-09-01' }],
+    summary: { income: 100, expense: 10, balance: 90, byCategory: { Outros: 10 } },
+  }));
+  await new Promise(resolve => setImmediate(resolve));
+  assert.equal(ui.element('dashboard-view').getAttribute('aria-busy'), null);
+  assert.equal(ui.element('transaction-rows').children.length, 0);
+  assert.equal(ui.element('balance-total').textContent, '—');
+  assert.match(ui.element('page-message').textContent, /data inicial.*anterior/i);
 });
 
 test('login envia usuário normalizado e senha e mostra identidade da conta', async () => {

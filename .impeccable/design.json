@@ -1,0 +1,341 @@
+{
+  "schemaVersion": 2,
+  "generatedAt": "2026-09-18T02:54:07.866488+00:00",
+  "title": "Design System: Assistente de Finanças — Nicolas & Ionara",
+  "extensions": {
+    "colorMeta": {
+      "primary": {
+        "role": "primary",
+        "displayName": "Violeta de ação",
+        "canonical": "#7C3AED",
+        "tonalRamp": [
+          "oklch(15.00% 0.2466 293.01)",
+          "oklch(26.43% 0.2466 293.01)",
+          "oklch(37.86% 0.2466 293.01)",
+          "oklch(49.29% 0.2466 293.01)",
+          "oklch(60.71% 0.2466 293.01)",
+          "oklch(72.14% 0.2466 293.01)",
+          "oklch(83.57% 0.2466 293.01)",
+          "oklch(95.00% 0.2466 293.01)"
+        ]
+      },
+      "primary-deep": {
+        "role": "primary",
+        "displayName": "Violeta profundo",
+        "canonical": "#6D28D9",
+        "tonalRamp": [
+          "oklch(15.00% 0.2412 292.58)",
+          "oklch(26.43% 0.2412 292.58)",
+          "oklch(37.86% 0.2412 292.58)",
+          "oklch(49.29% 0.2412 292.58)",
+          "oklch(60.71% 0.2412 292.58)",
+          "oklch(72.14% 0.2412 292.58)",
+          "oklch(83.57% 0.2412 292.58)",
+          "oklch(95.00% 0.2412 292.58)"
+        ]
+      },
+      "positive": {
+        "role": "secondary",
+        "displayName": "Verde de entrada",
+        "canonical": "#22C55E",
+        "tonalRamp": [
+          "oklch(15.00% 0.1920 149.58)",
+          "oklch(26.43% 0.1920 149.58)",
+          "oklch(37.86% 0.1920 149.58)",
+          "oklch(49.29% 0.1920 149.58)",
+          "oklch(60.71% 0.1920 149.58)",
+          "oklch(72.14% 0.1920 149.58)",
+          "oklch(83.57% 0.1920 149.58)",
+          "oklch(95.00% 0.1920 149.58)"
+        ]
+      },
+      "negative": {
+        "role": "secondary",
+        "displayName": "Rosa de saída",
+        "canonical": "#F43F5E",
+        "tonalRamp": [
+          "oklch(15.00% 0.2154 16.44)",
+          "oklch(26.43% 0.2154 16.44)",
+          "oklch(37.86% 0.2154 16.44)",
+          "oklch(49.29% 0.2154 16.44)",
+          "oklch(60.71% 0.2154 16.44)",
+          "oklch(72.14% 0.2154 16.44)",
+          "oklch(83.57% 0.2154 16.44)",
+          "oklch(95.00% 0.2154 16.44)"
+        ]
+      },
+      "gold": {
+        "role": "tertiary",
+        "displayName": "Dourado da marca",
+        "canonical": "#F4B000",
+        "tonalRamp": [
+          "oklch(15.00% 0.1655 80.58)",
+          "oklch(26.43% 0.1655 80.58)",
+          "oklch(37.86% 0.1655 80.58)",
+          "oklch(49.29% 0.1655 80.58)",
+          "oklch(60.71% 0.1655 80.58)",
+          "oklch(72.14% 0.1655 80.58)",
+          "oklch(83.57% 0.1655 80.58)",
+          "oklch(95.00% 0.1655 80.58)"
+        ]
+      },
+      "background": {
+        "role": "neutral",
+        "displayName": "Grafite de fundo",
+        "canonical": "#080B12",
+        "tonalRamp": [
+          "oklch(15.00% 0.0161 265.80)",
+          "oklch(26.43% 0.0161 265.80)",
+          "oklch(37.86% 0.0161 265.80)",
+          "oklch(49.29% 0.0161 265.80)",
+          "oklch(60.71% 0.0161 265.80)",
+          "oklch(72.14% 0.0161 265.80)",
+          "oklch(83.57% 0.0161 265.80)",
+          "oklch(95.00% 0.0161 265.80)"
+        ]
+      },
+      "surface": {
+        "role": "neutral",
+        "displayName": "Grafite de painel",
+        "canonical": "#121722",
+        "tonalRamp": [
+          "oklch(15.00% 0.0234 265.47)",
+          "oklch(26.43% 0.0234 265.47)",
+          "oklch(37.86% 0.0234 265.47)",
+          "oklch(49.29% 0.0234 265.47)",
+          "oklch(60.71% 0.0234 265.47)",
+          "oklch(72.14% 0.0234 265.47)",
+          "oklch(83.57% 0.0234 265.47)",
+          "oklch(95.00% 0.0234 265.47)"
+        ]
+      },
+      "surface-raised": {
+        "role": "neutral",
+        "displayName": "Grafite elevado",
+        "canonical": "#171D29",
+        "tonalRamp": [
+          "oklch(15.00% 0.0250 263.89)",
+          "oklch(26.43% 0.0250 263.89)",
+          "oklch(37.86% 0.0250 263.89)",
+          "oklch(49.29% 0.0250 263.89)",
+          "oklch(60.71% 0.0250 263.89)",
+          "oklch(72.14% 0.0250 263.89)",
+          "oklch(83.57% 0.0250 263.89)",
+          "oklch(95.00% 0.0250 263.89)"
+        ]
+      },
+      "text": {
+        "role": "neutral",
+        "displayName": "Texto claro",
+        "canonical": "#F8FAFC",
+        "tonalRamp": [
+          "oklch(15.00% 0.0034 247.86)",
+          "oklch(26.43% 0.0034 247.86)",
+          "oklch(37.86% 0.0034 247.86)",
+          "oklch(49.29% 0.0034 247.86)",
+          "oklch(60.71% 0.0034 247.86)",
+          "oklch(72.14% 0.0034 247.86)",
+          "oklch(83.57% 0.0034 247.86)",
+          "oklch(95.00% 0.0034 247.86)"
+        ]
+      },
+      "muted": {
+        "role": "neutral",
+        "displayName": "Cinza azulado",
+        "canonical": "#94A3B8",
+        "tonalRamp": [
+          "oklch(15.00% 0.0351 256.79)",
+          "oklch(26.43% 0.0351 256.79)",
+          "oklch(37.86% 0.0351 256.79)",
+          "oklch(49.29% 0.0351 256.79)",
+          "oklch(60.71% 0.0351 256.79)",
+          "oklch(72.14% 0.0351 256.79)",
+          "oklch(83.57% 0.0351 256.79)",
+          "oklch(95.00% 0.0351 256.79)"
+        ]
+      },
+      "border": {
+        "role": "neutral",
+        "displayName": "Borda grafite",
+        "canonical": "#283142",
+        "tonalRamp": [
+          "oklch(15.00% 0.0331 262.88)",
+          "oklch(26.43% 0.0331 262.88)",
+          "oklch(37.86% 0.0331 262.88)",
+          "oklch(49.29% 0.0331 262.88)",
+          "oklch(60.71% 0.0331 262.88)",
+          "oklch(72.14% 0.0331 262.88)",
+          "oklch(83.57% 0.0331 262.88)",
+          "oklch(95.00% 0.0331 262.88)"
+        ]
+      }
+    },
+    "typographyMeta": {
+      "headline": {
+        "displayName": "Título principal",
+        "purpose": "Título de login; tamanhos menores e fluidos no dashboard e em telas estreitas."
+      },
+      "title": {
+        "displayName": "Título de painel",
+        "purpose": "Identifica cartões, seções e grupos de informações."
+      },
+      "body": {
+        "displayName": "Texto de apoio",
+        "purpose": "Texto explicativo e orientação de formulário; labels e metadados usam escalas menores."
+      }
+    },
+    "shadows": [
+      {
+        "name": "dialog",
+        "value": "0 24px 80px #0008",
+        "purpose": "Separar diálogos modais do fundo escurecido."
+      },
+      {
+        "name": "login-wallet",
+        "value": "0 24px 64px #05070c66",
+        "purpose": "Profundidade da carteira abstrata no login."
+      },
+      {
+        "name": "login-chip",
+        "value": "0 12px 30px #080b1250",
+        "purpose": "Profundidade dos chips decorativos do login."
+      }
+    ],
+    "motion": [
+      {
+        "name": "ease",
+        "value": "cubic-bezier(.16,1,.3,1)",
+        "purpose": "Curva de entrada e interação."
+      },
+      {
+        "name": "interaction",
+        "value": "180ms",
+        "purpose": "Botões, inputs, navegação e entrada de diálogos."
+      },
+      {
+        "name": "entrance",
+        "value": "220ms",
+        "purpose": "Aparição do logotipo e séries do gráfico."
+      },
+      {
+        "name": "skeleton",
+        "value": "1.8s ease infinite",
+        "purpose": "Indicação contínua de consulta em andamento."
+      },
+      {
+        "name": "reduced-motion",
+        "value": "prefers-reduced-motion: reduce",
+        "purpose": "Desativa animações, transições e rolagem suave."
+      }
+    ],
+    "breakpoints": [
+      {
+        "name": "mobile",
+        "value": "600px"
+      },
+      {
+        "name": "bottom-navigation",
+        "value": "900px"
+      },
+      {
+        "name": "compact-desktop",
+        "value": "1250px"
+      },
+      {
+        "name": "wide-desktop",
+        "value": "1600px"
+      }
+    ]
+  },
+  "components": [
+    {
+      "name": "Botão principal",
+      "kind": "button",
+      "description": "Ação principal da tarefa atual.",
+      "html": "<button type=\"button\" class=\"ds-button-primary\">Novo lançamento</button>",
+      "css": ".ds-button-primary{min-height:44px;display:inline-flex;align-items:center;justify-content:center;gap:9px;border:1px solid transparent;border-radius:10px;padding:10px 16px;font-size:.875rem;line-height:1.35;font-weight:550;cursor:pointer;transition:background 180ms,border-color 180ms,transform 180ms cubic-bezier(.16,1,.3,1);font-family:Inter,ui-sans-serif,system-ui,sans-serif;background:linear-gradient(115deg,#6D28D9,#9342e7);color:#fff;border-color:transparent;}.ds-button-primary:hover:not(:disabled){background:linear-gradient(115deg,#7C3AED,#9b4cec);}.ds-button-primary:focus-visible{outline:3px solid #c4b5fd;outline-offset:4px;}.ds-button-primary:active:not(:disabled){transform:translateY(1px);}.ds-button-primary:disabled{cursor:not-allowed;opacity:.55;}@media(prefers-reduced-motion:reduce){.ds-button-primary{transition:none;}}",
+      "refersTo": "button-primary"
+    },
+    {
+      "name": "Botão secundário",
+      "kind": "button",
+      "description": "Ação complementar sobre superfície elevada.",
+      "html": "<button type=\"button\" class=\"ds-button-secondary\">Adicionar receita</button>",
+      "css": ".ds-button-secondary{min-height:44px;display:inline-flex;align-items:center;justify-content:center;gap:9px;border:1px solid transparent;border-radius:10px;padding:10px 16px;font-size:.875rem;line-height:1.35;font-weight:550;cursor:pointer;transition:background 180ms,border-color 180ms,transform 180ms cubic-bezier(.16,1,.3,1);font-family:Inter,ui-sans-serif,system-ui,sans-serif;background:var(--surface-raised,#171D29);color:var(--text,#F8FAFC);border-color:var(--line,#283142);}.ds-button-secondary:hover:not(:disabled){background:#242c3c;border-color:#64748b;}.ds-button-secondary:focus-visible{outline:3px solid #c4b5fd;outline-offset:4px;}.ds-button-secondary:active:not(:disabled){transform:translateY(1px);}.ds-button-secondary:disabled{cursor:not-allowed;opacity:.55;}@media(prefers-reduced-motion:reduce){.ds-button-secondary{transition:none;}}",
+      "refersTo": "button-secondary"
+    },
+    {
+      "name": "Botão discreto",
+      "kind": "button",
+      "description": "Ação de apoio sem preenchimento em repouso.",
+      "html": "<button type=\"button\" class=\"ds-button-ghost\">Cancelar</button>",
+      "css": ".ds-button-ghost{min-height:44px;display:inline-flex;align-items:center;justify-content:center;gap:9px;border:1px solid transparent;border-radius:10px;padding:10px 16px;font-size:.875rem;line-height:1.35;font-weight:550;cursor:pointer;transition:background 180ms,border-color 180ms,transform 180ms cubic-bezier(.16,1,.3,1);font-family:Inter,ui-sans-serif,system-ui,sans-serif;background:transparent;color:#cbd5e1;border-color:transparent;}.ds-button-ghost:hover:not(:disabled){background:#242c3c;}.ds-button-ghost:focus-visible{outline:3px solid #c4b5fd;outline-offset:4px;}.ds-button-ghost:active:not(:disabled){transform:translateY(1px);}.ds-button-ghost:disabled{cursor:not-allowed;opacity:.55;}@media(prefers-reduced-motion:reduce){.ds-button-ghost{transition:none;}}"
+    },
+    {
+      "name": "Botão destrutivo",
+      "kind": "button",
+      "description": "Confirmação explícita de alteração destrutiva.",
+      "html": "<button type=\"button\" class=\"ds-button-destructive\">Confirmar</button>",
+      "css": ".ds-button-destructive{min-height:44px;display:inline-flex;align-items:center;justify-content:center;gap:9px;border:1px solid transparent;border-radius:10px;padding:10px 16px;font-size:.875rem;line-height:1.35;font-weight:550;cursor:pointer;transition:background 180ms,border-color 180ms,transform 180ms cubic-bezier(.16,1,.3,1);font-family:Inter,ui-sans-serif,system-ui,sans-serif;background:#9f1239;color:var(--text,#F8FAFC);border-color:transparent;}.ds-button-destructive:hover:not(:disabled){background:#be123c;}.ds-button-destructive:focus-visible{outline:3px solid #c4b5fd;outline-offset:4px;}.ds-button-destructive:active:not(:disabled){transform:translateY(1px);}.ds-button-destructive:disabled{cursor:not-allowed;opacity:.55;}@media(prefers-reduced-motion:reduce){.ds-button-destructive{transition:none;}}"
+    },
+    {
+      "name": "Campo de texto",
+      "kind": "input",
+      "description": "Label permanente, superfície escura e foco visível.",
+      "html": "<div class=\"ds-field\"><label class=\"ds-label\" for=\"ds-description\">Descrição</label><input class=\"ds-input\" id=\"ds-description\" type=\"text\" maxlength=\"180\" placeholder=\"Ex.: almoço, salário, aluguel\"></div>",
+      "css": ".ds-field{width:100%;max-width:360px;font-family:Inter,ui-sans-serif,system-ui,sans-serif;}.ds-label{display:block;font-size:.8125rem;font-weight:550;color:#cbd5e1;margin:0 0 8px;}.ds-input{box-sizing:border-box;width:100%;min-width:0;min-height:48px;border:1px solid #344052;border-radius:10px;background:#0D121D;color:var(--text,#F8FAFC);padding:11px 13px;caret-color:#c4b5fd;transition:border-color 180ms,background 180ms;font-family:Inter,ui-sans-serif,system-ui,sans-serif;}.ds-input::placeholder{color:#94a3b8;}.ds-input:hover{border-color:#64748b;}.ds-input:focus{border-color:#a78bfa;}.ds-input:focus-visible{outline:3px solid #c4b5fd;outline-offset:4px;}@media(prefers-reduced-motion:reduce){.ds-input{transition:none;}}"
+    },
+    {
+      "name": "Card de resumo",
+      "kind": "card",
+      "refersTo": "card",
+      "description": "Superfície tonal para um valor mensal autoritativo; o exemplo usa indisponibilidade, sem dados fictícios.",
+      "html": "<article class=\"ds-card\"><div class=\"ds-metric-label\">Receitas</div><strong class=\"ds-value\">—</strong><small class=\"ds-caption\">Entradas do mês</small></article>",
+      "css": ".ds-card{max-width:360px;min-width:0;background:var(--surface,#121722);color:var(--text,#F8FAFC);border:1px solid var(--line,#283142);border-radius:var(--radius,20px);padding:24px;font-family:Inter,ui-sans-serif,system-ui,sans-serif;}.ds-metric-label{font-size:.8125rem;color:#b8c4d5;margin-bottom:22px;}.ds-value{display:block;font-size:clamp(1.6rem,2.6vw,2.4rem);font-weight:600;letter-spacing:-.035em;font-variant-numeric:tabular-nums;white-space:nowrap;overflow-x:auto;}.ds-caption{display:block;color:var(--muted,#94A3B8);font-size:.7rem;margin-top:10px;line-height:1.5;}"
+    },
+    {
+      "name": "Item de navegação",
+      "kind": "nav",
+      "description": "Estado selecionado violeta com aria-current; navegação da aplicação sem nova rota de servidor.",
+      "html": "<nav class=\"ds-nav\" aria-label=\"Navegação de exemplo\"><button type=\"button\" class=\"ds-nav-item\" aria-current=\"page\"><svg class=\"ds-icon\" viewBox=\"0 0 24 24\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"1.7\" stroke-linecap=\"round\" stroke-linejoin=\"round\" aria-hidden=\"true\"><rect x=\"3\" y=\"3\" width=\"7\" height=\"7\" rx=\"1.5\"/><rect x=\"14\" y=\"3\" width=\"7\" height=\"7\" rx=\"1.5\"/><rect x=\"3\" y=\"14\" width=\"7\" height=\"7\" rx=\"1.5\"/><rect x=\"14\" y=\"14\" width=\"7\" height=\"7\" rx=\"1.5\"/></svg><span>Visão geral</span></button></nav>",
+      "css": ".ds-nav{max-width:234px;}.ds-nav-item{width:100%;display:flex;align-items:center;gap:12px;padding:12px 14px;min-height:48px;border:1px solid transparent;border-radius:10px;background:transparent;color:var(--muted,#94A3B8);font-size:.875rem;font-weight:500;text-align:left;cursor:pointer;transition:background 180ms,color 180ms;font-family:Inter,ui-sans-serif,system-ui,sans-serif;}.ds-icon{display:block;width:20px;height:20px;flex-shrink:0;}.ds-nav-item:hover{background:#171d29;color:white;}.ds-nav-item[aria-current=page]{color:#e9ddff;background:#251b3e;border-color:#443064;}.ds-nav-item[aria-current=page] .ds-icon{color:#b998ff;}.ds-nav-item:focus-visible{outline:3px solid #c4b5fd;outline-offset:4px;}@media(prefers-reduced-motion:reduce){.ds-nav-item{transition:none;}}"
+    },
+    {
+      "name": "Badge de compartilhamento",
+      "kind": "chip",
+      "description": "Rótulo informativo que distingue lançamentos compartilhados; não é um controle interativo.",
+      "html": "<span class=\"ds-badge ds-shared-badge\">Compartilhado</span>",
+      "css": ".ds-badge{display:inline-flex;border-radius:5px;padding:4px 6px;font-size:.6rem;color:#aebad0;background:#212937;font-family:Inter,ui-sans-serif,system-ui,sans-serif;}.ds-shared-badge{color:#d8c4ff;background:#2b2043;}"
+    }
+  ],
+  "narrative": {
+    "northStar": "Clareza para seus planos",
+    "overview": "Uma interface financeira sóbria, com valores legíveis e controles próximos da tarefa. O violeta organiza a hierarquia; a identidade original permanece no logotipo e no dourado dos nomes.",
+    "keyCharacteristics": [
+      "Superfícies grafite e bordas discretas.",
+      "Violeta concentrado nas ações e no saldo mensal.",
+      "Gráficos com legendas e valores textuais equivalentes."
+    ],
+    "rules": [
+      {
+        "name": "The Meaning Rule",
+        "body": "Cor acompanha informação textual; nunca substitui o significado de uma operação.",
+        "section": "colors"
+      },
+      {
+        "name": "The Task Rule",
+        "body": "A visão geral mostra cinco lançamentos e acesso à lista completa. Filtros e ações detalhadas pertencem à listagem.",
+        "section": "layout"
+      }
+    ],
+    "dos": [
+      "Use dados reais e estados explícitos de indisponibilidade.",
+      "Preserve labels, foco visível e equivalentes textuais dos gráficos."
+    ],
+    "donts": [
+      "Não reutilize assets ou identidade Frentix.",
+      "Não adicione metas ou notificações fictícias.",
+      "Não use páginas parciais para calcular totais mensais."
+    ]
+  }
+}
