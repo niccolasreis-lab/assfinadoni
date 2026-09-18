@@ -49,6 +49,7 @@ input:focus, select:focus { border-color: #287451; }
 .topbar { background: #0b1724; color: #fff; border-bottom: 2px solid var(--gold); }
 .topbar .muted { color: #bfd0df; }
 .topbar .button.ghost { background: #21364b; color: #eaf1f7; }
+.topbar .button.ghost:hover:not(:disabled) { background: #304a63; }
 .topbar-inner, .content { width: min(100% - 48px, 1200px); margin: auto; }
 .topbar-inner { min-height: 72px; display: flex; align-items: center; justify-content: space-between; gap: 16px; }
 .brand, .top-actions, .heading-actions { display: flex; align-items: center; gap: 14px; }
@@ -165,6 +166,7 @@ dialog::backdrop { background: rgba(16, 40, 29, .7); }
   .filter-search { grid-column: 1 / -1; }
 }
 @media (max-width: 600px) {
+  .header-logo { width: 96px; }
   .help-row { align-items: start; flex-direction: column; gap: 12px; }
   .tutorial-guide { padding: 22px 18px; }
   .tutorial-heading { flex-direction: column; gap: 14px; }
