@@ -1,3 +1,2 @@
-// Public configuration only. Example: https://t.me/your_assistant_bot
-// Never place tokens, chat IDs, passwords or API keys in this file.
-export const telegramBotUrl = '';
+// Public bot address. Never place tokens, chat IDs or passwords here.
+export const telegramBotUrl = 'https://t.me/assistentefinanceirodoni_bot';

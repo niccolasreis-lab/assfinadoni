@@ -27,6 +27,6 @@
 
 ## Configuração e limites
 
-Configurar somente o link público do bot em `public/config.js` para habilitar “Abrir Telegram”. O vínculo existente e as variáveis de ambiente não mudaram. Metas e notificações foram adiadas conforme decisão aprovada. As datas dos registros são formatadas em pt-BR; a apresentação interna dos seletores nativos de data/mês segue o idioma do navegador/sistema.
+Link público configurado em `public/config.js`: `https://t.me/assistentefinanceirodoni_bot`, habilitando “Abrir Telegram”. O vínculo existente e as variáveis de ambiente não mudaram. Metas e notificações foram adiadas conforme decisão aprovada. As datas dos registros são formatadas em pt-BR; a apresentação interna dos seletores nativos de data/mês segue o idioma do navegador/sistema.
 
-Não houve publicação, alteração de API, migração ou validação com credenciais reais. A validação do backend existente usa seus testes automatizados; a validação visual usa fixtures isolados.
+Publicado na Vercel por integração com a branch `main` do GitHub em 18/09/2026. Não houve alteração de API, migração ou validação com credenciais reais. A validação do backend existente usa seus testes automatizados; a validação visual usa fixtures isolados.
