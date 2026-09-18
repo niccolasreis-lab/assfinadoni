@@ -98,6 +98,8 @@ async function request(path, options = {}) {
 }
 
 function showDashboard(authenticated) {
+  $('login-brand').removeAttribute('data-pulsing');
+  if (!authenticated && !document.hidden && !$('username').value && !$('password').value) $('login-brand').setAttribute('data-pulsing', 'true');
   $('initial-status').hidden = true;
   $('login-view').hidden = authenticated;
   $('dashboard-view').hidden = !authenticated;
@@ -360,6 +362,13 @@ async function init() {
     }
     catch (error) { message('login-error', error.message, true); }
   });
+  const stopLoginPulse = () => $('login-brand').removeAttribute('data-pulsing');
+  for (const id of ['username', 'password']) {
+    $(id).addEventListener('focus', stopLoginPulse);
+    $(id).addEventListener('input', stopLoginPulse);
+  }
+  $('login-brand').addEventListener('animationend', stopLoginPulse);
+  document.addEventListener?.('visibilitychange', () => { if (document.hidden) stopLoginPulse(); });
   $('logout').addEventListener('click', async () => {
     const button = $('logout'); button.disabled = true;
     try {

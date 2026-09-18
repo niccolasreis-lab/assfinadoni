@@ -5,6 +5,15 @@ import test from 'node:test';
 
 const source = readFileSync(new URL('../public/app.js', import.meta.url), 'utf8');
 
+test('pulso do login termina ao focar ou preencher campos e ao concluir animação', async () => {
+  for (const [id, event] of [['username', 'focus'], ['password', 'input'], ['login-brand', 'animationend']]) {
+    const ui = mount(() => Promise.resolve(json({ authenticated: false })));
+    await until(() => ui.element('login-brand').getAttribute('data-pulsing') === 'true');
+    ui.element(id).dispatch(event);
+    assert.equal(ui.element('login-brand').getAttribute('data-pulsing'), null);
+  }
+});
+
 test('boas-vindas e guia respeitam nome e vínculo Telegram de cada conta', async () => {
   for (const account of [
     { username: 'ionararosendo', name: 'Iônara', telegram_linked: false },
