@@ -1,7 +1,15 @@
 import { categoryMarkup, comparison, createHistoryLoader, historyMarkup, validSummary } from './charts.js';
+import { installDialogMotion, reveal } from './motion.js';
+import { createProfileController } from './profile-ui.js';
+import { createRemindersController } from './reminders-ui.js';
+let reminders;
 import { telegramBotUrl } from './config.js';
 const $ = id => document.getElementById(id);
 const paths = {
+  chevron: '<path d="m6 9 6 6 6-6"/>',
+  camera: '<path d="M8 5 9 3h6l1 2h4v15H4V5Z"/><circle cx="12" cy="12" r="4"/>',
+  cloud: '<path d="M6 18a5 5 0 0 1-1-10 7 7 0 0 1 13-1 5 5 0 0 1 0 11"/><path d="m9 15 3-3 3 3m-3-3v9"/>',
+  logout: '<path d="M9 4H4v16h5m5-12 4 4-4 4m-6-4h10"/>',
   wallet: '<rect x="3" y="5" width="18" height="15" rx="3"/><path d="M3 8h18M17 12h4v5h-4a2.5 2.5 0 0 1 0-5Z"/>',
   overview: '<rect x="3" y="3" width="7" height="7" rx="1.5"/><rect x="14" y="3" width="7" height="7" rx="1.5"/><rect x="3" y="14" width="7" height="7" rx="1.5"/><rect x="14" y="14" width="7" height="7" rx="1.5"/>',
   transactions: '<path d="M4 7h16m-4-4 4 4-4 4M20 17H4m4-4-4 4 4 4"/>',
@@ -19,6 +27,7 @@ const paths = {
 };
 export const icon = name => `<svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">${paths[name] || paths.wallet}</svg>`;
 const sections = [['overview','Visão geral','overview'],['transactions','Transações','transactions'],['income','Receitas','up'],['expense','Despesas','down'],['categories','Categorias','categories'],['reports','Relatórios','reports'],['settings','Configurações','settings']];
+let profile;
 let api, section = 'overview', historyContext = '', lastState, renderedPoints;
 const history = createHistoryLoader(async (month, shared) => {
   const result = await api.request(`/api/transactions?month=${month}&page=1&scope=mine&include_shared_summary=${shared}`);
@@ -49,9 +58,9 @@ function updatePanels() {
     if (active) node.setAttribute('aria-current','page'); else node.removeAttribute('aria-current');
   });
 }
-function navigate(next, load = true) {
+async function navigate(next, load = true) {
   if (!sections.some(s => s[0] === next)) next = 'overview';
-  section = next; $('more-dialog').close(); updatePanels();
+  section = next; await $('more-dialog').close(); updatePanels(); reveal(document.querySelector('.content'));
   if (load && ['overview','transactions','income','expense'].includes(section)) api.navigate(section);
   $('workspace-heading').focus({ preventScroll:true });
 }
@@ -77,7 +86,7 @@ async function loadHistory(state, force = false) {
 function resetHistory() { history.reset(); historyContext = ''; lastState = null; renderedPoints = null; }
 window.FinanceUI = {
   init(callbacks) {
-    api = callbacks; drawIcons();
+    api = callbacks; drawIcons(); installDialogMotion(); profile=createProfileController(api.request); reminders=createRemindersController({request:api.request,onChanged:api.reload});
     new ResizeObserver(() => {
       if (renderedPoints && $('history-chart').clientWidth) $('history-chart').innerHTML=historyMarkup(renderedPoints,$('history-chart').clientWidth).svg;
     }).observe($('history-chart'));
@@ -103,7 +112,7 @@ window.FinanceUI = {
   },
   render(state) {
     const name = state.account?.display_name || state.account?.name || state.account?.username || '';
-    $('account-avatar').textContent = name.split(/\s+/).filter(Boolean).slice(0,2).map(part=>part[0]).join('').toUpperCase();
+    profile.sync(state.account);
     $('category-chart').innerHTML=categoryMarkup(state.summary); $('category-list').hidden=false;
     if(section === 'overview') $('transaction-count').textContent = `${Math.min(5,state.transactions.length)} recentes`;
     $('transaction-rows').querySelectorAll('tr').forEach(row => {
@@ -112,6 +121,9 @@ window.FinanceUI = {
       cell.prepend(badge);
     });
   },
+  identity(account) { profile?.sync(account); reminders?.sync(account); },
+  beforeLogout() { return reminders?.beforeLogout(); },
+  authChanged(authenticated) { if(!authenticated) { profile?.reset(); reminders?.reset(); } reveal($(authenticated ? 'dashboard-view' : 'login-view')); },
   loaded(state) { loadHistory({ month:state.month, includeSharedSummary:state.includeSharedSummary, summary:state.summary, account:state.account }); },
   invalidate() { resetHistory(); },
   loading() {
@@ -125,10 +137,10 @@ window.FinanceUI = {
   },
   failed() { resetHistory(); $('history-chart').replaceChildren(); $('history-table').replaceChildren(); $('history-status').textContent='Não foi possível carregar os dados deste período.'; $('balance-insight').textContent='Comparação indisponível.'; $('retry-history').hidden=false; },
   reset() {
-    resetHistory(); section='overview'; updatePanels();
+    resetHistory(); profile?.reset(); reminders?.reset(); section='overview'; updatePanels();
     $('history-chart').replaceChildren(); $('history-table').replaceChildren(); $('history-status').textContent=''; $('balance-insight').textContent='';
     $('password').type='password'; $('toggle-password').setAttribute('aria-pressed','false'); $('toggle-password').setAttribute('aria-label','Mostrar senha');
-    $('confirm-dialog').close(); $('more-dialog').close();
+    document.querySelectorAll('dialog').forEach(dialog=>dialog.closeImmediately());
   },
   confirm(copy) {
     const dialog=$('confirm-dialog');

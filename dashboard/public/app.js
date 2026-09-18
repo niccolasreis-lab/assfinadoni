@@ -22,6 +22,7 @@ function ownerName(row) { return row.owner_name || row.owner?.name || row.owner_
 function setIdentity(account) {
   if (!account) return;
   state.account = account;
+  window.FinanceUI?.identity(account);
   $('user-name').textContent = account.display_name || account.name || account.username || 'Minha conta';
   $('user-username').textContent = account.username ? `@${account.username}` : '';
   const username = account.username || '';
@@ -105,6 +106,7 @@ function showDashboard(authenticated) {
   $('initial-status').hidden = true;
   $('login-view').hidden = authenticated;
   $('dashboard-view').hidden = !authenticated;
+  window.FinanceUI?.authChanged(authenticated);
   if (!authenticated) $('username').focus?.();
 }
 
@@ -402,6 +404,7 @@ async function init() {
   $('logout').addEventListener('click', async () => {
     const button = $('logout'); button.disabled = true;
     try {
+      await window.FinanceUI?.beforeLogout();
       await request('/api/session', { method: 'DELETE' });
       state.loadId++;
       state.transactions = [];

@@ -6,6 +6,7 @@
   <meta name="theme-color" content="#080B12">
   <title>Assistente de Finanças — Nicolas &amp; Ionara</title>
   <link rel="stylesheet" href="/styles.css">
+  <link rel="stylesheet" href="/reminders.css">
   <link rel="stylesheet" href="/react.css">
   <link rel="manifest" href="/manifest.webmanifest">
   <link rel="apple-touch-icon" href="/icons/icon-192.png">
@@ -30,8 +31,7 @@
         <p class="art-caption">Seu dia a dia, conectado.<br>Na web e pelo assistente no Telegram.</p>
       </div>
       <div class="login-card">
-        <div id="login-brand" class="login-brand"><img class="brand-logo login-logo" src="/logo.png" width="1536" height="1024" alt="Assistente de Finanças — Nicolas e Ionara"></div>
-        <p class="brand-caption">Nicolas &amp; Ionara</p>
+        <div id="login-brand" class="login-brand brand-lockup"><span class="brand-symbol" aria-hidden="true"><img src="/logo.png" alt="" width="1536" height="1024"></span><span><strong>Assistente de Finanças</strong><small>Nicolas &amp; Ionara</small></span></div>
         <h1>Seu financeiro em um só lugar.</h1>
         <p class="muted">Organize suas receitas e despesas, aqui ou pelo assistente no Telegram.</p>
         <form id="login-form">
@@ -48,15 +48,15 @@
 
     <section id="dashboard-view" class="dashboard" hidden>
       <aside class="sidebar">
-        <a class="sidebar-brand" href="#overview" aria-label="Assistente de Finanças — Nicolas & Ionara"><img src="/logo.png" width="1536" height="1024" alt=""><strong>Assistente de Finanças</strong><span>Nicolas &amp; Ionara</span></a>
+        <a class="sidebar-brand" href="#overview" aria-label="Assistente de Finanças — Nicolas & Ionara"><span class="brand-symbol" aria-hidden="true"><img src="/logo.png" width="1536" height="1024" alt=""></span><strong>Assistente de Finanças</strong><span>Nicolas &amp; Ionara</span></a>
         <nav id="desktop-nav" aria-label="Navegação principal"></nav>
         <div class="sidebar-footer"><span class="connection-dot"></span> Seu financeiro, conectado.<small>Web + Telegram</small></div>
       </aside>
       <div class="workspace">
       <header class="topbar">
         <div class="topbar-inner">
-          <div class="brand"><span class="brand-glyph" data-icon="wallet"></span><span>Assistente de Finanças <small>Nicolas &amp; Ionara</small></span></div>
-          <div class="top-actions"><span id="account-avatar" class="avatar" aria-hidden="true">NI</span><div class="account-identity"><strong id="user-name">Minha conta</strong><span id="user-username" class="muted"></span></div></div>
+          <div class="brand"><span class="brand-symbol" aria-hidden="true"><img src="/logo.png" alt="" width="1536" height="1024"></span><span>Assistente de Finanças <small>Nicolas &amp; Ionara</small></span></div>
+          <div class="top-actions"><button id="account-trigger" class="account-trigger" type="button" aria-label="Abrir meu perfil" aria-expanded="false" aria-controls="account-menu"><span id="account-avatar" class="avatar" aria-hidden="true">NI</span><span class="account-identity"><strong id="user-name">Minha conta</strong><span id="user-username" class="muted"></span></span><span data-icon="chevron"></span></button></div>
         </div>
       </header>
       <div class="content">
@@ -66,7 +66,7 @@
         </div>
         <section id="settings-panel" class="panel settings-panel" hidden aria-labelledby="settings-title">
           <h2 id="settings-title">Sua conta e preferências</h2><p id="telegram-status" class="muted"></p>
-          <div class="help-row"><button id="install-app" class="button secondary" type="button"><span data-icon="download"></span>Instalar app</button><button id="open-tutorial" class="button secondary" type="button" aria-controls="tutorial-guide" aria-expanded="false">Como usar</button><button id="logout" class="button ghost" type="button">Sair da conta</button></div>
+          <div class="help-row"><button id="settings-edit-profile" type="button" class="button secondary"><span data-icon="user"></span>Editar perfil</button><button id="install-app" class="button secondary" type="button"><span data-icon="download"></span>Instalar app</button><button id="open-tutorial" class="button secondary" type="button" aria-controls="tutorial-guide" aria-expanded="false">Como usar</button><button id="logout" class="button ghost" type="button">Sair da conta</button></div>
         </section>
         <section id="tutorial-guide" class="tutorial-guide" aria-labelledby="tutorial-title" hidden>
           <div class="tutorial-heading"><div><h2 id="tutorial-title" tabindex="-1">Seu financeiro, passo a passo</h2><p class="muted">Um guia rápido. Você pode fechar e consultar novamente em “Como usar”.</p></div><button id="close-tutorial" class="button ghost" type="button">Fechar guia</button></div>
@@ -80,6 +80,7 @@
           </dl>
           <div class="tutorial-actions"><button id="tutorial-new-transaction" class="button primary" type="button">Adicionar um lançamento</button><button id="finish-tutorial" class="button subtle" type="button">Entendi, continuar</button></div>
         </section>
+        <p id="profile-notice" class="message" role="status" hidden></p>
         <p id="page-message" class="message" role="status" hidden></p>
         <div class="summary-heading"><h2>Resumo do mês</h2><label class="toggle-control" for="include-shared-summary"><input id="include-shared-summary" type="checkbox"><span class="toggle-track" aria-hidden="true"></span><span>Incluir compartilhados nos totais</span></label></div>
         <section class="cards" aria-label="Resumo mensal" aria-live="polite">
@@ -117,6 +118,29 @@
       <nav id="mobile-nav" class="mobile-nav" aria-label="Navegação no celular"></nav>
     </section>
   </main>
+  <div id="account-menu" class="account-menu" popover="auto" aria-label="Meu perfil">
+    <div class="profile-menu-heading"><span id="menu-avatar" class="avatar" aria-hidden="true"></span><div><strong id="menu-name"></strong><p id="menu-username" class="muted"></p></div></div>
+    <p id="profile-load-status" class="muted" role="status">Carregando perfil...</p>
+    <button id="edit-profile" class="profile-menu-action" type="button" disabled><span data-icon="user"></span>Editar perfil <span class="menu-action-hint">Nome e foto</span></button>
+    <button id="retry-profile" class="profile-menu-action" type="button" hidden>Tentar novamente</button>
+    <button id="menu-settings" class="profile-menu-action" type="button"><span data-icon="settings"></span>Configurações</button>
+    <button id="menu-logout" class="profile-menu-action danger" type="button"><span data-icon="logout"></span>Sair da conta</button>
+  </div>
+  <dialog id="profile-dialog" aria-labelledby="profile-title">
+    <form id="profile-form" class="dialog-body">
+      <div class="dialog-heading"><div><h2 id="profile-title">Seu perfil, do seu jeito</h2><p class="muted">Uma foto e um nome para chamar de seus.</p></div><button id="profile-close" class="icon-button" type="button" aria-label="Fechar perfil"><span data-icon="close"></span></button></div>
+      <fieldset id="profile-fields">
+        <div class="profile-photo-editor"><span id="profile-preview" class="profile-preview" aria-hidden="true"></span><div><button id="choose-photo" class="button secondary" type="button"><span data-icon="camera"></span>Escolher foto</button><button id="remove-photo" class="text-button" type="button">Remover foto</button><p class="muted">JPG, PNG ou WebP · até 8 MB</p></div></div>
+        <input id="profile-photo" type="file" accept="image/jpeg,image/png,image/webp" hidden>
+        <p id="photo-status" class="muted" role="status"></p>
+        <div id="photo-zoom-field" hidden><label for="photo-zoom">Aproximar foto</label><input id="photo-zoom" type="range" min="1" max="3" step="0.05" value="1"></div>
+        <div><label for="profile-name">Como quer aparecer?</label><input id="profile-name" type="text" minlength="2" maxlength="60" required autocomplete="name" aria-describedby="profile-name-help"><p id="profile-name-help" class="muted">Seu nome de exibição. O usuário de acesso continua <strong id="profile-username"></strong>.</p></div>
+      </fieldset>
+      <p class="profile-sync-note"><span data-icon="cloud"></span>Salvo na sua conta, em todos os dispositivos.</p>
+      <p id="profile-error" class="message error" role="alert" hidden></p>
+      <div class="dialog-actions"><button id="profile-cancel" class="button ghost" type="button">Cancelar</button><button id="profile-save" class="button primary" type="submit">Salvar perfil</button></div>
+    </form>
+  </dialog>
   <dialog id="more-dialog" aria-labelledby="more-title"><div class="dialog-body"><div class="dialog-heading"><h2 id="more-title">Mais opções</h2><button class="icon-button" id="close-more" aria-label="Fechar opções" type="button"><span data-icon="close"></span></button></div><nav id="more-nav" aria-label="Outras seções"></nav></div></dialog>
   <dialog id="confirm-dialog" aria-labelledby="confirm-title" aria-describedby="confirm-copy"><form method="dialog" class="dialog-body"><h2 id="confirm-title">Confirmar alteração</h2><p id="confirm-copy"></p><div class="dialog-actions"><button id="confirm-cancel" class="button ghost" value="cancel" autofocus>Cancelar</button><button id="confirm-accept" class="button destructive" value="confirm">Confirmar</button></div></form></dialog>
 

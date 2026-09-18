@@ -21,6 +21,9 @@ for(const width of [360,768,1024,1440]){
    if(req.method()==='DELETE')authenticated=false;
    return route.fulfill({json:{authenticated,account:authenticated?account:undefined}});
   }
+  if(url.pathname==='/api/profile')return route.fulfill({json:{profile:{display_name:account.name,avatar_data_url:null},account}});
+  if(url.pathname==='/api/reminders')return route.fulfill({json:{reminders:[],telegram_linked:true}});
+  if(url.pathname==='/api/push')return route.fulfill({json:{publicKey:null,supported:true}});
   if(req.method()!=='GET')return route.fulfill({json:{transaction:{id:'qa-1'}}});
   if(fail)return route.fulfill({status:500,json:{error:'Falha simulada para teste'}});
   const month=url.searchParams.get('month')||'2026-09';const n=Number(month.slice(5));
@@ -35,11 +38,13 @@ for(const width of [360,768,1024,1440]){
  assert.equal(await page.locator('#dashboard-view').isVisible(),true);
  await page.screenshot({animations:'disabled',path:`${out}/dashboard-${width}.png`,fullPage:true});
  assert.equal(await page.evaluate(()=>document.documentElement.scrollWidth>innerWidth),false,`overflow ${width}`);
- const nav=async id=>{if(width<=900&&!['overview','transactions'].includes(id)){await page.locator('#mobile-nav [data-section=more]').click();await page.locator(`#more-nav [data-section=${id}]`).click();}else await page.locator(`${width<=900?'#mobile-nav':'#desktop-nav'} [data-section=${id}]`).click();};
+ await page.locator('#reminders-trigger').click();await page.locator('#rm-list .empty').waitFor();await page.screenshot({animations:'disabled',path:`${out}/reminders-${width}.png`});await page.keyboard.press('Escape');await page.locator('#rm-center').waitFor({state:'hidden'});
+ await page.locator('#account-trigger').click();await page.locator('#edit-profile').click();await page.locator('#profile-name').waitFor();assert.equal(await page.locator('#profile-name').inputValue(),account.name);await page.screenshot({animations:'disabled',path:`${out}/profile-${width}.png`});await page.keyboard.press('Escape');await page.locator('#profile-dialog').waitFor({state:'hidden'});
+ const nav=async id=>{if(width<=900&&!['overview','transactions'].includes(id)){await page.locator('#mobile-nav [data-section=more]').click();await page.locator(`#more-nav [data-section=${id}]`).click();}else await page.locator(`${width<=900?'#mobile-nav':'#desktop-nav'} [data-section=${id}]`).click();await page.waitForFunction(expected=>document.querySelector('#dashboard-view').dataset.section===expected,id);};
  await page.locator('#quick-income').click();assert.equal(await page.locator('#transaction-type').inputValue(),'receita');await page.locator('#cancel-dialog').click();
  await nav('transactions');await page.locator('#filter-form').waitFor({state:'visible'});
- await page.locator('#transaction-rows .danger').first().click();await page.locator('#confirm-dialog').waitFor({state:'visible'});assert.equal(await page.locator('#confirm-cancel').evaluate(el=>el===document.activeElement),true);await page.keyboard.press('Tab');assert.equal(await page.locator('#confirm-accept').evaluate(el=>el===document.activeElement),true);await page.keyboard.press('Escape');assert.equal(await page.locator('#confirm-dialog').isVisible(),false);
- await page.locator('#new-transaction').click();await page.screenshot({animations:'disabled',path:`${out}/form-${width}.png`});await page.keyboard.press('Escape');assert.equal(await page.locator('#transaction-dialog').isVisible(),false);
+ await page.locator('#transaction-rows .danger').first().click();await page.locator('#confirm-dialog').waitFor({state:'visible'});assert.equal(await page.locator('#confirm-cancel').evaluate(el=>el===document.activeElement),true);await page.keyboard.press('Tab');assert.equal(await page.locator('#confirm-accept').evaluate(el=>el===document.activeElement),true);await page.keyboard.press('Escape');await page.locator('#confirm-dialog').waitFor({state:'hidden'});assert.equal(await page.locator('#confirm-dialog').isVisible(),false);
+ await page.locator('#new-transaction').click();await page.screenshot({animations:'disabled',path:`${out}/form-${width}.png`});await page.keyboard.press('Escape');await page.locator('#transaction-dialog').waitFor({state:'hidden'});assert.equal(await page.locator('#transaction-dialog').isVisible(),false);
  await nav('income');await page.waitForFunction(()=>document.querySelector('#filter-type').value==='receita');await page.locator('#clear-filters').click();await page.waitForFunction(()=>!document.querySelector('#dashboard-view').hasAttribute('aria-busy'));assert.equal(await page.locator('#filter-type').inputValue(),'receita');
  await nav('categories');assert.equal(await page.locator('#category-panel').isVisible(),true);
  await nav('reports');assert.equal(await page.locator('#history-panel').isVisible(),true);

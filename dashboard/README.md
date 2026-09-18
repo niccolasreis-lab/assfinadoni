@@ -15,7 +15,7 @@ Esta versão usa contas individuais vinculadas a chats distintos do Telegram. A 
    - `SUPABASE_SERVICE_ROLE_KEY`: chave `service_role` desse projeto, como variável sensível.
    - `SESSION_SECRET`: segredo aleatório de pelo menos 32 caracteres, diferente da senha.
 
-3. Aplique as migrações em `supabase/migrations` e faça o deploy. Não há dependências npm externas.
+3. Aplique as migrações em `supabase/migrations` e faça o deploy. As dependências estão fixadas no lockfile.
 
 Cada conta possui uma carteira própria em `finance_users`. Usuários somente web podem ter `telegram_chat_id = null`; o vínculo futuro deve atualizar a mesma carteira por UUID, preservando os lançamentos, nunca criar um chat fictício. A migração multiusuário e o provisionamento vêm **antes** da nova API/interface. Depois disso, remova `TELEGRAM_CHAT_ID` e `DASHBOARD_PASSWORD`.
 
@@ -49,7 +49,7 @@ O botão “Instalar app” oferece instalação PWA (ou instruções para Safar
 
 O redesign mantém HTML/CSS/JavaScript e a ilha React de carregamento. `public/ui.js` reúne navegação e componentes visuais; `public/charts.js` contém apresentação e consultas históricas com cache exclusivamente em memória. O histórico usa seis resumos mensais da API existente; respostas obsoletas e resultados anteriores a alterações/logout são descartados. O saldo apresentado é o saldo do mês, não um saldo bancário acumulado.
 
-As seções Receitas e Despesas mantêm o tipo ao limpar filtros e trocar escopo. A visão geral mostra cinco lançamentos recentes, com acesso à lista completa. Configurações reúne vínculo Telegram, instalação, tutorial e saída. Metas e notificações permanecem fora desta versão.
+As seções Receitas e Despesas mantêm o tipo ao limpar filtros e trocar escopo. A visão geral mostra cinco lançamentos recentes, com acesso à lista completa. Configurações reúne vínculo Telegram, instalação, tutorial e saída. Metas permanecem fora desta versão; lembretes e notificações ficam na central acessível pelo sino.
 
 ### Link do assistente
 
@@ -61,4 +61,39 @@ Defina `telegramBotUrl` em `public/config.js` como `https://t.me/username_do_bot
 
 Com o conteúdo de `dist` servido localmente, execute `node scripts/verify-redesign.cjs` em um ambiente com Playwright disponível. Opcionalmente use `PLAYWRIGHT_MODULE`, `CHROMIUM_EXECUTABLE`, `QA_URL` e `QA_OUTPUT` para indicar o pacote, navegador, URL e diretório de capturas. O script intercepta as APIs somente no navegador de teste e usa dados sintéticos; os fixtures nunca são servidos pelo produto. Verifica 360, 768, 1024 e 1440 px, login, visibilidade de senha, navegação, confirmação, formulários, vazio, erro e saída. A validação local usa a CSP de `vercel.json`.
 
-Inter é hospedada em `public/fonts`, com licença OFL incluída. Ícones são SVGs locais. Nenhuma dependência de execução foi acrescentada. A documentação visual está em `../DESIGN.md`.
+Inter é hospedada em `public/fonts`, com licença OFL incluída. Ícones são SVGs locais. O frontend não acrescenta bibliotecas; o servidor utiliza `web-push` para Web Push. A documentação visual está em `../DESIGN.md`.
+
+
+## Perfil e movimento
+
+O menu do avatar permite editar nome e foto sincronizados na conta (`/api/profile`). Imagens JPEG/PNG/WebP são recortadas no navegador e enviadas como JPEG de 256 px; SVG não é aceito. O nome financeiro e o vínculo Telegram são preservados. O logotipo original permanece intacto, com enquadramento CSS e assinatura legível.
+
+Diálogos abrem em 220 ms e fecham em 150 ms. Cartões recebem borda em gradiente no hover e foco interno; somente ações usam cursor interativo. `prefers-reduced-motion` elimina deslocamentos. Teste adicional: `node scripts/verify-profile.cjs`.
+
+## Contas a pagar e pendências
+
+A central cria contas futuras e despesas para revisão, separadas dos totais até a confirmação. Editar, pagar/validar ou cancelar usa a mesma carteira no dashboard e Telegram. A conclusão é atômica e idempotente, gera uma única despesa e exige valor, categoria e data não futura. Os lembretes são privados da carteira e não são compartilhados automaticamente com os lançamentos.
+
+Padrão de contas: 9h de São Paulo, três dias antes, um dia antes e no vencimento; configurações por lembrete. Há um aviso único após o vencimento. Pendências recebem até três avisos diários. O scheduler verifica a cada cinco minutos; horários são aproximados. Notificações de tela bloqueada são genéricas, sem valores ou descrições. A consulta autenticada mostra os detalhes.
+
+No PWA, abra o sino e ative notificações neste dispositivo por ação explícita. É necessário HTTPS, navegador com Push API e permissão do sistema. Instalar o app não concede permissão automaticamente. Cada dispositivo se inscreve separadamente; sair remove sua inscrição. Nenhum dado financeiro é armazenado offline. Android físico requer teste de entrega no dispositivo do usuário; testes automatizados simulam permissão e assinatura.
+
+Comandos Telegram:
+
+- `/lembrete 25/09/2026 Internet | 120,00 | Moradia`
+- `/lembretes` ou `/pendencias`
+- `/pagar CODIGO`
+- `/validar CODIGO 42,50 | Alimentação`
+- `/cancelar CODIGO`
+
+O código é exibido na central e nas respostas. Mensagens interpretadas como despesas incompletas geram pendências; receitas ambíguas continuam exigindo esclarecimento. Contas futuras explícitas viram lembretes. A API privada resolve a carteira pelo chat privado cadastrado.
+
+### Operação das notificações
+
+Aplique a migração `finance_reminders` antes do deploy. Gere um par VAPID via `web-push.generateVAPIDKeys()` e um segredo aleatório de 32 bytes; insira uma única linha em `finance_notification_config` com `singleton=true`, `private_key`, `public_key`, `dispatch_secret` e `vapid_subject=https://assfinadoni.vercel.app`. Não rotacione as chaves existentes sem planejar reinscrição dos dispositivos. Essa tabela tem RLS e acesso somente de serviço. Nunca inclua seus valores em arquivos públicos, logs ou Git.
+
+`api/notification-dispatch` e `api/telegram-reminders` exigem `x-notification-secret`. O primeiro processa push e devolve entregas Telegram com lease; o scheduler revalida antes de enviar e confirma usando o mesmo lease. A fila deduplica ocorrências e limita tentativas. Entrega externa é de melhor esforço: uma falha entre envio e confirmação pode gerar repetição. Assinaturas expiradas são removidas.
+
+`scripts/configure-notifications-n8n.py` prepara, sem publicar, os dois workflows a partir de um backup autorizado do workflow ativo. A configuração usa a credencial Supabase já existente e lê somente `dispatch_secret`. Os workflows desabilitam armazenamento de dados de execução para não persistir segredos. Exports preparados e backups ficam fora do repositório. Publique o backend antes de atualizar/ativar os workflows e confira as conexões e credenciais após a publicação.
+
+Testes: `node scripts/verify-reminders.cjs` cobre fluxos e permissões no navegador com fixtures. `FINANCE_SQL_TEST_MODULE=/caminho/@electric-sql/pglite/dist/index.js node --test tests/reminders-sql.test.js` executa a migração e valida isolamento, idempotência e agendamento em PostgreSQL isolado; sem o módulo esse teste é explicitamente pulado. O módulo de teste é opcional e não faz parte das dependências de produção.

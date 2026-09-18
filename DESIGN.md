@@ -110,3 +110,12 @@ Controles compactos, painéis arredondados e avatar circular. O logotipo é exib
 - Não reutilize assets ou identidade Frentix.
 - Não adicione metas ou notificações fictícias.
 - Não use páginas parciais para calcular totais mensais.
+
+
+## Perfil, movimento e lembretes
+
+O avatar abre um menu ancorado com nome, foto e acesso à edição sincronizada. O editor prioriza prévia, recorte simples e nome; a assinatura informa que as alterações acompanham a conta. A marca preserva o arquivo original e usa enquadramento CSS com texto legível separado.
+
+Entradas de seção e diálogos duram 220 ms; saídas, 150 ms. Uma borda violeta em gradiente aparece no hover/foco dos módulos sem deslocar layout. Áreas informativas não recebem cursor de ação. Movimento reduzido mantém estados e foco sem deslocamentos.
+
+O sino dá acesso a contas a pagar e pendências. A central diferencia consulta indisponível, lista vazia, concluído e cancelado. Formulários mostram a preferência de canal, antecedência e horário em São Paulo. Os avisos externos são discretos; somente a interface autenticada revela detalhes. Contas futuras não integram os totais antes da confirmação.
