@@ -6,15 +6,17 @@
   <meta name="theme-color" content="#162a26">
   <title>Assistente de Finanças · Nicolas &amp; Ionara</title>
   <link rel="stylesheet" href="/styles.css">
+  <link rel="stylesheet" href="/react.css">
   <link rel="manifest" href="/manifest.webmanifest">
   <link rel="apple-touch-icon" href="/icons/icon-192.png">
   <meta name="apple-mobile-web-app-capable" content="yes">
   <script type="module" src="/app.js"></script>
   <script type="module" src="/pwa.js"></script>
+  <script type="module" src="/loading-island.js"></script>
 </head>
 <body>
   <main>
-    <p id="initial-status" class="initial-status" role="status">Preparando seu financeiro...</p>
+    <div id="initial-status" class="initial-status" role="status">Preparando seu financeiro...</div>
     <section id="login-view" class="login-shell" hidden>
       <div class="login-card">
         <div id="login-brand" class="login-brand"><img class="brand-logo login-logo" src="/logo.png" width="1536" height="1024" alt="Assistente de Finanças — Nicolas e Ionara"></div>

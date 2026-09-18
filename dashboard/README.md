@@ -31,6 +31,10 @@ Para gerar `SESSION_SECRET` localmente, use `openssl rand -base64 48`. Não salv
 
 ## Desenvolvimento e testes
 
+A interface mantém o dashboard original e acrescenta uma ilha React/TypeScript no carregamento inicial. Componentes reutilizáveis ficam em `components/ui`, resolvidos por `@/components/ui` e pelo `components.json` do shadcn; essa convenção evita importações divergentes em novos componentes. Os estilos Tailwind ficam em `styles/react.css`, sem Preflight para não modificar formulários e tabelas existentes. O ShiningText usa apenas a prop `text`, sem provider/estado global ou imagens adicionais.
+
+Use `pnpm install --frozen-lockfile`, `pnpm run build` e `pnpm test`. O build gera `dist` com os arquivos públicos e JS/CSS locais; as APIs Vercel permanecem em `api`. Para adicionar componentes, use o CLI shadcn com a configuração existente. O brilho usa Motion, para quando o carregamento termina e respeita movimento reduzido.
+
 Use `npm test` (ou `node --test`) dentro desta pasta. Para testar a UI com funções Vercel localmente, configure as variáveis e execute `vercel dev`. Nunca use dados reais em um Preview público sem proteção por senha forte.
 
 ## Limites conhecidos
