@@ -1,133 +1,93 @@
-import { randomBytes } from 'node:crypto';
-import { authenticated, calendarDate, CATEGORIES, currentUser, localDate, monthBounds, readBody, sameOrigin, send, supabase, uuid, validatedTransaction } from '../lib/server.js';
+import { calendarDate, CATEGORIES, localDate, monthBounds, publicAccount, readBody, requireAccount, rpc, sameOrigin, send, uuid, validatedTransaction } from '../lib/server.js';
 
-const fields = 'id,transaction_type,amount,category,description,transaction_date,created_at,deleted_at';
 const pageSize = 50;
-const restoreWindowMs = 30 * 24 * 60 * 60 * 1000;
 
 function queryValue(value, name) {
   if (Array.isArray(value) || (value !== undefined && typeof value !== 'string')) throw new Error(`${name} inválido.`);
   return value;
 }
 
-function listOptions(query, month, userId) {
+function listOptions(query) {
   const view = queryValue(query.view, 'Visão') || 'active';
   if (!['active', 'trash'].includes(view)) throw new Error('Visão inválida.');
+  const scope = queryValue(query.scope, 'Escopo') || 'mine';
+  if (!['mine', 'shared', 'all'].includes(scope)) throw new Error('Escopo inválido.');
   const rawPage = queryValue(query.page, 'Página') || '1';
   if (!/^[1-9]\d{0,3}$/.test(rawPage)) throw new Error('Página inválida.');
-  const page = Number(rawPage);
-  const params = new URLSearchParams({ select: fields, user_id: `eq.${userId}` });
-  if (view === 'trash') {
-    params.set('deleted_at', `gte.${new Date(Date.now() - restoreWindowMs).toISOString()}`);
-    params.set('order', 'deleted_at.desc,id.desc');
-  } else {
-    params.set('deleted_at', 'is.null');
-    const q = (queryValue(query.q, 'Busca') || '').trim();
-    if (q.length > 120) throw new Error('Busca inválida.');
-    if (q) {
-      const escaped = q.replace(/[\\"%_*]/g, '\\$&');
-      params.set('description', `ilike.%${escaped}%`);
-    }
-    const category = queryValue(query.category, 'Categoria') || '';
-    if (category) {
-      if (!CATEGORIES.includes(category)) throw new Error('Categoria inválida.');
-      params.set('category', `eq.${category}`);
-    }
-    const type = queryValue(query.type, 'Tipo') || '';
-    if (type) {
-      if (!['receita', 'despesa'].includes(type)) throw new Error('Tipo inválido.');
-      params.set('transaction_type', `eq.${type}`);
-    }
-    const from = queryValue(query.date_from, 'Data inicial') || '';
-    const to = queryValue(query.date_to, 'Data final') || '';
-    if ((from && !calendarDate(from)) || (to && !calendarDate(to)) || (from && to && from > to)) throw new Error('Intervalo de datas inválido.');
-    if (from || to) {
-      if (from) params.append('transaction_date', `gte.${from}`);
-      if (to) params.append('transaction_date', `lte.${to}`);
-    } else {
-      const [start, next] = monthBounds(month);
-      params.append('transaction_date', `gte.${start}`);
-      params.append('transaction_date', `lt.${next}`);
-    }
-    params.set('order', 'transaction_date.desc,created_at.desc,id.desc');
-  }
-  params.set('limit', String(pageSize + 1));
-  params.set('offset', String((page - 1) * pageSize));
-  return { view, page, params };
-}
-
-async function monthlySummary(month, userId) {
-  const [start, next] = monthBounds(month);
-  const params = new URLSearchParams({ select: 'transaction_type,amount,category', user_id: `eq.${userId}`, deleted_at: 'is.null', order: 'id.asc' });
-  params.append('transaction_date', `gte.${start}`);
-  params.append('transaction_date', `lt.${next}`);
-  let income = 0;
-  let expense = 0;
-  const byCategory = {};
-  for (let offset = 0; offset < 100000; offset += 1000) {
-    params.set('limit', '1000');
-    params.set('offset', String(offset));
-    const rows = await supabase(`finance_transactions?${params}`);
-    if (!Array.isArray(rows)) throw new Error('Resposta inesperada do banco de dados.');
-    for (const row of rows) {
-      const amount = Number(row.amount);
-      if (!Number.isFinite(amount)) throw new Error('Valor inválido recebido do banco de dados.');
-      if (row.transaction_type === 'receita') income += amount;
-      else if (row.transaction_type === 'despesa') {
-        expense += amount;
-        byCategory[row.category] = (byCategory[row.category] || 0) + amount;
-      }
-    }
-    if (rows.length < 1000) return { income, expense, balance: income - expense, byCategory };
-  }
-  throw new Error('Muitos lançamentos neste mês.');
+  const q = (queryValue(query.q, 'Busca') || '').trim();
+  if (q.length > 120) throw new Error('Busca inválida.');
+  const category = queryValue(query.category, 'Categoria') || '';
+  if (category && !CATEGORIES.includes(category)) throw new Error('Categoria inválida.');
+  const type = queryValue(query.type, 'Tipo') || '';
+  if (type && !['receita', 'despesa'].includes(type)) throw new Error('Tipo inválido.');
+  const from = queryValue(query.date_from, 'Data inicial') || '';
+  const to = queryValue(query.date_to, 'Data final') || '';
+  if ((from && !calendarDate(from)) || (to && !calendarDate(to)) || (from && to && from > to)) throw new Error('Intervalo de datas inválido.');
+  const includeShared = (queryValue(query.include_shared_summary, 'Resumo compartilhado') || 'false') === 'true';
+  if (!['true', 'false', undefined].includes(query.include_shared_summary)) throw new Error('Resumo compartilhado inválido.');
+  return { view, scope, page: Number(rawPage), q, category, type, from, to, includeShared };
 }
 
 export default async function handler(req, res) {
   try {
-    if (!authenticated(req)) return send(res, 401, { error: 'Faça login para continuar.' });
+    const account = await requireAccount(req);
+    if (!account) return send(res, 401, { error: 'Faça login para continuar.' });
     if (!['GET', 'POST', 'PATCH', 'DELETE'].includes(req.method)) return send(res, 405, { error: 'Método não permitido.' });
     if (req.method !== 'GET' && !sameOrigin(req)) return send(res, 403, { error: 'Origem não autorizada.' });
-    const user = await currentUser();
     if (req.method === 'GET') {
       const month = String(req.query?.month || localDate().slice(0, 7));
-      monthBounds(month);
-      const { view, page, params } = listOptions(req.query || {}, month, user.id);
-      const rows = await supabase(`finance_transactions?${params}`);
-      if (!Array.isArray(rows)) throw new Error('Resposta inesperada do banco de dados.');
-      const summary = await monthlySummary(month, user.id);
-      return send(res, 200, { month, user: { name: user.name }, transactions: rows.slice(0, pageSize),
-        pagination: { page, pageSize, hasMore: rows.length > pageSize }, summary });
+      const [monthStart, monthEnd] = monthBounds(month);
+      const options = listOptions(req.query || {});
+      let from = options.from || null;
+      let to = options.to || null;
+      if (options.view === 'active' && !from && !to) {
+        from = monthStart;
+        const end = new Date(`${monthEnd}T00:00:00Z`);
+        end.setUTCDate(end.getUTCDate() - 1);
+        to = end.toISOString().slice(0, 10);
+      }
+      const result = await rpc('finance_dashboard_list_transactions', {
+        p_account_id: account.id, p_scope: options.scope, p_view: options.view, p_search: options.q || null,
+        p_category: options.category || null, p_type: options.type || null, p_date_from: from, p_date_to: to,
+        p_page: options.page, p_page_size: pageSize,
+      });
+      const summary = await rpc('finance_dashboard_monthly_summary', {
+        p_account_id: account.id, p_month_start: monthStart, p_month_end: monthEnd, p_include_shared: options.includeShared,
+      });
+      const transactions = Array.isArray(result?.transactions) ? result.transactions : [];
+      return send(res, 200, { month, user: { name: account.name, username: account.username }, account: publicAccount(account),
+        scope: options.scope, include_shared_summary: options.includeShared, transactions,
+        pagination: { page: options.page, pageSize, hasMore: Boolean(result?.has_more) },
+        summary: summary || { income: 0, expense: 0, balance: 0, byCategory: {} } });
     }
     const body = readBody(req);
     if (req.method === 'POST') {
       const values = validatedTransaction(body);
-      for (let attempt = 0; attempt < 3; attempt++) {
-        const messageId = -(1000000000000 + randomBytes(6).readUIntBE(0, 6));
-        try {
-          const created = await supabase('finance_transactions', { method: 'POST', body: { ...values, user_id: user.id, telegram_message_id: messageId } });
-          return send(res, 201, { transaction: created[0] });
-        } catch (error) { if (error.code !== '23505' || attempt === 2) throw error; }
-      }
+      const created = await rpc('finance_dashboard_create_transaction', { p_account_id: account.id, p_transaction_type: values.transaction_type,
+        p_amount: values.amount, p_category: values.category, p_description: values.description, p_transaction_date: values.transaction_date });
+      if (!created) throw new Error('Não foi possível criar o lançamento.');
+      return send(res, 201, { transaction: created });
     }
     const id = uuid(body.id);
-    const filter = `finance_transactions?id=eq.${id}&user_id=eq.${encodeURIComponent(user.id)}&select=${fields}`;
     if (req.method === 'PATCH') {
       if (body.action === 'restore') {
-        const cutoff = new Date(Date.now() - restoreWindowMs).toISOString();
-        const restored = await supabase(`${filter}&deleted_at=gte.${encodeURIComponent(cutoff)}`, { method: 'PATCH', body: { deleted_at: null } });
-        if (!restored?.length) return send(res, 404, { error: 'Lançamento não encontrado ou prazo de restauração encerrado.' });
-        return send(res, 200, { transaction: restored[0] });
+        const restored = await rpc('finance_dashboard_restore_transaction', { p_account_id: account.id, p_transaction_id: id });
+        if (!restored) return send(res, 404, { error: 'Lançamento não encontrado ou prazo de restauração encerrado.' });
+        return send(res, 200, { transaction: restored });
       }
-      const updated = await supabase(`${filter}&deleted_at=is.null`, { method: 'PATCH', body: validatedTransaction(body) });
-      if (!updated?.length) return send(res, 404, { error: 'Lançamento não encontrado.' });
-      return send(res, 200, { transaction: updated[0] });
+      const values = validatedTransaction(body);
+      const updated = await rpc('finance_dashboard_update_transaction', { p_account_id: account.id, p_transaction_id: id,
+        p_transaction_type: values.transaction_type, p_amount: values.amount, p_category: values.category,
+        p_description: values.description, p_transaction_date: values.transaction_date });
+      if (!updated) return send(res, 404, { error: 'Lançamento não encontrado.' });
+      return send(res, 200, { transaction: updated });
     }
-    const deleted = await supabase(`${filter}&deleted_at=is.null`, { method: 'PATCH', body: { deleted_at: new Date().toISOString() } });
-    if (!deleted?.length) return send(res, 404, { error: 'Lançamento não encontrado.' });
-    return send(res, 200, { deleted: true, transaction: deleted[0] });
+    const deleted = await rpc('finance_dashboard_delete_transaction', { p_account_id: account.id, p_transaction_id: id });
+    if (!deleted) return send(res, 404, { error: 'Lançamento não encontrado.' });
+    return send(res, 200, { deleted: true, transaction: deleted });
   } catch (error) {
-    const status = error.status === 403 ? 403 : /inválid|Informe|Selecione|Descreva|Mês|Visão|Página|Busca|Categoria|Tipo|Intervalo|Envie JSON|Dados inválidos/.test(error.message) ? 400 : 500;
-    return send(res, status, { error: status === 500 ? 'Não consegui concluir a operação. Tente novamente.' : error.message });
+    const validation = /inválid|Informe|Selecione|Descreva|Mês|Visão|Escopo|Página|Busca|Categoria|Tipo|Intervalo|Resumo|Envie JSON|Dados inválidos/.test(error.message);
+    return send(res, error.status === 403 ? 403 : validation ? 400 : 500,
+      { error: validation ? error.message : 'Não consegui concluir a operação. Tente novamente.' });
   }
 }

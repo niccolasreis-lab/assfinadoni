@@ -1,8 +1,13 @@
-import { createHmac, randomBytes, timingSafeEqual } from 'node:crypto';
+import { createHmac, randomBytes, scrypt as cryptoScrypt, timingSafeEqual } from 'node:crypto';
+import { promisify } from 'node:util';
 
 export const CATEGORIES = ['Alimentação', 'Transporte', 'Moradia', 'Saúde', 'Educação', 'Lazer', 'Assinaturas', 'Outros'];
 const COOKIE = 'finance_session';
 const MAX_AGE = 60 * 60 * 24 * 7;
+const scrypt = promisify(cryptoScrypt);
+const SCRYPT_KEY_LENGTH = 64;
+const SCRYPT_OPTIONS = { N: 16384, r: 8, p: 1, maxmem: 32 * 1024 * 1024 };
+const DUMMY_PASSWORD_HASH = 'scrypt$16384$8$1$28a6e8a0e641aa622d786051c6c30bbf$542e62a959108f320c986abb634d3408770442aaec5213592d90e0c91f77219d8b447c777811536798e77a2a90a06850393f68a1faece72e239161099b5a1883';
 
 export function send(res, status, data) {
   res.setHeader('Cache-Control', 'no-store');
@@ -42,15 +47,36 @@ function equal(a, b) {
   return left.length === right.length && timingSafeEqual(left, right);
 }
 
-export function passwordMatches(value) {
-  const expected = process.env.DASHBOARD_PASSWORD;
-  if (!expected || expected.length < 12) throw new Error('DASHBOARD_PASSWORD não configurada.');
-  return equal(createHmac('sha256', secret()).update(String(value)).digest('hex'),
-    createHmac('sha256', secret()).update(expected).digest('hex'));
+export function normalizeUsername(value) {
+  const username = String(value || '').trim().toLowerCase();
+  if (!/^[a-z0-9_]{3,40}$/.test(username)) throw new Error('Credenciais inválidas.');
+  return username;
 }
 
-export function setSession(res) {
-  const payload = Buffer.from(JSON.stringify({ exp: Date.now() + MAX_AGE * 1000, nonce: randomBytes(8).toString('hex') })).toString('base64url');
+export async function hashPassword(password) {
+  const value = String(password || '');
+  if (!value) throw new Error('Senha obrigatória.');
+  const salt = randomBytes(16).toString('hex');
+  const derived = await scrypt(value, salt, SCRYPT_KEY_LENGTH, SCRYPT_OPTIONS);
+  return `scrypt$${SCRYPT_OPTIONS.N}$${SCRYPT_OPTIONS.r}$${SCRYPT_OPTIONS.p}$${salt}$${derived.toString('hex')}`;
+}
+
+export async function verifyPassword(password, encoded = DUMMY_PASSWORD_HASH) {
+  try {
+    const [algorithm, rawN, rawR, rawP, salt, expected] = String(encoded).split('$');
+    if (algorithm !== 'scrypt' || !/^\d+$/.test(rawN) || !/^\d+$/.test(rawR) || !/^\d+$/.test(rawP)
+      || !/^[0-9a-f]{32}$/i.test(salt) || !/^[0-9a-f]{128}$/i.test(expected)) return false;
+    const options = { N: Number(rawN), r: Number(rawR), p: Number(rawP), maxmem: 32 * 1024 * 1024 };
+    if (options.N !== SCRYPT_OPTIONS.N || options.r !== SCRYPT_OPTIONS.r || options.p !== SCRYPT_OPTIONS.p) return false;
+    const actual = await scrypt(String(password || ''), salt, SCRYPT_KEY_LENGTH, options);
+    return timingSafeEqual(actual, Buffer.from(expected, 'hex'));
+  } catch { return false; }
+}
+
+export function setSession(res, account) {
+  if (!account?.id || !Number.isInteger(Number(account.session_version))) throw new Error('Conta inválida para sessão.');
+  const payload = Buffer.from(JSON.stringify({ aid: account.id, v: Number(account.session_version), exp: Date.now() + MAX_AGE * 1000,
+    nonce: randomBytes(8).toString('hex') })).toString('base64url');
   res.setHeader('Set-Cookie', `${COOKIE}=${payload}.${sign(payload)}; Path=/; Max-Age=${MAX_AGE}; HttpOnly; Secure; SameSite=Strict`);
 }
 
@@ -58,34 +84,54 @@ export function clearSession(res) {
   res.setHeader('Set-Cookie', `${COOKIE}=; Path=/; Max-Age=0; HttpOnly; Secure; SameSite=Strict`);
 }
 
-export function authenticated(req) {
-  const raw = String(req.headers.cookie || '').split(';').map((p) => p.trim()).find((p) => p.startsWith(`${COOKIE}=`));
-  if (!raw) return false;
+export function readSession(req) {
+  const raw = String(req.headers.cookie || '').split(';').map((part) => part.trim()).find((part) => part.startsWith(`${COOKIE}=`));
+  if (!raw) return null;
   const [payload, signature] = raw.slice(COOKIE.length + 1).split('.');
-  if (!payload || !signature || !equal(sign(payload), signature)) return false;
-  try { return Number(JSON.parse(Buffer.from(payload, 'base64url').toString()).exp) > Date.now(); }
-  catch { return false; }
+  if (!payload || !signature || !equal(sign(payload), signature)) return null;
+  try {
+    const session = JSON.parse(Buffer.from(payload, 'base64url').toString());
+    if (!uuidOrNull(session.aid) || !Number.isInteger(session.v) || !Number.isFinite(session.exp) || session.exp <= Date.now()) return null;
+    return session;
+  } catch { return null; }
+}
+
+export async function authenticated(req) {
+  const session = readSession(req);
+  if (!session) return null;
+  const params = new URLSearchParams({ select: 'id,username,display_name,finance_user_id,session_version,active,finance_users(name,telegram_chat_id)', id: `eq.${session.aid}`, active: 'eq.true', limit: '1' });
+  const rows = await supabase(`dashboard_accounts?${params}`);
+  if (!Array.isArray(rows) || rows.length !== 1 || rows[0].active !== true || Number(rows[0].session_version) !== session.v) return null;
+  const row = rows[0];
+  return { id: row.id, username: row.username, display_name: row.display_name, finance_user_id: row.finance_user_id,
+    session_version: Number(row.session_version), telegram_linked: row.finance_users?.telegram_chat_id != null, name: row.finance_users?.name || row.display_name || row.username };
+}
+
+export async function requireAccount(req) { return authenticated(req); }
+
+export function publicAccount(account) {
+  return { id: account.id, username: account.username, name: account.name || account.display_name || account.username, telegram_linked: Boolean(account.telegram_linked) };
 }
 
 export function localDate() {
   const parts = Object.fromEntries(new Intl.DateTimeFormat('en-US', {
     timeZone: 'America/Sao_Paulo', year: 'numeric', month: '2-digit', day: '2-digit',
-  }).formatToParts(new Date()).map((p) => [p.type, p.value]));
+  }).formatToParts(new Date()).map((part) => [part.type, part.value]));
   return `${parts.year}-${parts.month}-${parts.day}`;
 }
 
 export function validDate(value) {
   if (typeof value !== 'string' || !/^\d{4}-\d{2}-\d{2}$/.test(value)) return false;
-  const [y, m, d] = value.split('-').map(Number);
-  const date = new Date(Date.UTC(y, m - 1, d));
-  return date.getUTCFullYear() === y && date.getUTCMonth() === m - 1 && date.getUTCDate() === d && value <= localDate();
+  const [year, month, day] = value.split('-').map(Number);
+  const date = new Date(Date.UTC(year, month - 1, day));
+  return date.getUTCFullYear() === year && date.getUTCMonth() === month - 1 && date.getUTCDate() === day && value <= localDate();
 }
 
 export function calendarDate(value) {
   if (typeof value !== 'string' || !/^\d{4}-\d{2}-\d{2}$/.test(value)) return false;
-  const [y, m, d] = value.split('-').map(Number);
-  const date = new Date(Date.UTC(y, m - 1, d));
-  return date.getUTCFullYear() === y && date.getUTCMonth() === m - 1 && date.getUTCDate() === d;
+  const [year, month, day] = value.split('-').map(Number);
+  const date = new Date(Date.UTC(year, month - 1, day));
+  return date.getUTCFullYear() === year && date.getUTCMonth() === month - 1 && date.getUTCDate() === day;
 }
 
 export function validatedTransaction(input) {
@@ -105,21 +151,19 @@ export function validatedTransaction(input) {
 function config() {
   const url = String(process.env.SUPABASE_URL || '').replace(/\/$/, '');
   const key = process.env.SUPABASE_SERVICE_ROLE_KEY;
-  const chatId = String(process.env.TELEGRAM_CHAT_ID || '');
-  if (!/^https:\/\/[a-z0-9-]+\.supabase\.co$/.test(url) || !key || !/^-?\d{1,20}$/.test(chatId)) throw new Error('Configuração do Supabase ou Telegram incompleta.');
-  return { url, key, chatId };
+  if (!/^https:\/\/[a-z0-9-]+\.supabase\.co$/.test(url) || !key) throw new Error('Configuração do Supabase incompleta.');
+  return { url, key };
 }
 
 export async function supabase(path, options = {}) {
   const { url, key } = config();
   const response = await fetch(`${url}/rest/v1/${path}`, {
     method: options.method || 'GET',
-    headers: { apikey: key, Authorization: `Bearer ${key}`, 'Content-Type': 'application/json',
-      Prefer: options.prefer || 'return=representation' },
+    headers: { apikey: key, Authorization: `Bearer ${key}`, 'Content-Type': 'application/json', Prefer: options.prefer || 'return=representation' },
     body: options.body === undefined ? undefined : JSON.stringify(options.body),
     cache: 'no-store',
   });
-  const value = await response.json().catch(() => null);
+  const value = response.status === 204 ? null : await response.json().catch(() => null);
   if (!response.ok) {
     const error = new Error('Falha ao consultar o banco de dados.');
     error.status = response.status;
@@ -129,12 +173,7 @@ export async function supabase(path, options = {}) {
   return value;
 }
 
-export async function currentUser() {
-  const { chatId } = config();
-  const rows = await supabase(`finance_users?select=id,name&telegram_chat_id=eq.${encodeURIComponent(chatId)}&limit=1`);
-  if (!Array.isArray(rows) || rows.length !== 1) throw new Error('Usuário do Telegram não encontrado no Supabase.');
-  return rows[0];
-}
+export async function rpc(name, body) { return supabase(`rpc/${name}`, { method: 'POST', body }); }
 
 export function monthBounds(month) {
   if (!/^\d{4}-(0[1-9]|1[0-2])$/.test(month)) throw new Error('Mês inválido.');
@@ -143,7 +182,12 @@ export function monthBounds(month) {
   return [`${month}-01`, next];
 }
 
+function uuidOrNull(value) {
+  return /^[0-9a-f]{8}-[0-9a-f]{4}-[1-8][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(String(value || '')) ? String(value) : null;
+}
+
 export function uuid(value) {
-  if (!/^[0-9a-f]{8}-[0-9a-f]{4}-[1-8][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(String(value || ''))) throw new Error('Lançamento inválido.');
-  return value;
+  const parsed = uuidOrNull(value);
+  if (!parsed) throw new Error('Lançamento inválido.');
+  return parsed;
 }

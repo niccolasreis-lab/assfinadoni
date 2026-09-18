@@ -4,7 +4,7 @@ Dashboard simples para Vercel, ligado às tabelas `finance_users` e `finance_tra
 
 ## Segurança e escopo
 
-Esta versão é **para um único chat do Telegram**. Uma senha protege a sessão; o servidor fixa `TELEGRAM_CHAT_ID` e filtra toda leitura, edição, exclusão e restauração pelo `user_id` correspondente. A chave `service role` fica somente nas variáveis do servidor. Não use a chave em arquivos públicos nem em variáveis `NEXT_PUBLIC_*`. Excluir move o lançamento para a lixeira por 30 dias e exige confirmação na interface.
+Esta versão usa contas individuais vinculadas a chats distintos do Telegram. A sessão assinada identifica a conta e é revalidada a cada requisição. Os RPCs autorizam acesso próprio ou compartilhado, incluindo edição, exclusão e restauração. A chave `service role` fica somente no servidor; nunca use variáveis `NEXT_PUBLIC_*`. Excluir move o lançamento para a lixeira por 30 dias.
 
 ## Configurar na Vercel
 
@@ -13,13 +13,19 @@ Esta versão é **para um único chat do Telegram**. Uma senha protege a sessão
 
    - `SUPABASE_URL`: URL HTTPS do projeto Supabase usado no n8n.
    - `SUPABASE_SERVICE_ROLE_KEY`: chave `service_role` desse projeto, como variável sensível.
-   - `TELEGRAM_CHAT_ID`: ID numérico do chat privado que é dono dos lançamentos.
-   - `DASHBOARD_PASSWORD`: senha forte de pelo menos 12 caracteres.
    - `SESSION_SECRET`: segredo aleatório de pelo menos 32 caracteres, diferente da senha.
 
 3. Aplique as migrações em `supabase/migrations` e faça o deploy. Não há dependências npm externas.
 
-O usuário precisa ter concluído o onboarding no Telegram antes de acessar o dashboard, pois o app localiza a linha existente em `finance_users`.
+Cada conta possui uma carteira própria em `finance_users`. Usuários somente web podem ter `telegram_chat_id = null`; o vínculo futuro deve atualizar a mesma carteira por UUID, preservando os lançamentos, nunca criar um chat fictício. A migração multiusuário e o provisionamento vêm **antes** da nova API/interface. Depois disso, remova `TELEGRAM_CHAT_ID` e `DASHBOARD_PASSWORD`.
+
+## Provisionar as duas contas
+
+Use `node scripts/provision-accounts.js` uma vez, com `SUPABASE_URL`, `SUPABASE_SERVICE_ROLE_KEY`, `IONARA_TELEGRAM_CHAT_ID` e `NICOLAS_TELEGRAM_CHAT_ID` no ambiente privado. Informe a senha pela entrada padrão; não passe senha em argumentos ou comandos que a gravem no histórico. O script valida ambos os vínculos antes de inserir, gera salts/hash scrypt individuais e recusa contas existentes ou conflitantes. Não imprima segredos nem salve arquivos de credenciais no projeto.
+
+Para uma conta sem Telegram, forneça `IONARA_FINANCE_USER_ID` ou `NICOLAS_FINANCE_USER_ID` no lugar do chat, referindo-se à carteira web já criada. Usernames: `ionararosendo` e `nicolasreis`. Não há cadastro público. Cinco falhas em 15 minutos bloqueiam temporariamente a conta; a senha curta e igual nas duas contas continua sendo um risco, mesmo com hash e bloqueio.
+
+Compartilhamento é individual e opcional. O destinatário pode editar, excluir, restaurar e cancelar acesso. Totais próprios são padrão; incluir compartilhados é uma escolha explícita. Lixeira e limpeza continuam excluindo os itens dos resumos do bot, sem alterar o proprietário nem a deduplicação do Telegram.
 
 Para gerar `SESSION_SECRET` localmente, use `openssl rand -base64 48`. Não salve a saída no repositório.
 
@@ -29,6 +35,8 @@ Use `npm test` (ou `node --test`) dentro desta pasta. Para testar a UI com funç
 
 ## Limites conhecidos
 
-- Não há cadastro multiusuário. Para expandir, será preciso autenticação individual e associação segura entre contas web e chats Telegram.
+O botão “Instalar app” oferece instalação PWA (ou instruções para Safari/iPhone). A tela offline não contém dados: somente a página pública offline e os ícones são cacheados. Login, consultas e alterações exigem internet. O guia “Como usar” aparece no primeiro acesso de cada conta neste dispositivo e pode ser reaberto.
+
+- Não há cadastro público nem recuperação de senha pela interface. Provisionamento e redefinição são administrativos.
 - O dashboard não faz leitura de PDFs, imagens ou áudios; isso ocorre pelo bot.
 - A lixeira guarda lançamentos por 30 dias; depois disso, a limpeza agendada os remove e mantém apenas a chave técnica de deduplicação do update do Telegram.

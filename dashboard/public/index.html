@@ -6,7 +6,11 @@
   <meta name="theme-color" content="#162a26">
   <title>Financeiro do Ni</title>
   <link rel="stylesheet" href="/styles.css">
+  <link rel="manifest" href="/manifest.webmanifest">
+  <link rel="apple-touch-icon" href="/icons/icon-192.png">
+  <meta name="apple-mobile-web-app-capable" content="yes">
   <script type="module" src="/app.js"></script>
+  <script type="module" src="/pwa.js"></script>
 </head>
 <body>
   <main>
@@ -15,10 +19,12 @@
       <div class="login-card">
         <div class="brand-mark">ni<span>.</span></div>
         <h1>Seu financeiro em um só lugar.</h1>
-        <p class="muted">Acompanhe e organize os lançamentos do seu assistente no Telegram.</p>
+        <p class="muted">Organize suas receitas e despesas, aqui ou pelo assistente no Telegram.</p>
         <form id="login-form">
+          <label for="username">Usuário</label>
+          <input id="username" name="username" type="text" autocomplete="username" autocapitalize="none" spellcheck="false" required maxlength="64" placeholder="Digite seu usuário">
           <label for="password">Senha de acesso</label>
-          <input id="password" type="password" autocomplete="current-password" required minlength="12" placeholder="Digite sua senha">
+          <input id="password" name="password" type="password" autocomplete="current-password" required placeholder="Digite sua senha">
           <button class="button primary full" type="submit">Entrar</button>
         </form>
         <p id="login-error" class="message error" role="alert" hidden></p>
@@ -29,16 +35,30 @@
       <header class="topbar">
         <div class="topbar-inner">
           <div class="brand"><div class="brand-mark small">ni<span>.</span></div><span>Financeiro</span></div>
-          <div class="top-actions"><span id="user-name" class="muted"></span><button id="logout" class="button ghost" type="button">Sair</button></div>
+          <div class="top-actions"><div class="account-identity"><strong id="user-name">Minha conta</strong><span id="user-username" class="muted"></span></div><button id="logout" class="button ghost" type="button">Sair</button></div>
         </div>
       </header>
       <div class="content">
         <div class="heading-row">
-          <div><h1>Seu mês, sem complicação.</h1><p class="muted">Os dados aqui são os mesmos registrados pelo bot.</p></div>
+          <div><h1 id="welcome-title">Seu mês, sem complicação.</h1><p id="welcome-copy" class="muted">Organize seus lançamentos e compartilhe só o que escolher.</p></div>
           <div class="heading-actions"><label class="month-label" for="month">Mês</label><input id="month" type="month"><button id="new-transaction" class="button primary" type="button">+ Novo lançamento</button></div>
         </div>
+        <div class="help-row"><p id="telegram-status" class="muted"></p><button id="install-app" class="button subtle" type="button">Instalar app</button><button id="open-tutorial" class="button subtle" type="button" aria-controls="tutorial-guide" aria-expanded="false">Como usar</button></div>
+        <section id="tutorial-guide" class="tutorial-guide" aria-labelledby="tutorial-title" hidden>
+          <div class="tutorial-heading"><div><h2 id="tutorial-title" tabindex="-1">Seu financeiro, passo a passo</h2><p class="muted">Um guia rápido. Você pode fechar e consultar novamente em “Como usar”.</p></div><button id="close-tutorial" class="button ghost" type="button">Fechar guia</button></div>
+          <dl class="tutorial-steps">
+            <div><dt>Adicionar receita ou despesa</dt><dd>Use “Novo lançamento”, escolha o tipo, informe valor, categoria, descrição e data. O registro fica privado por padrão.</dd></div>
+            <div><dt>Corrigir um registro</dt><dd>Toque em “Editar” na lista e salve as alterações. Em lançamentos compartilhados, a mudança vale para as duas contas.</dd></div>
+            <div><dt>Excluir e recuperar</dt><dd>“Excluir” move o lançamento para a “Lixeira” e retira o valor dos totais. Use “Restaurar” em até 30 dias; depois desse prazo, a remoção é definitiva.</dd></div>
+            <div><dt>Compartilhar com a outra pessoa</dt><dd>Use “Compartilhar” no registro desejado. A outra pessoa poderá visualizar, editar, excluir e restaurar. “Parar de compartilhar” encerra o acesso.</dd></div>
+            <div><dt>Encontrar seus lançamentos</dt><dd>Alterne entre “Minhas”, “Compartilhadas comigo” e “Todas”. Busque uma descrição ou combine categoria, tipo e datas; “Limpar filtros” volta ao mês selecionado.</dd></div>
+            <div><dt>Entender os totais</dt><dd>Os cartões e categorias mostram o mês escolhido, mesmo ao filtrar a lista. Por padrão, contam só seus registros. Ative “Incluir compartilhados nos totais” para somar os recebidos.</dd></div>
+          </dl>
+          <div class="tutorial-actions"><button id="tutorial-new-transaction" class="button primary" type="button">Adicionar um lançamento</button><button id="finish-tutorial" class="button subtle" type="button">Entendi, continuar</button></div>
+        </section>
         <p id="page-message" class="message" role="status" hidden></p>
-        <section class="cards" aria-label="Resumo mensal">
+        <div class="summary-heading"><span class="eyebrow">Resumo mensal</span><label class="toggle-control" for="include-shared-summary"><input id="include-shared-summary" type="checkbox"><span class="toggle-track" aria-hidden="true"></span><span>Incluir compartilhados nos totais</span></label></div>
+        <section class="cards" aria-label="Resumo mensal" aria-live="polite">
           <article class="card"><span>Receitas</span><strong id="income-total">R$ 0,00</strong><small>Entradas do mês</small></article>
           <article class="card"><span>Despesas</span><strong id="expense-total">R$ 0,00</strong><small>Saídas do mês</small></article>
           <article class="card balance"><span>Saldo</span><strong id="balance-total">R$ 0,00</strong><small>Receitas menos despesas</small></article>
@@ -46,6 +66,7 @@
         <div class="columns">
           <section class="panel transactions-panel" aria-label="Lançamentos e lixeira">
             <div class="panel-heading"><div class="view-switch" role="group" aria-label="Visualizar lançamentos"><button id="active-view" class="view-button" type="button" aria-pressed="true">Lançamentos</button><button id="trash-view" class="view-button" type="button" aria-pressed="false">Lixeira</button></div><span id="transaction-count" class="count">0 registros</span></div>
+            <div class="scope-row"><span id="scope-label">Exibir</span><div class="scope-switch" role="group" aria-labelledby="scope-label"><button id="scope-mine" class="scope-button" type="button" data-scope="mine" aria-pressed="true">Minhas</button><button id="scope-shared" class="scope-button" type="button" data-scope="shared" aria-pressed="false">Compartilhadas comigo</button><button id="scope-all" class="scope-button" type="button" data-scope="all" aria-pressed="false">Todas</button></div></div>
             <form id="filter-form" class="filters" aria-label="Filtrar lançamentos">
               <div class="filter-search"><label for="filter-search">Buscar descrição</label><div class="search-control"><input id="filter-search" type="search" maxlength="120" placeholder="Ex.: mercado"><button class="button ghost" type="submit">Buscar</button></div></div>
               <div><label for="filter-category">Categoria</label><select id="filter-category"><option value="">Todas</option></select></div>
@@ -65,6 +86,14 @@
     </section>
   </main>
 
+  <dialog id="install-help" aria-labelledby="install-help-title">
+    <div class="dialog-body"><h2 id="install-help-title">Instalar Financeiro</h2>
+      <p>No Android ou computador, abra o menu do navegador e escolha “Instalar app”.</p>
+      <p>No iPhone, abra no Safari, toque em Compartilhar e escolha “Adicionar à Tela de Início”.</p>
+      <p class="muted">Você precisa de internet para acessar e alterar seus lançamentos.</p>
+      <button id="close-install-help" class="button primary" type="button">Entendi</button>
+    </div>
+  </dialog>
   <dialog id="transaction-dialog" aria-labelledby="dialog-title">
     <form id="transaction-form" class="dialog-body">
       <div class="dialog-heading"><h2 id="dialog-title">Novo lançamento</h2><button id="close-dialog" class="icon-button" type="button" aria-label="Fechar formulário">×</button></div>
@@ -75,6 +104,17 @@
       <div><label for="transaction-date">Data</label><input id="transaction-date" type="date" required></div>
       <p id="form-error" class="message error" role="alert" hidden></p>
       <div class="dialog-actions"><button id="cancel-dialog" class="button ghost" type="button">Cancelar</button><button id="save-transaction" class="button primary" type="submit">Salvar lançamento</button></div>
+    </form>
+  </dialog>
+
+  <dialog id="share-dialog" aria-labelledby="share-dialog-title">
+    <form id="share-form" class="dialog-body">
+      <div class="dialog-heading"><h2 id="share-dialog-title">Compartilhar lançamento</h2><button id="close-share-dialog" class="icon-button" type="button" aria-label="Fechar compartilhamento">×</button></div>
+      <input id="share-transaction-id" type="hidden">
+      <p id="share-description" class="share-description"></p>
+      <p class="muted dialog-copy">A outra pessoa poderá visualizar, editar, excluir e restaurar este lançamento.</p>
+      <p id="share-error" class="message error" role="alert" hidden></p>
+      <div class="dialog-actions"><button id="cancel-share-dialog" class="button ghost" type="button">Cancelar</button><button id="confirm-share" class="button primary" type="submit">Compartilhar</button></div>
     </form>
   </dialog>
 </body>

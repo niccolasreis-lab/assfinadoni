@@ -5,6 +5,22 @@ import test from 'node:test';
 
 const source = readFileSync(new URL('../public/app.js', import.meta.url), 'utf8');
 
+test('boas-vindas e guia respeitam nome e vínculo Telegram de cada conta', async () => {
+  for (const account of [
+    { username: 'ionararosendo', name: 'Iônara', telegram_linked: false },
+    { username: 'nicolasreis', name: 'Nicolas', telegram_linked: true },
+  ]) {
+    const ui = mount(() => Promise.resolve(json({ authenticated: true, account, transactions: [], summary: { income: 0, expense: 0, balance: 0, byCategory: {} } })));
+    await until(() => ui.element('welcome-title').textContent.includes(account.name));
+    assert.equal(ui.element('tutorial-guide').hidden, false);
+    assert.match(ui.element('telegram-status').textContent, account.telegram_linked ? /conectado/ : /pendente/);
+    ui.element('finish-tutorial').dispatch('click');
+    assert.equal(ui.element('tutorial-guide').hidden, true);
+    ui.element('open-tutorial').dispatch('click');
+    assert.equal(ui.element('tutorial-guide').hidden, false);
+  }
+});
+
 class Element {
   constructor(tagName = 'div') {
     this.tagName = tagName;
@@ -94,4 +110,60 @@ test('ações de cada lançamento possuem nomes acessíveis específicos', async
   const actions = ui.element('transaction-rows').children[0].children[4].children;
   assert.match(actions[0].getAttribute('aria-label') ?? '', /editar.*almoço/i);
   assert.match(actions[1].getAttribute('aria-label') ?? '', /excluir.*almoço/i);
+});
+
+test('login envia usuário normalizado e senha e mostra identidade da conta', async () => {
+  const calls = [];
+  const ui = mount(async (path, options = {}) => {
+    calls.push({ path, options });
+    if (path === '/api/session') return json(options.method === 'POST' ? { authenticated: true, account: { name: 'Iônara', username: 'ionararosendo' } } : { authenticated: false });
+    return json({ account: { name: 'Iônara', username: 'ionararosendo' }, transactions: [], summary: { income: 0, expense: 0, balance: 0, byCategory: {} } });
+  });
+  await until(() => ui.element('login-view').hidden === false);
+  ui.element('username').value = '  IONARAROSENDO ';
+  ui.element('password').value = 'senha-ficticia-testes';
+  await ui.element('login-form').dispatch('submit');
+  const call = calls.find((item) => item.options.method === 'POST');
+  assert.deepEqual(JSON.parse(call.options.body), { username: 'ionararosendo', password: 'senha-ficticia-testes' });
+  assert.equal(ui.element('user-username').textContent, '@ionararosendo');
+  assert.equal(ui.element('password').value, '');
+});
+
+test('scope e inclusão nos totais são controles independentes, com filtros por scope', async () => {
+  const calls = [];
+  const ui = mount(async (path) => {
+    calls.push(path);
+    if (path === '/api/session') return json({ authenticated: true, account: { username: 'nicolasreis', name: 'Nicolas' } });
+    return json({ transactions: [], summary: { income: 100, expense: path.includes('include_shared_summary=true') ? 40 : 20, balance: 80, byCategory: {} } });
+  });
+  await until(() => calls.length === 2);
+  ui.element('filter-search').value = 'Mercado';
+  ui.element('scope-shared').dispatch('click');
+  await until(() => calls.some((path) => path.includes('scope=shared')));
+  assert.equal(ui.element('filter-search').value, '');
+  ui.element('include-shared-summary').checked = true;
+  ui.element('include-shared-summary').dispatch('change');
+  await until(() => calls.some((path) => path.includes('include_shared_summary=true')));
+  assert.match(calls.at(-1), /scope=shared/);
+  ui.element('scope-mine').dispatch('click');
+  await until(() => calls.at(-1).includes('q=Mercado'));
+  assert.equal(ui.element('filter-search').value, 'Mercado');
+});
+
+test('destinatário vê proprietário e ações completas, mas edição/exclusão exigem confirmação', async () => {
+  const mutations = [];
+  const ui = mount(async (path, options = {}) => {
+    if (options.method) mutations.push({ path, options });
+    if (path === '/api/session') return json({ authenticated: true, account: { username: 'nicolasreis', name: 'Nicolas' } });
+    return json({ transactions: [{ id: 'shared', transaction_type: 'despesa', amount: 12, category: 'Alimentação', description: 'Almoço', transaction_date: '2026-09-01', owner_name: 'Iônara', owner_username: 'ionararosendo', is_owner: false, is_shared: true }] });
+  });
+  await until(() => ui.element('transaction-rows').children.length === 1);
+  const row = ui.element('transaction-rows').children[0];
+  const actions = row.children[4].children;
+  assert.deepEqual(actions.map((action) => action.textContent), ['Editar', 'Excluir', 'Parar de compartilhar']);
+  assert.match(row.children[0].children[0].children.map((element) => element.textContent).join(' '), /Iônara|ionararosendo/);
+  actions[0].dispatch('click');
+  actions[1].dispatch('click');
+  actions[2].dispatch('click');
+  assert.equal(mutations.length, 0);
 });
