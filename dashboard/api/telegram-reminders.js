@@ -49,8 +49,8 @@ export default async function handler(req, res) {
     if (!parsed && !['review', 'bill'].includes(body.action)) return send(res, 200, { handled: false });
     if (parsed && ['lembretes', 'pendencias'].includes(parsed.command)) {
       const kind = parsed.command === 'pendencias' ? 'review' : 'bill';
-      const rows = await supabase(`finance_reminders?${new URLSearchParams({ select: 'short_code,description,due_date', finance_user_id: `eq.${owner}`, kind: `eq.${kind}`, status: 'eq.pending', order: 'created_at.desc', limit: '20' })}`);
-      return send(res, 200, { handled: true, text: rows.length ? rows.map(r => `${r.short_code} · ${r.description}${r.due_date ? ` · ${r.due_date.split('-').reverse().join('/')}` : ''}`).join('\n') + '\n\n/pagar CODIGO · /validar CODIGO valor | categoria · /cancelar CODIGO' : 'Você não tem itens pendentes nesta lista.' });
+      const rows = await supabase(`finance_reminders?${new URLSearchParams({ select: 'short_code,description,due_date', finance_user_id: `eq.${owner}`, kind: `eq.${kind}`, status: 'eq.pending', order: 'created_at.desc', limit: '15' })}`);
+      return send(res, 200, { handled: true, text: rows.length ? rows.map(r => `${r.short_code} · ${r.description}${r.due_date ? ` · ${r.due_date.split('-').reverse().join('/')}` : ''}`).join('\n') + (rows.length === 15 ? '\n\nAté 15 itens; veja os demais no painel.' : '') + '\n\n/pagar CODIGO · /validar CODIGO valor | categoria · /cancelar CODIGO' : 'Você não tem itens pendentes nesta lista.' });
     }
     if (parsed?.code) {
       const rows = await supabase(`finance_reminders?${new URLSearchParams({ select: 'id,kind', finance_user_id: `eq.${owner}`, short_code: `eq.${parsed.code}`, limit: '1' })}`);

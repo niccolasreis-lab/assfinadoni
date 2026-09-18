@@ -50,3 +50,12 @@ test('pendências preservam informação válida e ações são restritas à con
     assert.match(foreign.body.text,/não encontrado/);assert.equal(calls.at(-1).u.searchParams.get('finance_user_id'),'eq.safe-owner');assert.ok(!calls.some(c=>c.u.pathname.endsWith('/finance_reminder_action')));
   }finally{globalThis.fetch=old;}
 });
+test('listagem Telegram permanece abaixo do limite de mensagem mesmo com descrições máximas', async () => {
+ const old=globalThis.fetch;
+ globalThis.fetch=async(url)=>{const u=new URL(url);let value=[];
+  if(u.pathname.endsWith('/finance_notification_config'))value=[{dispatch_secret:secret}];
+  if(u.pathname.endsWith('/finance_users'))value=[{id:'owner'}];
+  if(u.pathname.endsWith('/finance_reminders')){assert.equal(u.searchParams.get('limit'),'15');value=Array.from({length:15},()=>({short_code:'aabb1234',description:'a'.repeat(180),due_date:'2026-09-30'}));}
+  return {ok:true,status:200,json:async()=>value};};
+ try{const r=res();await handler({method:'POST',headers:{'x-notification-secret':secret,'content-type':'application/json'},body:{chat_id:'123',update_id:'111',text:'/lembretes'}},r);assert.ok(r.body.text.length<4096);assert.match(r.body.text,/Até 15 itens/);}finally{globalThis.fetch=old;}
+});
