@@ -389,6 +389,7 @@ private fun LoginScreen(loading: Boolean, error: String?, onLogin: (String, Stri
 
 private enum class Destination(val label: String) { Overview("Visão geral"), Transactions("Transações"), More("Mais") }
 
+@OptIn(ExperimentalMaterial3Api::class)
 @Composable
 private fun FinanceShell(state: FinanceState, snackbar: SnackbarHostState, vm: FinanceViewModel) {
     var destination by rememberSaveable { mutableStateOf(Destination.Overview) }
@@ -435,6 +436,7 @@ private fun FinanceShell(state: FinanceState, snackbar: SnackbarHostState, vm: F
     }
 }
 
+@OptIn(ExperimentalMaterial3Api::class)
 @Composable
 private fun AppContent(destination: Destination, state: FinanceState, snackbar: SnackbarHostState, vm: FinanceViewModel, modifier: Modifier) {
     Scaffold(
