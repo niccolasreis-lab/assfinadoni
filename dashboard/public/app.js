@@ -152,11 +152,14 @@ function openTransactionActions(row) {
   const share = document.createElement('button');
   share.type = 'button';
   share.className = 'profile-menu-action';
-  share.textContent = isShared(row) ? 'Parar de compartilhar' : 'Compartilhar lançamento';
-  share.addEventListener('click', () => {
+  share.textContent = 'Compartilhar em outro app';
+  share.addEventListener('click', async () => {
+    const text = `${row.description}\n${money(row.amount)} · ${formatDate(row.transaction_date)}\nCategoria: ${row.category}`;
+    try {
+      if (navigator.share) await navigator.share({ title: row.description, text });
+      else { await navigator.clipboard?.writeText(text); message('page-message', 'Lançamento copiado. Cole no WhatsApp, Telegram ou outra rede.'); }
+    } catch (error) { if (error.name !== 'AbortError') message('page-message', 'Não foi possível abrir o compartilhamento.', true); }
     dialog.close();
-    if (isShared(row)) unshareTransaction(row);
-    else openShareDialog(row);
   });
 
   const remove = document.createElement('button');

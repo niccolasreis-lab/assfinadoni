@@ -1,6 +1,7 @@
 package br.com.assfinadoni
 
 import android.content.Context
+import android.content.Intent
 import android.os.Bundle
 import android.net.Uri
 import androidx.activity.ComponentActivity
@@ -594,6 +595,7 @@ private fun TransactionRow(row: FinanceTransaction, onClick: () -> Unit) {
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 private fun TransactionActions(row: FinanceTransaction, vm: FinanceViewModel) {
+    val context = LocalContext.current
     ModalBottomSheet(onDismissRequest = { vm.select(null) }) {
         Column(
             Modifier.fillMaxWidth().navigationBarsPadding().padding(20.dp, 4.dp, 20.dp, 20.dp),
@@ -603,7 +605,11 @@ private fun TransactionActions(row: FinanceTransaction, vm: FinanceViewModel) {
             Text(money(row.amount) + " · " + formatDate(row.date), color = Muted)
             Spacer(Modifier.height(12.dp))
             ActionButton(Icons.Outlined.Edit, "Editar lançamento") { vm.edit(row) }
-            ActionButton(if (row.shared) Icons.Outlined.SyncDisabled else Icons.Outlined.Share, if (row.shared) "Parar de compartilhar" else "Compartilhar lançamento") { vm.toggleShare(row) }
+            ActionButton(Icons.Outlined.Share, "Compartilhar em outro app") {
+                val text = "${row.description}\n${money(row.amount)} · ${formatDate(row.date)}\nCategoria: ${row.category}"
+                context.startActivity(Intent.createChooser(Intent(Intent.ACTION_SEND).apply { type = "text/plain"; putExtra(Intent.EXTRA_TEXT, text) }, "Compartilhar lançamento"))
+                vm.select(null)
+            }
             ActionButton(Icons.Outlined.Delete, "Excluir lançamento", destructive = true) { vm.requestDelete(row) }
         }
     }

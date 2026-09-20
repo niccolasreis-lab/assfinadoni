@@ -14,6 +14,7 @@ Aplicação de controle financeiro pessoal para Nicolas e Ionara, com dashboard 
 - Lançamentos futuros tratados como lembretes/agendamentos até serem pagos.
 - Categorias padrão e categorias personalizadas por usuário.
 - Imagens JPG, PNG e WebP anexáveis a receitas e despesas, com validação de tamanho e acesso.
+- Compartilhamento externo de lançamentos pelo Android e navegador, usando o menu nativo de apps sociais.
 
 ## 3. Usuários e permissões
 
@@ -29,6 +30,7 @@ Cada conta possui seus próprios lançamentos e categorias. Um lançamento pode 
 - Editar um lançamento existente.
 - Excluir para a lixeira e restaurar por até 30 dias.
 - Compartilhar, encerrar compartilhamento e confirmar o impacto para a outra conta.
+- Compartilhar externamente com WhatsApp, Telegram, Instagram, e-mail e outros apps.
 - Anexar imagem do comprovante; a imagem fica vinculada ao lançamento.
 
 ### Categorias
@@ -86,5 +88,6 @@ Cada conta possui seus próprios lançamentos e categorias. Um lançamento pode 
 - Compressão automática e armazenamento de imagens no Supabase Storage.
 - Deduplicação por hash/idempotência no Telegram.
 - OCR de comprovantes e revisão dos campos extraídos.
+- Separar visualmente ações de compartilhamento externo e compartilhamento entre contas.
 - Relatórios exportáveis e notificações nativas.
 
