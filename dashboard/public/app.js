@@ -264,7 +264,8 @@ function openForm(row = null) {
   $('category').value = row?.category || categories[0];
   $('description').value = row?.description || '';
   $('transaction-date').value = row?.transaction_date || saoPauloToday();
-  $('transaction-date').max = saoPauloToday();
+  if (row) $('transaction-date').max = saoPauloToday();
+  else $('transaction-date').removeAttribute('max');
   $('transaction-dialog').showModal();
 }
 
@@ -278,8 +279,27 @@ async function saveTransaction(event) {
   const button = $('save-transaction'); button.disabled = true;
   button.textContent = id ? 'Salvando alterações...' : 'Adicionando...';
   try {
-    await request('/api/transactions', { method: id ? 'PATCH' : 'POST', body: JSON.stringify(body) });
+    const scheduled = !id && body.transaction_type === 'despesa' && body.transaction_date > saoPauloToday();
+    if (scheduled) {
+      await request('/api/reminders', { method: 'POST', body: JSON.stringify({
+        kind: 'bill',
+        description: body.description,
+        amount: body.amount,
+        category: body.category,
+        due_date: body.transaction_date,
+        reminder_offsets: [3, 1, 0],
+        reminder_hour: 9,
+        notify_telegram: true,
+        notify_push: true,
+      }) });
+    } else {
+      await request('/api/transactions', { method: id ? 'PATCH' : 'POST', body: JSON.stringify(body) });
+    }
     $('transaction-dialog').close();
+    if (scheduled) {
+      message('page-message', 'Conta agendada. Ela só entrará nos totais quando for marcada como paga.');
+      return;
+    }
     const month = body.transaction_date.slice(0, 7);
     if ($('month').value !== month) {
       $('month').value = month;
