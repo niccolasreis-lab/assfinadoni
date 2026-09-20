@@ -1,8 +1,8 @@
 import { icon } from './ui.js';
-const categories = ['Alimentação', 'Transporte', 'Moradia', 'Saúde', 'Educação', 'Lazer', 'Assinaturas', 'Outros'];
+const defaultCategories = ['Alimentação', 'Transporte', 'Moradia', 'Saúde', 'Educação', 'Lazer', 'Assinaturas', 'Outros'];
 const $ = (id) => document.getElementById(id);
 const money = (value) => Number(value || 0).toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' });
-const state = { transactions: [], summary: null, month: '', view: 'active', page: 1, hasMore: false, datesCustomized: false, loadId: 0, deleting: new Set() };
+const state = { transactions: [], summary: null, month: '', view: 'active', page: 1, hasMore: false, datesCustomized: false, loadId: 0, deleting: new Set(), categories: [...defaultCategories] };
 state.scope = 'mine'; state.includeSharedSummary = false; state.account = null;
 state.scopeFilters = {}; state.section = 'overview';
 function saveScopeFilters() {
@@ -335,11 +335,14 @@ function openForm(row = null) {
   $('save-transaction').textContent = row ? 'Salvar alterações' : 'Adicionar lançamento';
   $('transaction-type').value = row?.transaction_type || 'despesa';
   $('amount').value = row?.amount || '';
-  $('category').value = row?.category || categories[0];
+  $('category').value = row?.category || state.categories[0] || defaultCategories[0];
   $('description').value = row?.description || '';
   $('transaction-date').value = row?.transaction_date || saoPauloToday();
   if (row) $('transaction-date').max = saoPauloToday();
   else $('transaction-date').removeAttribute('max');
+  $('transaction-image').value = '';
+  $('transaction-image-preview').hidden = true;
+  $('transaction-image-status').textContent = 'JPG, PNG ou WebP · até 1 MB';
   $('transaction-dialog').showModal();
 }
 
@@ -367,7 +370,10 @@ async function saveTransaction(event) {
         notify_push: true,
       }) });
     } else {
-      await request('/api/transactions', { method: id ? 'PATCH' : 'POST', body: JSON.stringify(body) });
+      const result = await request('/api/transactions', { method: id ? 'PATCH' : 'POST', body: JSON.stringify(body) });
+      const image = $('transaction-image').files?.[0];
+      const transactionId = id || result?.transaction?.id || result?.id;
+      if (image && transactionId) await uploadAttachment(transactionId, image);
     }
     $('transaction-dialog').close();
     if (scheduled) {
@@ -385,6 +391,33 @@ async function saveTransaction(event) {
     message('page-message', id ? 'Lançamento atualizado.' : 'Lançamento adicionado.');
   } catch (error) { message('form-error', error.message, true); }
   finally { button.disabled = false; button.textContent = id ? 'Salvar alterações' : 'Adicionar lançamento'; }
+}
+
+function readImageDataUrl(file) {
+  return new Promise((resolve, reject) => { const reader = new FileReader(); reader.onload = () => resolve(reader.result); reader.onerror = () => reject(new Error('Não consegui ler a imagem.')); reader.readAsDataURL(file); });
+}
+
+async function uploadAttachment(transactionId, file) {
+  if (!/^image\/(jpeg|png|webp)$/.test(file.type) || file.size > 900000) throw new Error('A imagem deve ser JPG, PNG ou WebP e ter até 900 KB.');
+  const data_url = await readImageDataUrl(file);
+  await request('/api/transaction-attachments', { method: 'POST', body: JSON.stringify({ transaction_id: transactionId, filename: file.name, content_type: file.type, data_url }) });
+}
+
+async function loadCategories() {
+  try { const data = await request('/api/categories'); state.categories = [...new Set((data.categories || []).map((item) => item.name).concat(defaultCategories))]; }
+  catch { state.categories = [...defaultCategories]; }
+  for (const target of ['category', 'filter-category']) {
+    const select = $(target); const value = select.value; select.replaceChildren();
+    if (target === 'filter-category') { const option = document.createElement('option'); option.value = ''; option.textContent = 'Todas'; select.append(option); }
+    for (const name of state.categories) { const option = document.createElement('option'); option.value = name; option.textContent = name; select.append(option); }
+    select.value = value;
+  }
+}
+
+async function createCategory(event) {
+  event?.preventDefault(); message('category-error', '');
+  try { const data = await request('/api/categories', { method: 'POST', body: JSON.stringify({ name: $('new-category-name').value }) }); await loadCategories(); $('category').value = data.category.name; $('category-dialog').close(); $('new-category-name').value = ''; }
+  catch (error) { message('category-error', error.message, true); }
 }
 
 async function deleteTransaction(row) {
@@ -468,11 +501,7 @@ async function init() {
   state.includeSharedSummary = remembered('finance_include_shared', 'false') === 'true';
   $('month').value = saoPauloToday().slice(0, 7);
   syncMonthDates();
-  for (const name of categories) {
-    for (const target of ['category', 'filter-category']) {
-      const option = document.createElement('option'); option.value = name; option.textContent = name; $(target).append(option);
-    }
-  }
+  await loadCategories();
   $('login-form').addEventListener('submit', async (event) => {
     event.preventDefault(); message('login-error', '');
     const button = $('login-submit'); if (button.disabled) return;
@@ -535,13 +564,19 @@ async function init() {
   $('finish-tutorial').addEventListener('click', () => finishTutorial());
   $('tutorial-new-transaction').addEventListener('click', () => { finishTutorial(false); openForm(); });
   $('transaction-form').addEventListener('submit', saveTransaction);
+  $('new-category').addEventListener('click', () => { message('category-error', ''); $('category-dialog').showModal(); $('new-category-name').focus(); });
+  $('category-form').addEventListener('submit', createCategory);
+  $('close-category-dialog').addEventListener('click', () => $('category-dialog').close());
+  $('cancel-category-dialog').addEventListener('click', () => $('category-dialog').close());
+  $('transaction-image').addEventListener('change', () => { const file = $('transaction-image').files?.[0]; $('transaction-image-status').textContent = file ? `${file.name} · ${(file.size / 1024).toFixed(0)} KB` : 'JPG, PNG ou WebP · até 1 MB'; });
   $('close-dialog').addEventListener('click', () => $('transaction-dialog').close());
   $('cancel-dialog').addEventListener('click', () => $('transaction-dialog').close());
   $('share-form').addEventListener('submit', shareTransaction);
   $('close-share-dialog').addEventListener('click', () => $('share-dialog').close());
   $('cancel-share-dialog').addEventListener('click', () => $('share-dialog').close());
-  try { const session = await request('/api/session'); setIdentity(session.account || session.user); showDashboard(session.authenticated); if (session.authenticated) await loadTransactions(); }
+  try { const session = await request('/api/session'); setIdentity(session.account || session.user); showDashboard(session.authenticated); if (session.authenticated) { await loadCategories(); await loadTransactions(); } }
   catch { showDashboard(false); }
 }
 
 init();
+
