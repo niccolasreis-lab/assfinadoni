@@ -25,6 +25,7 @@ import androidx.compose.material.icons.outlined.Home
 import androidx.compose.material.icons.outlined.MoreHoriz
 import androidx.compose.material.icons.outlined.ReceiptLong
 import androidx.compose.material.icons.outlined.Share
+import androidx.compose.material.icons.outlined.SystemUpdate
 import androidx.compose.material.icons.outlined.SyncDisabled
 import androidx.compose.material.icons.outlined.TrendingDown
 import androidx.compose.material.icons.outlined.TrendingUp
@@ -513,14 +514,15 @@ private fun AppBody(destination: Destination, state: FinanceState, vm: FinanceVi
 @Composable
 private fun UpdateCard(update: AppUpdate, modifier: Modifier) {
     val context = LocalContext.current
-    Card(modifier.padding(12.dp).fillMaxWidth(), colors = CardDefaults.cardColors(containerColor = VioletContainer), shape = RoundedCornerShape(16.dp)) {
-        Row(Modifier.padding(14.dp), verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(12.dp)) {
-            Column(Modifier.weight(1f)) { Text("Nova versão disponível", fontWeight = FontWeight.SemiBold); Text("Versão ${update.versionName}", color = Muted, style = MaterialTheme.typography.bodySmall) }
+    Card(modifier.padding(horizontal = 16.dp, vertical = 10.dp).fillMaxWidth(), colors = CardDefaults.cardColors(containerColor = VioletContainer), shape = RoundedCornerShape(18.dp), elevation = CardDefaults.cardElevation(defaultElevation = 2.dp)) {
+        Row(Modifier.padding(16.dp), verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(14.dp)) {
+            Surface(shape = RoundedCornerShape(12.dp), color = Violet.copy(alpha = .22f), modifier = Modifier.size(44.dp)) { Box(contentAlignment = Alignment.Center) { Icon(Icons.Outlined.SystemUpdate, "Atualização disponível", tint = Violet) } }
+            Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(2.dp)) { Text("Seu app evoluiu", fontWeight = FontWeight.SemiBold); Text("Versão ${update.versionName} disponível", color = Muted, style = MaterialTheme.typography.bodySmall) }
             Button(onClick = {
                 val request = DownloadManager.Request(android.net.Uri.parse(update.downloadUrl)).setTitle("Atualizando Assistente de Finanças").setDescription("Baixando a nova versão").setNotificationVisibility(DownloadManager.Request.VISIBILITY_VISIBLE_NOTIFY_COMPLETED).setDestinationInExternalFilesDir(context, Environment.DIRECTORY_DOWNLOADS, "assfinadoni-update.apk")
                 val id = (context.getSystemService(Context.DOWNLOAD_SERVICE) as DownloadManager).enqueue(request)
                 context.getSharedPreferences("app_update", Context.MODE_PRIVATE).edit().putLong("download_id", id).apply()
-            }) { Text("Atualizar") }
+            }, modifier = Modifier.heightIn(min = 44.dp)) { Text("Atualizar") }
         }
     }
 }
