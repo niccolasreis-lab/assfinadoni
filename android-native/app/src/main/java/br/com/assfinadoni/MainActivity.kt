@@ -2,6 +2,9 @@ package br.com.assfinadoni
 
 import android.content.Context
 import android.content.Intent
+import android.app.DownloadManager
+import android.os.Environment
+import androidx.core.content.FileProvider
 import android.os.Bundle
 import android.net.Uri
 import androidx.activity.ComponentActivity
@@ -105,7 +108,9 @@ data class FinanceState(
     val message: String? = null,
     val error: String? = null
     ,val categories: List<String> = listOf("Alimentação", "Transporte", "Moradia", "Saúde", "Educação", "Lazer", "Assinaturas", "Outros")
+    ,val update: AppUpdate? = null
 )
+data class AppUpdate(val versionCode: Int, val versionName: String, val downloadUrl: String)
 
 private class SecureCookieJar(context: Context) : CookieJar {
     private val prefs = EncryptedSharedPreferences.create(
@@ -162,6 +167,15 @@ private class FinanceApi(context: Context) {
         val json = call("GET", "/api/session")
         if (!json.optBoolean("authenticated")) return null
         return parseAccount(json.getJSONObject("account"))
+    }
+
+    suspend fun latestAppVersion(): AppUpdate? = withContext(Dispatchers.IO) {
+        val request = Request.Builder().url(base + "/api/app-version").get().build()
+        client.newCall(request).execute().use { response ->
+            if (!response.isSuccessful) return@withContext null
+            val json = JSONObject(response.body?.string().orEmpty())
+            AppUpdate(json.optInt("version_code"), json.optString("version_name"), json.optString("download_url"))
+        }
     }
 
     suspend fun login(username: String, password: String): Account {
@@ -296,7 +310,7 @@ private class FinanceViewModel(private val api: FinanceApi) : ViewModel() {
     private suspend fun refreshInternal() {
         val (transactions, summary) = api.transactions(mutableState.value.month)
         val cats = api.categories().ifEmpty { mutableState.value.categories }
-        mutableState.value = mutableState.value.copy(transactions = transactions, summary = summary, categories = cats)
+        mutableState.value = mutableState.value.copy(transactions = transactions, summary = summary, categories = cats, update = api.latestAppVersion()?.takeIf { it.versionCode > BuildConfig.VERSION_CODE && it.downloadUrl.isNotBlank() })
     }
 
     fun select(row: FinanceTransaction?) { mutableState.value = mutableState.value.copy(selected = row) }
@@ -483,13 +497,31 @@ private fun DestinationIcon(destination: Destination) {
 
 @Composable
 private fun AppBody(destination: Destination, state: FinanceState, vm: FinanceViewModel, modifier: Modifier) {
-    Box(modifier.fillMaxSize()) {
-        when (destination) {
-            Destination.Overview -> OverviewScreen(state, vm)
-            Destination.Transactions -> TransactionsScreen(state, vm)
-            Destination.More -> MoreScreen(state, vm)
+    Column(modifier.fillMaxSize()) {
+        state.update?.let { update -> UpdateCard(update, modifier = Modifier) }
+        Box(Modifier.weight(1f).fillMaxWidth()) {
+            when (destination) {
+                Destination.Overview -> OverviewScreen(state, vm)
+                Destination.Transactions -> TransactionsScreen(state, vm)
+                Destination.More -> MoreScreen(state, vm)
+            }
+            if (state.loading) LinearProgressIndicator(Modifier.fillMaxWidth().align(Alignment.TopCenter))
         }
-        if (state.loading) LinearProgressIndicator(Modifier.fillMaxWidth().align(Alignment.TopCenter))
+    }
+}
+
+@Composable
+private fun UpdateCard(update: AppUpdate, modifier: Modifier) {
+    val context = LocalContext.current
+    Card(modifier.padding(12.dp).fillMaxWidth(), colors = CardDefaults.cardColors(containerColor = VioletContainer), shape = RoundedCornerShape(16.dp)) {
+        Row(Modifier.padding(14.dp), verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(12.dp)) {
+            Column(Modifier.weight(1f)) { Text("Nova versão disponível", fontWeight = FontWeight.SemiBold); Text("Versão ${update.versionName}", color = Muted, style = MaterialTheme.typography.bodySmall) }
+            Button(onClick = {
+                val request = DownloadManager.Request(android.net.Uri.parse(update.downloadUrl)).setTitle("Atualizando Assistente de Finanças").setDescription("Baixando a nova versão").setNotificationVisibility(DownloadManager.Request.VISIBILITY_VISIBLE_NOTIFY_COMPLETED).setDestinationInExternalFilesDir(context, Environment.DIRECTORY_DOWNLOADS, "assfinadoni-update.apk")
+                val id = (context.getSystemService(Context.DOWNLOAD_SERVICE) as DownloadManager).enqueue(request)
+                context.getSharedPreferences("app_update", Context.MODE_PRIVATE).edit().putLong("download_id", id).apply()
+            }) { Text("Atualizar") }
+        }
     }
 }
 
