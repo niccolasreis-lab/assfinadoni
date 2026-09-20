@@ -112,6 +112,65 @@ function showDashboard(authenticated) {
 
 async function confirmAction(copy) { return window.FinanceUI ? window.FinanceUI.confirm(copy) : window.confirm(copy); }
 
+function openTransactionActions(row) {
+  let dialog = $('transaction-actions-dialog');
+  if (!dialog) {
+    dialog = document.createElement('dialog');
+    dialog.id = 'transaction-actions-dialog';
+    dialog.setAttribute('aria-labelledby', 'transaction-actions-title');
+    document.body.append(dialog);
+  }
+
+  const body = document.createElement('div');
+  body.className = 'dialog-body';
+  const heading = document.createElement('div');
+  heading.className = 'dialog-heading';
+  const headingCopy = document.createElement('div');
+  const title = document.createElement('h2');
+  title.id = 'transaction-actions-title';
+  title.textContent = row.description;
+  const detail = document.createElement('p');
+  detail.className = 'muted';
+  detail.textContent = `${row.transaction_type === 'receita' ? 'Receita' : 'Despesa'} de ${money(row.amount)} · ${formatDate(row.transaction_date)}`;
+  headingCopy.append(title, detail);
+  const close = document.createElement('button');
+  close.type = 'button';
+  close.className = 'icon-button';
+  close.setAttribute('aria-label', 'Fechar ações');
+  close.textContent = '×';
+  close.addEventListener('click', () => dialog.close());
+  heading.append(headingCopy, close);
+
+  const actions = document.createElement('nav');
+  actions.setAttribute('aria-label', 'Ações do lançamento');
+  const edit = document.createElement('button');
+  edit.type = 'button';
+  edit.className = 'profile-menu-action';
+  edit.textContent = 'Editar lançamento';
+  edit.addEventListener('click', () => { dialog.close(); openForm(row); });
+
+  const share = document.createElement('button');
+  share.type = 'button';
+  share.className = 'profile-menu-action';
+  share.textContent = isShared(row) ? 'Parar de compartilhar' : 'Compartilhar lançamento';
+  share.addEventListener('click', () => {
+    dialog.close();
+    if (isShared(row)) unshareTransaction(row);
+    else openShareDialog(row);
+  });
+
+  const remove = document.createElement('button');
+  remove.type = 'button';
+  remove.className = 'profile-menu-action danger';
+  remove.textContent = 'Excluir lançamento';
+  remove.addEventListener('click', () => { dialog.close(); deleteTransaction(row); });
+
+  actions.append(edit, share, remove);
+  body.append(heading, actions);
+  dialog.replaceChildren(body);
+  dialog.showModal();
+}
+
 function render() {
   const rows = state.transactions;
   const summaryAvailable = state.summary && ['income','expense','balance'].every(key => (typeof state.summary[key] === 'number' || typeof state.summary[key] === 'string' && state.summary[key].trim() !== '') && Number.isFinite(Number(state.summary[key])));
@@ -181,6 +240,21 @@ function render() {
       actions.append(edit, remove, share);
     }
     tr.setAttribute('data-type', row.transaction_type);
+    if (state.view !== 'trash') {
+      tr.classList.add('transaction-row-interactive');
+      tr.tabIndex = 0;
+      tr.setAttribute('aria-haspopup', 'dialog');
+      tr.setAttribute('aria-label', `Abrir ações de ${row.description}, ${money(row.amount)}`);
+      tr.addEventListener('click', (event) => {
+        if (event.target.closest('button, a, input, select')) return;
+        openTransactionActions(row);
+      });
+      tr.addEventListener('keydown', (event) => {
+        if (event.target !== tr || !['Enter', ' '].includes(event.key)) return;
+        event.preventDefault();
+        openTransactionActions(row);
+      });
+    }
     tr.append(description, category, date, amount, actions);
     body.append(tr);
   }
