@@ -1824,3 +1824,33 @@ dialog.is-closing::backdrop { animation:backdrop-out 150ms ease-in forwards; }
   dialog[open]::backdrop,dialog.is-closing::backdrop { animation:none; }
 }
 .brand-symbol img { clip-path:inset(0 0 34% 0); }
+
+.transaction-row-interactive {
+  cursor:pointer;
+  transition:background-color 180ms ease-out, box-shadow 180ms ease-out;
+}
+.transaction-row-interactive:hover {
+  background:#191526;
+}
+.transaction-row-interactive:active {
+  background:#211a31;
+}
+.transaction-row-interactive:focus-visible {
+  outline:2px solid #a78bfa;
+  outline-offset:-2px;
+}
+#transaction-actions-dialog nav {
+  display:grid;
+  gap:4px;
+}
+@media(max-width:600px) {
+  #transaction-actions-dialog {
+    width:calc(100% - 24px);
+    max-width:none;
+    margin:auto 12px 12px;
+    border-radius:20px;
+  }
+  #transaction-actions-dialog .dialog-body {
+    padding:20px 18px max(20px, env(safe-area-inset-bottom));
+  }
+}
