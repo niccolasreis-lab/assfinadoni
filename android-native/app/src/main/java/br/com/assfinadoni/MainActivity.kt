@@ -2,7 +2,10 @@ package br.com.assfinadoni
 
 import android.content.Context
 import android.os.Bundle
+import android.net.Uri
 import androidx.activity.ComponentActivity
+import androidx.activity.compose.rememberLauncherForActivityResult
+import androidx.activity.result.contract.ActivityResultContracts
 import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
 import androidx.compose.foundation.clickable
@@ -57,6 +60,8 @@ import java.time.LocalDate
 import java.time.format.DateTimeFormatter
 import java.util.Locale
 import java.util.concurrent.TimeUnit
+import android.util.Base64
+import java.io.ByteArrayOutputStream
 
 private val Graphite = Color(0xFF080B12)
 private val Surface = Color(0xFF121722)
@@ -98,6 +103,7 @@ data class FinanceState(
     val pendingDelete: FinanceTransaction? = null,
     val message: String? = null,
     val error: String? = null
+    ,val categories: List<String> = listOf("Alimentação", "Transporte", "Moradia", "Saúde", "Educação", "Lazer", "Assinaturas", "Outros")
 )
 
 private class SecureCookieJar(context: Context) : CookieJar {
@@ -173,15 +179,28 @@ private class FinanceApi(context: Context) {
         return list to parseSummary(json.getJSONObject("summary"))
     }
 
-    suspend fun save(row: FinanceTransaction?, draft: TransactionDraft) {
+    suspend fun categories(): List<String> = call("GET", "/api/categories").optJSONArray("categories")?.let { array -> buildList { for (i in 0 until array.length()) add(array.getJSONObject(i).optString("name")) } } ?: emptyList()
+    suspend fun createCategory(name: String): String = call("POST", "/api/categories", JSONObject().put("name", name)).getJSONObject("category").optString("name")
+
+    suspend fun save(row: FinanceTransaction?, draft: TransactionDraft): String {
         val body = JSONObject()
             .put("transaction_type", draft.type)
             .put("amount", draft.amount)
             .put("category", draft.category)
             .put("description", draft.description)
             .put("transaction_date", draft.date)
-        if (row == null) call("POST", "/api/transactions", body)
+        val result = if (row == null) call("POST", "/api/transactions", body)
         else call("PATCH", "/api/transactions", body.put("id", row.id))
+        return result.optJSONObject("transaction")?.optString("id").orEmpty().ifBlank { row?.id.orEmpty() }
+    }
+
+    suspend fun uploadImage(transactionId: String, uri: Uri, context: Context) {
+        val bytes = context.contentResolver.openInputStream(uri)?.use { it.readBytes() } ?: throw IllegalStateException("Não consegui ler a imagem.")
+        if (bytes.size > 900_000) throw IllegalArgumentException("A imagem deve ter até 900 KB.")
+        val type = context.contentResolver.getType(uri) ?: "image/jpeg"
+        if (type !in listOf("image/jpeg", "image/png", "image/webp")) throw IllegalArgumentException("Use uma imagem JPG, PNG ou WebP.")
+        val name = uri.lastPathSegment ?: "comprovante.jpg"
+        call("POST", "/api/transaction-attachments", JSONObject().put("transaction_id", transactionId).put("filename", name).put("content_type", type).put("data_url", "data:$type;base64," + Base64.encodeToString(bytes, Base64.NO_WRAP)))
     }
 
     suspend fun delete(row: FinanceTransaction) {
@@ -275,7 +294,8 @@ private class FinanceViewModel(private val api: FinanceApi) : ViewModel() {
 
     private suspend fun refreshInternal() {
         val (transactions, summary) = api.transactions(mutableState.value.month)
-        mutableState.value = mutableState.value.copy(transactions = transactions, summary = summary)
+        val cats = api.categories().ifEmpty { mutableState.value.categories }
+        mutableState.value = mutableState.value.copy(transactions = transactions, summary = summary, categories = cats)
     }
 
     fun select(row: FinanceTransaction?) { mutableState.value = mutableState.value.copy(selected = row) }
@@ -285,14 +305,17 @@ private class FinanceViewModel(private val api: FinanceApi) : ViewModel() {
     fun cancelDelete() { mutableState.value = mutableState.value.copy(pendingDelete = null) }
     fun clearFeedback() { mutableState.value = mutableState.value.copy(message = null, error = null) }
 
-    fun save(draft: TransactionDraft) = runTask(if (mutableState.value.creating) "Lançamento adicionado." else "Lançamento atualizado.") {
+    fun save(draft: TransactionDraft, image: Uri? = null, context: Context? = null) = runTask(if (mutableState.value.creating) "Lançamento adicionado." else "Lançamento atualizado.") {
         if (draft.amount.toBigDecimalOrNull()?.signum() != 1) throw IllegalArgumentException("Informe um valor maior que zero.")
         if (draft.description.isBlank()) throw IllegalArgumentException("Descreva o lançamento.")
         LocalDate.parse(draft.date)
-        api.save(mutableState.value.editing, draft)
+        val id = api.save(mutableState.value.editing, draft)
+        if (image != null && context != null) api.uploadImage(id, image, context)
         mutableState.value = mutableState.value.copy(editing = null, creating = false)
         refreshInternal()
     }
+
+    fun addCategory(name: String) = runTask { api.createCategory(name.trim()); refreshInternal() }
 
     fun deleteConfirmed() = runTask("Lançamento movido para a lixeira.") {
         val row = mutableState.value.pendingDelete ?: return@runTask
@@ -361,7 +384,7 @@ private fun FinanceRoot(vm: FinanceViewModel) {
     else FinanceShell(state, snackbar, vm)
 
     if (state.selected != null) TransactionActions(state.selected!!, vm)
-    if (state.editing != null || state.creating) TransactionEditor(state.editing, vm)
+    if (state.editing != null || state.creating) TransactionEditor(state.editing, state.categories, vm)
     if (state.pendingDelete != null) DeleteConfirmation(state.pendingDelete!!, vm)
 }
 
@@ -397,7 +420,7 @@ private fun FinanceShell(state: FinanceState, snackbar: SnackbarHostState, vm: F
         val expanded = maxWidth >= 840.dp
         if (expanded) {
             Row(Modifier.fillMaxSize().windowInsetsPadding(WindowInsets.safeDrawing)) {
-                NavigationRail {
+                NavigationRail(containerColor = Graphite) {
                     Spacer(Modifier.height(12.dp))
                     Destination.entries.forEach { item ->
                         NavigationRailItem(
@@ -420,13 +443,14 @@ private fun FinanceShell(state: FinanceState, snackbar: SnackbarHostState, vm: F
                 topBar = { TopAppBar(title = { Text(destination.label) }) },
                 floatingActionButton = { FloatingActionButton(onClick = { vm.edit(null) }) { Icon(Icons.Outlined.Add, "Adicionar lançamento") } },
                 bottomBar = {
-                    NavigationBar {
+                    NavigationBar(containerColor = Graphite, tonalElevation = 0.dp) {
                         Destination.entries.forEach { item ->
                             NavigationBarItem(
                                 selected = destination == item,
                                 onClick = { destination = item },
                                 icon = { DestinationIcon(item) },
-                                label = { Text(item.label) }
+                                label = { Text(item.label) },
+                                colors = NavigationBarItemDefaults.colors(selectedIconColor = Violet, selectedTextColor = Violet, indicatorColor = Color.Transparent, unselectedIconColor = Muted, unselectedTextColor = Muted)
                             )
                         }
                     }
@@ -510,7 +534,7 @@ private fun SummaryCards(summary: Summary) {
 
 @Composable
 private fun MetricCard(label: String, value: BigDecimal, color: Color, modifier: Modifier) {
-    Card(modifier) {
+        Card(modifier = modifier, colors = CardDefaults.cardColors(containerColor = Surface), shape = RoundedCornerShape(16.dp)) {
         Column(Modifier.padding(16.dp)) {
             Text(label, color = Muted)
             Text(money(value), color = color, fontWeight = FontWeight.SemiBold, style = MaterialTheme.typography.titleMedium)
@@ -596,8 +620,12 @@ private fun ActionButton(icon: androidx.compose.ui.graphics.vector.ImageVector, 
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-private fun TransactionEditor(row: FinanceTransaction?, vm: FinanceViewModel) {
-    val categories = listOf("Alimentação", "Transporte", "Moradia", "Saúde", "Educação", "Lazer", "Assinaturas", "Outros")
+private fun TransactionEditor(row: FinanceTransaction?, categories: List<String>, vm: FinanceViewModel) {
+    val context = LocalContext.current
+    var imageUri by remember(row) { mutableStateOf<Uri?>(null) }
+    var newCategory by remember { mutableStateOf("") }
+    var categoryDialog by remember { mutableStateOf(false) }
+    val imagePicker = rememberLauncherForActivityResult(ActivityResultContracts.GetContent()) { imageUri = it }
     var type by remember(row) { mutableStateOf(row?.type ?: "despesa") }
     var amount by remember(row) { mutableStateOf(row?.amount?.toPlainString().orEmpty()) }
     var category by remember(row) { mutableStateOf(row?.category ?: categories.first()) }
@@ -620,15 +648,18 @@ private fun TransactionEditor(row: FinanceTransaction?, vm: FinanceViewModel) {
                     OutlinedButton(onClick = { categoryOpen = true }, modifier = Modifier.fillMaxWidth().heightIn(min = 48.dp)) { Text(category, Modifier.weight(1f)) }
                     DropdownMenu(categoryOpen, { categoryOpen = false }) {
                         categories.forEach { option -> DropdownMenuItem(text = { Text(option) }, onClick = { category = option; categoryOpen = false }) }
+                        DropdownMenuItem(text = { Text("+ Nova categoria") }, onClick = { categoryOpen = false; categoryDialog = true })
                     }
                 }
+                OutlinedButton(onClick = { imagePicker.launch("image/*") }, modifier = Modifier.fillMaxWidth().heightIn(min = 48.dp)) { Text(if (imageUri == null) "Adicionar imagem do comprovante" else "Imagem selecionada") }
                 OutlinedTextField(description, { description = it }, Modifier.fillMaxWidth(), label = { Text("Descrição") }, singleLine = true)
                 OutlinedTextField(date, { date = it }, Modifier.fillMaxWidth(), label = { Text("Data (AAAA-MM-DD)") }, singleLine = true)
             }
         },
-        confirmButton = { Button(onClick = { vm.save(TransactionDraft(type, amount, category, description, date)) }) { Text("Salvar") } },
+        confirmButton = { Button(onClick = { vm.save(TransactionDraft(type, amount, category, description, date), imageUri, context) }) { Text("Salvar") } },
         dismissButton = { TextButton(onClick = vm::closeEditor) { Text("Cancelar") } }
     )
+    if (categoryDialog) AlertDialog(onDismissRequest = { categoryDialog = false }, title = { Text("Nova categoria") }, text = { OutlinedTextField(newCategory, { newCategory = it }, label = { Text("Nome") }, singleLine = true) }, confirmButton = { Button(onClick = { if (newCategory.trim().length >= 2) { vm.addCategory(newCategory); category = newCategory.trim(); newCategory = ""; categoryDialog = false } }) { Text("Adicionar") } }, dismissButton = { TextButton(onClick = { categoryDialog = false }) { Text("Cancelar") } })
 }
 
 @Composable
@@ -672,3 +703,4 @@ private fun EmptyState(text: String) {
 
 private fun money(value: BigDecimal): String = NumberFormat.getCurrencyInstance(Locale("pt", "BR")).format(value)
 private fun formatDate(value: String): String = runCatching { LocalDate.parse(value).format(DateTimeFormatter.ofPattern("dd/MM/yyyy")) }.getOrDefault(value)
+
