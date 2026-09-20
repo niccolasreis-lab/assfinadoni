@@ -18,11 +18,14 @@ Atualizado em 20/09/2026.
 - Seletor de imagem no formulário web.
 - Seletor de imagem e nova categoria no editor do APK.
 - Ajustes de cores, navegação e cartões do APK para aproximar o dashboard web.
+- Compartilhamento externo implementado no Android com `Intent.ACTION_SEND`.
+- Compartilhamento externo implementado no web com Web Share API e fallback para copiar o texto.
 - PR de integração aberto: https://github.com/niccolasreis-lab/assfinadoni/pull/2.
 
 ## Em validação
 
 - Build do APK no GitHub Actions para o PR atual.
+- PR #3 validado com workflow Android concluído com sucesso (run 10).
 - Teste manual de upload de imagem nos dois clientes.
 - Teste de categoria personalizada em contas diferentes.
 - Teste de anexo em lançamento compartilhado e tentativa de acesso sem permissão.
@@ -30,6 +33,7 @@ Atualizado em 20/09/2026.
 ## Pendências técnicas
 
 - Exibir galeria/miniatura dos anexos no detalhe do lançamento.
+- Disponibilizar uma ação separada para compartilhamento entre contas, caso ela continue necessária.
 - Migrar data URLs para Supabase Storage quando o volume crescer.
 - Adicionar idempotência para evitar duplicidade em reprocessamento do Telegram.
 - Confirmar no workflow n8n a transcrição de áudio e OCR de imagens em produção.
