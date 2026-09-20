@@ -15,6 +15,7 @@ Aplicação de controle financeiro pessoal para Nicolas e Ionara, com dashboard 
 - Categorias padrão e categorias personalizadas por usuário.
 - Imagens JPG, PNG e WebP anexáveis a receitas e despesas, com validação de tamanho e acesso.
 - Compartilhamento externo de lançamentos pelo Android e navegador, usando o menu nativo de apps sociais.
+- Verificação de versão do APK com card de atualização e download iniciado pelo CTA.
 
 ## 3. Usuários e permissões
 

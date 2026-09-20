@@ -20,6 +20,7 @@ Atualizado em 20/09/2026.
 - Ajustes de cores, navegação e cartões do APK para aproximar o dashboard web.
 - Compartilhamento externo implementado no Android com `Intent.ACTION_SEND`.
 - Compartilhamento externo implementado no web com Web Share API e fallback para copiar o texto.
+- Card de nova versão implementado no APK, com consulta a `/api/app-version` e download via DownloadManager.
 - PR de integração aberto: https://github.com/niccolasreis-lab/assfinadoni/pull/2.
 
 ## Em validação
@@ -34,6 +35,7 @@ Atualizado em 20/09/2026.
 
 - Exibir galeria/miniatura dos anexos no detalhe do lançamento.
 - Disponibilizar uma ação separada para compartilhamento entre contas, caso ela continue necessária.
+- Configurar `ANDROID_APK_URL` no Vercel apontando para um APK hospedado (não ZIP de artefato) e concluir instalação automática pós-download.
 - Migrar data URLs para Supabase Storage quando o volume crescer.
 - Adicionar idempotência para evitar duplicidade em reprocessamento do Telegram.
 - Confirmar no workflow n8n a transcrição de áudio e OCR de imagens em produção.
