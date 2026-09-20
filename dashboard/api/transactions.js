@@ -1,4 +1,4 @@
-import { calendarDate, CATEGORIES, localDate, monthBounds, publicAccount, readBody, requireAccount, rpc, sameOrigin, send, uuid, validatedTransaction } from '../lib/server.js';
+import { calendarDate, localDate, monthBounds, publicAccount, readBody, requireAccount, rpc, sameOrigin, send, uuid, validCategoryName, validatedTransaction } from '../lib/server.js';
 
 const pageSize = 50;
 
@@ -17,7 +17,7 @@ function listOptions(query) {
   const q = (queryValue(query.q, 'Busca') || '').trim();
   if (q.length > 120) throw new Error('Busca inválida.');
   const category = queryValue(query.category, 'Categoria') || '';
-  if (category && !CATEGORIES.includes(category)) throw new Error('Categoria inválida.');
+  if (category && !validCategoryName(category)) throw new Error('Categoria inválida.');
   const type = queryValue(query.type, 'Tipo') || '';
   if (type && !['receita', 'despesa'].includes(type)) throw new Error('Tipo inválido.');
   const from = queryValue(query.date_from, 'Data inicial') || '';
