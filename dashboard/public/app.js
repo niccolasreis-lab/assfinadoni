@@ -1,4 +1,4 @@
-import './ui.js';
+import { icon } from './ui.js';
 const categories = ['Alimentação', 'Transporte', 'Moradia', 'Saúde', 'Educação', 'Lazer', 'Assinaturas', 'Outros'];
 const $ = (id) => document.getElementById(id);
 const money = (value) => Number(value || 0).toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' });
@@ -137,7 +137,7 @@ function openTransactionActions(row) {
   close.type = 'button';
   close.className = 'icon-button';
   close.setAttribute('aria-label', 'Fechar ações');
-  close.textContent = '×';
+  close.innerHTML = icon('close');
   close.addEventListener('click', () => dialog.close());
   heading.append(headingCopy, close);
 
