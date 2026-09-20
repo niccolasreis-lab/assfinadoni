@@ -14,7 +14,7 @@ function validateAttachment(body) {
   const content_type = String(body.content_type || '');
   const filename = String(body.filename || '').trim().slice(0, 180);
   const data_url = String(body.data_url || '');
-  if (!/^(image/jpeg|image/png|image/webp)$/.test(content_type)) throw new Error('Envie uma imagem JPG, PNG ou WebP.');
+  if (!/^image\/(jpeg|png|webp)$/.test(content_type)) throw new Error('Envie uma imagem JPG, PNG ou WebP.');
   if (!filename || filename.length > 180) throw new Error('Nome de arquivo inválido.');
   if (!/^data:image\/(jpeg|png|webp);base64,[A-Za-z0-9+/]+={0,2}$/.test(data_url) || data_url.length > 1400000) throw new Error('A imagem deve ter até 1 MB.');
   return { transaction_id, content_type, filename, data_url };
