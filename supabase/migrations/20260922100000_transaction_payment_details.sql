@@ -47,8 +47,7 @@ begin
       category = p_category,
       description = p_description,
       transaction_date = p_transaction_date,
-      payment_details = coalesce(p_payment_details, '{}'::jsonb),
-      updated_at = now()
+      payment_details = coalesce(p_payment_details, '{}'::jsonb)
   where id = p_transaction_id and user_id = p_account_id
   returning * into result;
   if result.id is null then raise exception 'Lançamento não encontrado.'; end if;
