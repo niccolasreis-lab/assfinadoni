@@ -341,6 +341,11 @@ function openForm(row = null) {
   $('category').value = row?.category || state.categories[0] || defaultCategories[0];
   $('description').value = row?.description || '';
   $('transaction-date').value = row?.transaction_date || saoPauloToday();
+  const payment = row?.payment_details || {};
+  $('payment-method').value = payment.method || 'nao_informado';
+  $('cash-amount').value = payment.cash_amount || '';
+  $('installments').value = payment.installments || '';
+  $('payment-breakdown').hidden = !['misto', 'cartao'].includes($('payment-method').value);
   if (row) $('transaction-date').max = saoPauloToday();
   else $('transaction-date').removeAttribute('max');
   $('transaction-image').value = '';
@@ -354,7 +359,7 @@ async function saveTransaction(event) {
   const id = $('transaction-id').value;
   const row = state.transactions.find((item) => item.id === id);
   if (row && !isOwn(row) && !await confirmAction(`Este lançamento pertence a ${ownerName(row)}. A alteração afetará as duas contas. Continuar?`)) return;
-  const body = { transaction_type: $('transaction-type').value, amount: Number($('amount').value), category: $('category').value, description: $('description').value.trim(), transaction_date: $('transaction-date').value };
+  const body = { transaction_type: $('transaction-type').value, amount: Number($('amount').value), category: $('category').value, description: $('description').value.trim(), transaction_date: $('transaction-date').value, payment_method: $('payment-method').value, cash_amount: Number($('cash-amount').value || 0), installments: Number($('installments').value || 0) };
   if (id) body.id = id;
   const button = $('save-transaction'); button.disabled = true;
   button.textContent = id ? 'Salvando alterações...' : 'Adicionando...';
@@ -572,6 +577,7 @@ async function init() {
   $('close-category-dialog').addEventListener('click', () => $('category-dialog').close());
   $('cancel-category-dialog').addEventListener('click', () => $('category-dialog').close());
   $('transaction-image').addEventListener('change', () => { const file = $('transaction-image').files?.[0]; $('transaction-image-status').textContent = file ? `${file.name} · ${(file.size / 1024).toFixed(0)} KB` : 'JPG, PNG ou WebP · até 1 MB'; });
+  $('payment-method').addEventListener('change', () => { $('payment-breakdown').hidden = !['misto', 'cartao'].includes($('payment-method').value); });
   $('close-dialog').addEventListener('click', () => $('transaction-dialog').close());
   $('cancel-dialog').addEventListener('click', () => $('transaction-dialog').close());
   $('share-form').addEventListener('submit', shareTransaction);
