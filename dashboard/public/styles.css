@@ -1854,3 +1854,6 @@ dialog.is-closing::backdrop { animation:backdrop-out 150ms ease-in forwards; }
     padding:20px 18px max(20px, env(safe-area-inset-bottom));
   }
 }
+.payment-field { border: 0; padding: 0; margin: 0; }
+.payment-field legend { padding: 0; margin-bottom: 8px; font-weight: 600; }
+
