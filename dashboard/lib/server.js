@@ -2,7 +2,7 @@ import { createHmac, randomBytes, scrypt as cryptoScrypt, timingSafeEqual } from
 import { promisify } from 'node:util';
 
 export const CATEGORIES = ['Alimentação', 'Transporte', 'Moradia', 'Saúde', 'Educação', 'Lazer', 'Assinaturas', 'Outros'];
-export function validCategoryName(value) { return typeof value === 'string' && /^[\\p{L}\\p{N}][\\p{L}\\p{N} &'’().\\/-]{1,59}$/u.test(value.trim()); }
+export function validCategoryName(value) { const name = typeof value === 'string' ? value.trim() : ''; return name.length >= 2 && name.length <= 60 && !/[\\p{Cc}\\p{Cf}]/u.test(name); }
 const COOKIE = 'finance_session';
 const MAX_AGE = 60 * 60 * 24 * 7;
 const scrypt = promisify(cryptoScrypt);
@@ -146,7 +146,15 @@ export function validatedTransaction(input) {
   if (!validCategoryName(category)) throw new Error('Selecione uma categoria válida.');
   if (!description || description.length > 180) throw new Error('Descreva o lançamento em até 180 caracteres.');
   if (!validDate(transaction_date)) throw new Error('Informe uma data válida que não seja futura.');
-  return { transaction_type, amount: amount.toFixed(2), category, description, transaction_date };
+  const payment_method = String(input.payment_method || 'nao_informado');
+  const cash_amount = Number(input.cash_amount || 0);
+  const installments = Number(input.installments || 0);
+  if (!['nao_informado', 'dinheiro', 'cartao', 'misto'].includes(payment_method)) throw new Error('Forma de pagamento inválida.');
+  if (!Number.isFinite(cash_amount) || cash_amount < 0 || cash_amount > amount) throw new Error('Valor em dinheiro inválido.');
+  if (!Number.isInteger(installments) || installments < 0 || installments > 120) throw new Error('Número de parcelas inválido.');
+  if (payment_method === 'misto' && (cash_amount <= 0 || cash_amount >= amount || installments < 2)) throw new Error('Informe o valor em dinheiro e pelo menos 2 parcelas.');
+  if (payment_method === 'cartao' && installments < 1) throw new Error('Informe o número de parcelas.');
+  return { transaction_type, amount: amount.toFixed(2), category, description, transaction_date, payment_details: { method: payment_method, cash_amount: cash_amount.toFixed(2), installments } };
 }
 
 function config() {
@@ -192,3 +200,4 @@ export function uuid(value) {
   if (!parsed) throw new Error('Lançamento inválido.');
   return parsed;
 }
+

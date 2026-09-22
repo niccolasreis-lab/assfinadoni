@@ -87,7 +87,13 @@ data class FinanceTransaction(
     val description: String,
     val date: String,
     val shared: Boolean,
-    val owner: Boolean
+    val owner: Boolean,
+    val payment: PaymentDetails = PaymentDetails()
+)
+data class PaymentDetails(
+    val method: String = "nao_informado",
+    val cashAmount: String = "0",
+    val installments: Int = 0
 )
 data class Summary(
     val income: BigDecimal = BigDecimal.ZERO,
@@ -205,6 +211,9 @@ private class FinanceApi(context: Context) {
             .put("category", draft.category)
             .put("description", draft.description)
             .put("transaction_date", draft.date)
+            .put("payment_method", draft.paymentMethod)
+            .put("cash_amount", draft.cashAmount.toBigDecimalOrNull() ?: BigDecimal.ZERO)
+            .put("installments", draft.installments.toIntOrNull() ?: 0)
         val result = if (row == null) call("POST", "/api/transactions", body)
         else call("PATCH", "/api/transactions", body.put("id", row.id))
         return result.optJSONObject("transaction")?.optString("id").orEmpty().ifBlank { row?.id.orEmpty() }
@@ -234,7 +243,9 @@ private class FinanceApi(context: Context) {
         json.optBoolean("telegram_linked")
     )
 
-    private fun parseTransaction(json: JSONObject) = FinanceTransaction(
+    private fun parseTransaction(json: JSONObject): FinanceTransaction {
+        val payment = json.optJSONObject("payment_details")
+        return FinanceTransaction(
         id = json.optString("id"),
         type = json.optString("transaction_type", "despesa"),
         amount = json.optString("amount", "0").toBigDecimalOrNull() ?: BigDecimal.ZERO,
@@ -242,8 +253,14 @@ private class FinanceApi(context: Context) {
         description = json.optString("description", "Lançamento"),
         date = json.optString("transaction_date", LocalDate.now().toString()),
         shared = json.optBoolean("is_shared") || json.optBoolean("shared") || json.has("share_id"),
-        owner = !json.has("is_owner") || json.optBoolean("is_owner")
+        owner = !json.has("is_owner") || json.optBoolean("is_owner"),
+        payment = PaymentDetails(
+            method = payment?.optString("method", "nao_informado") ?: "nao_informado",
+            cashAmount = payment?.optString("cash_amount", "0") ?: "0",
+            installments = payment?.optInt("installments", 0) ?: 0
+        )
     )
+    }
 
     private fun parseSummary(json: JSONObject): Summary {
         val categories = linkedMapOf<String, BigDecimal>()
@@ -263,7 +280,10 @@ data class TransactionDraft(
     val amount: String,
     val category: String,
     val description: String,
-    val date: String
+    val date: String,
+    val paymentMethod: String = "nao_informado",
+    val cashAmount: String = "0",
+    val installments: String = "0"
 )
 
 private class FinanceViewModel(private val api: FinanceApi) : ViewModel() {
@@ -324,6 +344,14 @@ private class FinanceViewModel(private val api: FinanceApi) : ViewModel() {
     fun save(draft: TransactionDraft, image: Uri? = null, context: Context? = null) = runTask(if (mutableState.value.creating) "Lançamento adicionado." else "Lançamento atualizado.") {
         if (draft.amount.toBigDecimalOrNull()?.signum() != 1) throw IllegalArgumentException("Informe um valor maior que zero.")
         if (draft.description.isBlank()) throw IllegalArgumentException("Descreva o lançamento.")
+        val cash = draft.cashAmount.toBigDecimalOrNull() ?: BigDecimal.ZERO
+        val installments = draft.installments.toIntOrNull() ?: 0
+        val total = draft.amount.toBigDecimalOrNull() ?: BigDecimal.ZERO
+        if (draft.paymentMethod !in listOf("nao_informado", "dinheiro", "cartao", "misto")) throw IllegalArgumentException("Forma de pagamento inválida.")
+        if (cash < BigDecimal.ZERO || cash > total) throw IllegalArgumentException("Valor em dinheiro inválido.")
+        if (installments < 0 || installments > 120) throw IllegalArgumentException("Número de parcelas inválido.")
+        if (draft.paymentMethod == "misto" && (cash <= BigDecimal.ZERO || cash >= total || installments < 2)) throw IllegalArgumentException("Informe o valor em dinheiro e pelo menos 2 parcelas.")
+        if (draft.paymentMethod == "cartao" && installments < 1) throw IllegalArgumentException("Informe o número de parcelas.")
         LocalDate.parse(draft.date)
         val id = api.save(mutableState.value.editing, draft)
         if (image != null && context != null) api.uploadImage(id, image, context)
@@ -671,7 +699,11 @@ private fun TransactionEditor(row: FinanceTransaction?, categories: List<String>
     var category by remember(row) { mutableStateOf(row?.category ?: categories.first()) }
     var description by remember(row) { mutableStateOf(row?.description.orEmpty()) }
     var date by remember(row) { mutableStateOf(row?.date ?: LocalDate.now().toString()) }
+    var paymentMethod by remember(row) { mutableStateOf(row?.payment?.method ?: "nao_informado") }
+    var cashAmount by remember(row) { mutableStateOf(row?.payment?.cashAmount ?: "0") }
+    var installments by remember(row) { mutableStateOf(row?.payment?.installments?.takeIf { it > 0 }?.toString() ?: "") }
     var categoryOpen by remember { mutableStateOf(false) }
+    var paymentOpen by remember { mutableStateOf(false) }
 
     AlertDialog(
         onDismissRequest = vm::closeEditor,
@@ -694,12 +726,37 @@ private fun TransactionEditor(row: FinanceTransaction?, categories: List<String>
                 OutlinedButton(onClick = { imagePicker.launch("image/*") }, modifier = Modifier.fillMaxWidth().heightIn(min = 48.dp)) { Text(if (imageUri == null) "Adicionar imagem do comprovante" else "Imagem selecionada") }
                 OutlinedTextField(description, { description = it }, Modifier.fillMaxWidth(), label = { Text("Descrição") }, singleLine = true)
                 OutlinedTextField(date, { date = it }, Modifier.fillMaxWidth(), label = { Text("Data (AAAA-MM-DD)") }, singleLine = true)
+                Text("Forma de pagamento", style = MaterialTheme.typography.labelLarge, color = Muted)
+                Box {
+                    OutlinedButton(onClick = { paymentOpen = true }, modifier = Modifier.fillMaxWidth().heightIn(min = 48.dp)) {
+                        Text(paymentLabel(paymentMethod), Modifier.weight(1f))
+                    }
+                    DropdownMenu(paymentOpen, { paymentOpen = false }) {
+                        listOf("nao_informado" to "Não informado", "dinheiro" to "Dinheiro", "cartao" to "Cartão / parcelado", "misto" to "Misto: dinheiro + parcelado").forEach { option ->
+                            DropdownMenuItem(text = { Text(option.second) }, onClick = { paymentMethod = option.first; paymentOpen = false })
+                        }
+                    }
+                }
+                if (paymentMethod == "misto" || paymentMethod == "cartao") {
+                    Row(horizontalArrangement = Arrangement.spacedBy(10.dp), modifier = Modifier.fillMaxWidth()) {
+                        if (paymentMethod == "misto") OutlinedTextField(cashAmount, { cashAmount = it }, Modifier.weight(1f), label = { Text("Em dinheiro") }, singleLine = true)
+                        OutlinedTextField(installments, { installments = it.filter(Char::isDigit) }, Modifier.weight(1f), label = { Text("Parcelas") }, singleLine = true)
+                    }
+                    if (paymentMethod == "misto") Text("O saldo restante será dividido entre as parcelas.", color = Muted, style = MaterialTheme.typography.bodySmall)
+                }
             }
         },
-        confirmButton = { Button(onClick = { vm.save(TransactionDraft(type, amount, category, description, date), imageUri, context) }) { Text("Salvar") } },
+        confirmButton = { Button(onClick = { vm.save(TransactionDraft(type, amount, category, description, date, paymentMethod, cashAmount, installments), imageUri, context) }) { Text("Salvar") } },
         dismissButton = { TextButton(onClick = vm::closeEditor) { Text("Cancelar") } }
     )
     if (categoryDialog) AlertDialog(onDismissRequest = { categoryDialog = false }, title = { Text("Nova categoria") }, text = { OutlinedTextField(newCategory, { newCategory = it }, label = { Text("Nome") }, singleLine = true) }, confirmButton = { Button(onClick = { if (newCategory.trim().length >= 2) { vm.addCategory(newCategory); category = newCategory.trim(); newCategory = ""; categoryDialog = false } }) { Text("Adicionar") } }, dismissButton = { TextButton(onClick = { categoryDialog = false }) { Text("Cancelar") } })
+}
+
+private fun paymentLabel(method: String): String = when (method) {
+    "dinheiro" -> "Dinheiro"
+    "cartao" -> "Cartão / parcelado"
+    "misto" -> "Misto: dinheiro + parcelado"
+    else -> "Não informado"
 }
 
 @Composable
