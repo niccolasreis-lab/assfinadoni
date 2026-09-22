@@ -2,7 +2,7 @@ import { createHmac, randomBytes, scrypt as cryptoScrypt, timingSafeEqual } from
 import { promisify } from 'node:util';
 
 export const CATEGORIES = ['Alimentação', 'Transporte', 'Moradia', 'Saúde', 'Educação', 'Lazer', 'Assinaturas', 'Outros'];
-export function validCategoryName(value) { return typeof value === 'string' && /^[\\p{L}\\p{N}][\\p{L}\\p{N} &'’().\\/-]{1,59}$/u.test(value.trim()); }
+export function validCategoryName(value) { const name = typeof value === 'string' ? value.trim() : ''; return name.length >= 2 && name.length <= 60 && !/[\\p{Cc}\\p{Cf}]/u.test(name); }
 const COOKIE = 'finance_session';
 const MAX_AGE = 60 * 60 * 24 * 7;
 const scrypt = promisify(cryptoScrypt);
@@ -192,3 +192,4 @@ export function uuid(value) {
   if (!parsed) throw new Error('Lançamento inválido.');
   return parsed;
 }
+

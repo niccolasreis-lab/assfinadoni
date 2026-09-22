@@ -2,7 +2,7 @@ import { readBody, requireAccount, sameOrigin, send, supabase } from '../lib/ser
 
 function cleanName(value) {
   const name = String(value || '').trim().replace(/\s+/g, ' ');
-  if (!/^[\p{L}\p{N}][\p{L}\p{N} &'’()./-]{1,59}$/u.test(name)) throw new Error('Use um nome de categoria entre 2 e 60 caracteres.');
+  if (name.length < 2 || name.length > 60 || /[\p{Cc}\p{Cf}]/u.test(name)) throw new Error('Use um nome de categoria entre 2 e 60 caracteres.');
   return name;
 }
 
@@ -31,3 +31,4 @@ export default async function handler(req, res) {
     return send(res, invalid ? 400 : error.status === 409 ? 409 : 500, { error: invalid ? error.message : error.status === 409 ? 'Essa categoria já existe.' : 'Não consegui carregar as categorias.' });
   }
 }
+
