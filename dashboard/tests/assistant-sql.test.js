@@ -4,7 +4,7 @@ import { readFileSync } from 'node:fs';
 import { PGlite } from '@electric-sql/pglite';
 const uid='11111111-1111-4111-8111-111111111111', other='22222222-2222-4222-8222-222222222222';
 const migration=readFileSync(new URL('../../supabase/migrations/20260918120432_finance_assistant.sql',import.meta.url),'utf8');
-const jevMigration=readFileSync(new URL('../../supabase/migrations/20260924130000_finance_assistant_jev.sql',import.meta.url),'utf8');
+const jevMigration=readFileSync(new URL('../../supabase/migrations/20260924130100_finance_assistant_jev.sql',import.meta.url),'utf8');
 const integrity=readFileSync(new URL('../../supabase/migrations/20260924120000_finance_integrity_foundation.sql',import.meta.url),'utf8');
 test('fila, isolamento, confirmação e efeitos financeiros atômicos em PostgreSQL',async()=>{
  const db=new PGlite();
