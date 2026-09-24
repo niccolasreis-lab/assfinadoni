@@ -3,7 +3,7 @@ import { readFileSync } from 'node:fs';
 import { runInNewContext } from 'node:vm';
 import test from 'node:test';
 
-const source = readFileSync(new URL('../public/app.js', import.meta.url), 'utf8').replace("import './ui.js';", '');
+const source = readFileSync(new URL('../public/app.js', import.meta.url), 'utf8').replace("import { icon } from './ui.js';", "const icon = () => '';\n");
 
 test('pulso do login termina ao focar ou preencher campos e ao concluir animação', async () => {
   for (const [id, event] of [['username', 'focus'], ['password', 'input'], ['login-brand', 'animationend']]) {
@@ -36,7 +36,7 @@ class Element {
     this.children = [];
     this.listeners = new Map();
     this.attributes = new Map();
-    this.classList = { toggle() {} };
+    this.classList = { add() {}, remove() {}, toggle() {} };
     this.value = '';
     this.textContent = '';
     this.style = {};
@@ -89,6 +89,7 @@ test('a última seleção de mês vence quando há uma consulta em andamento', a
   const calls = [];
   const ui = mount((path) => {
     if (path === '/api/session') return Promise.resolve(json({ authenticated: true }));
+    if (path === '/api/categories') return Promise.resolve(json({ categories: [] }));
     const pending = deferred();
     calls.push({ path, pending });
     return pending.promise;
@@ -172,6 +173,7 @@ test('login envia usuário normalizado e senha e mostra identidade da conta', as
 test('scope e inclusão nos totais são controles independentes, com filtros por scope', async () => {
   const calls = [];
   const ui = mount(async (path) => {
+    if (path === '/api/categories') return json({ categories: [] });
     calls.push(path);
     if (path === '/api/session') return json({ authenticated: true, account: { username: 'nicolasreis', name: 'Nicolas' } });
     return json({ transactions: [], summary: { income: 100, expense: path.includes('include_shared_summary=true') ? 40 : 20, balance: 80, byCategory: {} } });
