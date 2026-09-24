@@ -181,10 +181,30 @@ returns jsonb language sql security invoker set search_path=public as $$
   select jsonb_build_object('horizon_days',greatest(1,least(coalesce(p_horizon_days,30),365)),'assumptions',jsonb_build_array('Inclui parcelas planejadas, contas pendentes e assinaturas ativas cadastradas.','Valores são projeções e não alteram lançamentos realizados.'),'items',coalesce((select jsonb_agg(to_jsonb(i) order by i.event_date) from items i),'[]'::jsonb),'total_expenses',coalesce((select sum(amount) from items),0));
 $$;
 
+create or replace function public.finance_timeline(p_user_id uuid,p_date_from date default null,p_date_to date default null,p_limit integer default 200)
+returns jsonb language sql security invoker set search_path=public as $$
+  select coalesce(jsonb_agg(to_jsonb(x) order by x.event_date desc,x.kind),'[]'::jsonb)
+  from (
+    select t.transaction_date event_date,'transaction' kind,to_jsonb(t) data
+    from finance_transactions t where t.user_id=p_user_id and t.deleted_at is null
+      and (p_date_from is null or t.transaction_date>=p_date_from) and (p_date_to is null or t.transaction_date<=p_date_to)
+    union all
+    select i.due_date,'installment',to_jsonb(i) from finance_installments i where i.user_id=p_user_id
+      and (p_date_from is null or i.due_date>=p_date_from) and (p_date_to is null or i.due_date<=p_date_to)
+    union all
+    select r.due_date,'reminder',to_jsonb(r) from finance_reminders r where r.finance_user_id=p_user_id and r.status='pending'
+      and r.due_date is not null and (p_date_from is null or r.due_date>=p_date_from) and (p_date_to is null or r.due_date<=p_date_to)
+    union all
+    select a.created_at::date,'alert',to_jsonb(a) from finance_alerts a where a.user_id=p_user_id
+      and (p_date_from is null or a.created_at::date>=p_date_from) and (p_date_to is null or a.created_at::date<=p_date_to)
+    order by event_date desc,kind limit greatest(1,least(coalesce(p_limit,200),500))
+  ) x;
+$$;
+
 do $$ declare f record; begin
   for f in select p.oid::regprocedure sig from pg_proc p join pg_namespace n on n.oid=p.pronamespace
     where n.nspname='public' and p.proname in ('finance_budget_summary','finance_budget_create','finance_goal_list','finance_goal_create',
-      'finance_goal_contribute','finance_alert_list','finance_alert_dismiss','finance_insight_list','finance_cashflow_projection') loop
+      'finance_goal_contribute','finance_alert_list','finance_alert_dismiss','finance_insight_list','finance_cashflow_projection','finance_timeline') loop
     execute format('revoke all on function %s from public,anon,authenticated',f.sig);
     execute format('grant execute on function %s to service_role',f.sig);
   end loop;
