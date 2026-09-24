@@ -18,6 +18,7 @@ Esta versão usa contas individuais vinculadas a chats distintos do Telegram. A 
    - `SUPABASE_URL`: URL HTTPS do projeto Supabase usado no n8n.
    - `SUPABASE_SERVICE_ROLE_KEY`: chave `service_role` desse projeto, como variável sensível.
    - `SESSION_SECRET`: segredo aleatório de pelo menos 32 caracteres, diferente da senha.
+   - `ASSISTANT_ENABLED`: use `true` para ativar o assistente web e Telegram; deixe ausente para manter somente os lançamentos manuais.
 
 3. Aplique as migrações em `supabase/migrations` e faça o deploy. As dependências estão fixadas no lockfile.
 
