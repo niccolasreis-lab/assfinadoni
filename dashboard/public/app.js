@@ -514,7 +514,6 @@ async function init() {
   state.includeSharedSummary = remembered('finance_include_shared', 'false') === 'true';
   $('month').value = saoPauloToday().slice(0, 7);
   syncMonthDates();
-  await loadCategories();
   $('login-form').addEventListener('submit', async (event) => {
     event.preventDefault(); message('login-error', '');
     const button = $('login-submit'); if (button.disabled) return;
@@ -525,7 +524,7 @@ async function init() {
       state.view = 'active'; state.scope = 'mine'; state.includeSharedSummary = false; state.scopeFilters = {}; state.datesCustomized = false;
       restoreScopeFilters('mine'); remember('finance_scope', 'mine'); remember('finance_include_shared', 'false');
       state.section = 'overview'; window.FinanceUI?.reset();
-      setIdentity(data.account || data.user); $('password').value = ''; render(); showDashboard(true); await loadTransactions();
+      setIdentity(data.account || data.user); $('password').value = ''; render(); showDashboard(true); await loadTransactions(); await loadCategories();
     }
     catch (error) { message('login-error', error.message, true); }
     finally { button.disabled = false; button.textContent = 'Entrar'; $('login-form').removeAttribute('aria-busy'); }
@@ -588,9 +587,8 @@ async function init() {
   $('share-form').addEventListener('submit', shareTransaction);
   $('close-share-dialog').addEventListener('click', () => $('share-dialog').close());
   $('cancel-share-dialog').addEventListener('click', () => $('share-dialog').close());
-  try { const session = await request('/api/session'); setIdentity(session.account || session.user); showDashboard(session.authenticated); if (session.authenticated) { await loadCategories(); await loadTransactions(); } }
+  try { const session = await request('/api/session'); setIdentity(session.account || session.user); showDashboard(session.authenticated); if (session.authenticated) { await loadTransactions(); await loadCategories(); } }
   catch { showDashboard(false); }
 }
 
 init();
-
