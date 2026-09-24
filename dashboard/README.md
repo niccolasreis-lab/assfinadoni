@@ -20,6 +20,15 @@ Esta versão usa contas individuais vinculadas a chats distintos do Telegram. A 
    - `SESSION_SECRET`: segredo aleatório de pelo menos 32 caracteres, diferente da senha.
    - `ASSISTANT_ENABLED`: use `true` para ativar o assistente web e Telegram; deixe ausente para manter somente os lançamentos manuais.
 
+O worker do assistente aceita a avaliação opcional do Jev pelo OpenRouter. Mantenha a chave somente no ambiente privado do worker (nunca no navegador ou em variáveis `NEXT_PUBLIC_*`):
+
+   - `OPENROUTER_API_KEY`: chave da conta OpenRouter com acesso ao Jev.
+   - `JEV_ENABLED`: use `true` para registrar decisões e avaliações.
+   - `JEV_MODE`: começa em `shadow` para observar as decisões; use `gate` depois da calibração para bloquear operações incertas.
+   - `JEV_MODEL`: padrão `jev-1.13`.
+   - `JEV_TIMEOUT_MS`: padrão `4000`.
+   - `JEV_UNDERSTOOD_MIN`, `JEV_SAFE_MIN`, `JEV_FULFILLED_MIN`: limites opcionais, com padrões `0.90`, `0.97` e `0.85`.
+
 3. Aplique as migrações em `supabase/migrations` e faça o deploy. As dependências estão fixadas no lockfile.
 
 Cada conta possui uma carteira própria em `finance_users`. Usuários somente web podem ter `telegram_chat_id = null`; o vínculo futuro deve atualizar a mesma carteira por UUID, preservando os lançamentos, nunca criar um chat fictício. A migração multiusuário e o provisionamento vêm **antes** da nova API/interface. Depois disso, remova `TELEGRAM_CHAT_ID` e `DASHBOARD_PASSWORD`.

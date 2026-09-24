@@ -3,19 +3,54 @@ import { pathToFileURL } from 'node:url';
 import { setTimeout as delay } from 'node:timers/promises';
 import { rpc, supabase, uuid } from '../lib/server.js';
 import { extractMedia, telegramFile, MediaError } from './media.js';
-import { interpret } from './interpret.js';
+import { interpret, repairResponse } from './interpret.js';
+import { decisionMessage, decideProposal, evaluateResult, gateAllows, gateRequestsConfirmation, jevConfig, qualityNeedsRepair } from './jev.js';
 
-export async function processJob(job,{database=supabase,call=rpc,extract=extractMedia,download=telegramFile,analyze=interpret}={}) {
-  let transcript='';
+const MUTATING_ACTIONS = new Set(['create', 'update', 'delete', 'reminder', 'complete_reminder']);
+
+export function isMutatingAction(action) { return MUTATING_ACTIONS.has(action); }
+
+function jevQualityPayload({gateResult, qualityResult, repaired=false}) {
+  const gate=gateResult?.decision||{};
+  const quality=qualityResult?.decision||{};
+  return {
+    status:qualityResult?.status||'disabled',
+    model:quality.model||gate.model||null,
+    route:gate.route||null,
+    understood:gate.understood,
+    safe:gate.safe,
+    fulfilled:quality.fulfilled,
+    truthful:quality.truthful,
+    repaired:Boolean(repaired),
+    latency_ms:Number(gate.latency_ms||0)+Number(quality.latency_ms||0),
+    cost:Number(gate.usage?.cost||0)+Number(quality.usage?.cost||0),
+  };
+}
+
+async function recordQuality(call,job,quality,text) {
   try {
-    let input={user_id:job.user_id,text:job.payload.text||'',kind:'text'};
+    return await call('finance_assistant_record_quality',{p_id:job.id,p_quality:quality,p_text:text||null});
+  } catch {
+    console.error('Assistant worker: Jev evaluation could not be recorded.');
+    return null;
+  }
+}
+
+export async function processJob(job,{database=supabase,call=rpc,extract=extractMedia,download=telegramFile,analyze=interpret,decide=decideProposal,evaluate=evaluateResult,repair=repairResponse}={}) {
+  let transcript='';
+  let input;
+  let context={transactions:[],reminders:[],actual_outcomes:[]};
+  let proposal;
+  let gateResult={status:'disabled',decision:null};
+  let confirmationRequested=false;
+  try {
+    input={user_id:job.user_id,text:job.payload.text||'',kind:'text'};
     if(job.payload.file || job.payload.telegram_file_id) {
       const bytes=job.payload.file?Buffer.from(job.payload.file.base64,'base64'):await download(job.payload.telegram_file_id);
       const result=await extract(bytes,{photo:job.payload.media_kind==='photo'});
       transcript=result.text; input={...input,kind:result.kind,attachment:transcript};
       await database(`finance_assistant_jobs?id=eq.${job.id}&lease_token=eq.${job.lease_token}`,{method:'PATCH',body:{file_hash:createHash('sha256').update(bytes).digest('hex')}});
     }
-    let proposal;
     if(job.payload.action) proposal={operation:{action:'chat'},text:''};
     else {
       const query=new URLSearchParams({select:'id,transaction_type,amount,category,description,transaction_date',user_id:`eq.${job.user_id}`,deleted_at:'is.null',order:'created_at.desc',limit:'100'});
@@ -29,9 +64,48 @@ export async function processJob(job,{database=supabase,call=rpc,extract=extract
         const extra=await database(`finance_transactions?${new URLSearchParams({select:'id,transaction_type,amount,category,description,transaction_date',user_id:`eq.${job.user_id}`,id:`eq.${uuid(target)}`,deleted_at:'is.null',limit:'1'})}`);
         transactions.push(...extra);
       }
-      proposal=await analyze(input,{transactions,reminders,actual_outcomes:outcomes.map(o=>o.result).reverse()});
+      context={transactions,reminders,actual_outcomes:outcomes.map(o=>o.result).reverse()};
+      proposal=await analyze(input,context);
     }
-    return await call('finance_assistant_finish',{p_id:job.id,p_lease:job.lease_token,p_operation:proposal.operation,p_text:proposal.text,p_transcript:transcript});
+    if(isMutatingAction(proposal.operation?.action)) {
+      const deterministicChecks={operation_valid:Boolean(proposal.operation),mutation:true,server_validation:'finance_assistant_finish'};
+      gateResult=await decide({input,proposal,context,deterministicChecks});
+      const config=jevConfig();
+      if(config.enabled && config.mode==='gate' && gateResult.status==='ok' && gateResult.decision?.route==='fallback') {
+        try {
+          const reviewed=await analyze(input,{...context,jev_review:{decision:gateResult.decision,proposal:proposal.operation}});
+          if(isMutatingAction(reviewed.operation?.action)) {
+            const reviewedGate=await decide({input,proposal:reviewed,context,deterministicChecks});
+            if(reviewedGate.status==='ok' && gateAllows(reviewedGate.decision)) {
+              proposal=reviewed;gateResult=reviewedGate;
+            } else proposal={operation:{action:'chat'},text:decisionMessage(reviewedGate.decision)};
+          } else proposal=reviewed;
+        } catch { proposal={operation:{action:'chat'},text:decisionMessage(gateResult.decision)}; }
+      }
+      if(config.enabled && config.mode==='gate' && (gateResult.status==='error' || (gateResult.status==='ok' && !gateAllows(gateResult.decision)))) {
+        if(gateResult.status==='ok' && gateRequestsConfirmation(gateResult.decision)) {
+          confirmationRequested=true;
+          proposal={operation:{...proposal.operation,requires_confirmation:true},text:decisionMessage(gateResult.decision)};
+        } else proposal={operation:{action:'chat'},text:decisionMessage(gateResult.decision)};
+      }
+    }
+    const finished=await call(confirmationRequested?'finance_assistant_request_confirmation':'finance_assistant_finish',{p_id:job.id,p_lease:job.lease_token,p_operation:proposal.operation,p_text:proposal.text,p_transcript:transcript});
+    const config=jevConfig();
+    if(!config.enabled || !finished || finished.status==='failed' && proposal.operation?.action==='error') return finished;
+    const qualityResult=await evaluate({input,proposal,context,result:finished,gate:gateResult});
+    if(qualityResult.status==='disabled') return finished;
+    let repaired=false;
+    let finalText=null;
+    if(config.mode==='gate' && qualityResult.status==='ok' && qualityNeedsRepair(qualityResult.decision)) {
+      try {
+        const repairedProposal=await repair({input,proposal,context,result:finished,quality:qualityResult.decision});
+        if(repairedProposal?.text) { repaired=true; finalText=repairedProposal.text; }
+      } catch { /* A telemetry failure must not change a completed financial result. */ }
+    }
+    const quality=jevQualityPayload({gateResult,qualityResult,repaired});
+    if(qualityResult.status==='error') quality.error='Jev indisponível.';
+    const recorded=await recordQuality(call,job,quality,finalText);
+    return recorded||finished;
   } catch(error) {
     // A failed/uncertain commit is safe: finish is atomic and returns an existing final result.
     return call('finance_assistant_finish',{p_id:job.id,p_lease:job.lease_token,p_operation:{action:'error'},

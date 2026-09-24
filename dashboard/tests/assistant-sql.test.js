@@ -4,6 +4,7 @@ import { readFileSync } from 'node:fs';
 import { PGlite } from '@electric-sql/pglite';
 const uid='11111111-1111-4111-8111-111111111111', other='22222222-2222-4222-8222-222222222222';
 const migration=readFileSync(new URL('../../supabase/migrations/20260918120432_finance_assistant.sql',import.meta.url),'utf8');
+const jevMigration=readFileSync(new URL('../../supabase/migrations/20260924130000_finance_assistant_jev.sql',import.meta.url),'utf8');
 const integrity=readFileSync(new URL('../../supabase/migrations/20260924120000_finance_integrity_foundation.sql',import.meta.url),'utf8');
 test('fila, isolamento, confirmação e efeitos financeiros atômicos em PostgreSQL',async()=>{
  const db=new PGlite();
@@ -13,6 +14,7 @@ test('fila, isolamento, confirmação e efeitos financeiros atômicos em Postgre
  create table dashboard_accounts(id uuid primary key,finance_user_id uuid,active boolean);
  create table finance_transactions(id uuid primary key default gen_random_uuid(),user_id uuid,telegram_message_id bigint,transaction_type text,amount numeric,category text,description text,transaction_date date,created_at timestamptz default now(),deleted_at timestamptz,updated_by_account_id uuid,deleted_by_account_id uuid);`);
  await db.exec(migration);
+ await db.exec(jevMigration);
  await db.exec(integrity);
  const scalar=async(sql,values=[]) => (await db.query(sql,values)).rows[0].v;
  const enqueue=(key,payload={},user=uid)=>scalar("select finance_assistant_enqueue($1,null,'dashboard',$2,$3::jsonb) v",[user,key,JSON.stringify(payload)]);
@@ -23,6 +25,8 @@ test('fila, isolamento, confirmação e efeitos financeiros atômicos em Postgre
  const first=await enqueue('one');assert.equal((await enqueue('one')).id,first.id);
  const claimed=await claim();await enqueue('two');assert.equal(await claim(),null,'same wallet cannot process concurrently');
  const made=await finish(claimed,{action:'create',transactions:[tx]});assert.equal(await count(),1);
+ const quality=await scalar("select finance_assistant_record_quality($1,$2::jsonb,$3) v",[claimed.id,JSON.stringify({fulfilled:.98,repaired:false}),'Resposta revisada.']);
+ assert.equal(quality.result.text,'Resposta revisada.');assert.equal(quality.result.quality.fulfilled,.98);
  await finish(claimed,{action:'create',transactions:[tx]});assert.equal(await count(),1,'repeat finish does not duplicate');
  const second=await claim();const duplicate=await finish(second,{action:'create',transactions:[tx]});assert.equal(duplicate.status,'awaiting_confirmation');assert.equal(await count(),1);
  await enqueue('foreign-confirm',{action:'confirm',confirmation_id:duplicate.id},other);await finish(await claim(),{action:'chat'});assert.equal(await count(),1);
@@ -35,7 +39,11 @@ test('fila, isolamento, confirmação e efeitos financeiros atômicos em Postgre
  await enqueue('cancel',{action:'cancel',confirmation_id:pending.id});await finish(await claim(),{action:'chat'});assert.equal(await count(),2);
  await enqueue('batch');const batch=await finish(await claim(),{action:'create',transactions:[tx,{...tx,amount:50}]});assert.equal(batch.status,'awaiting_confirmation');assert.equal(await count(),2);
  await enqueue('batch-confirm',{action:'confirm',confirmation_id:batch.id});await finish(await claim(),{action:'chat'});assert.equal(await count(),4);
- await enqueue('invalid');const invalid=await claim();await assert.rejects(finish(invalid,{action:'create',transactions:[{...tx,amount:-1}]}));assert.equal(await count(),4);
+ await enqueue('invalid');const invalid=await claim();await assert.rejects(finish(invalid,{action:'create',transactions:[{...tx,amount:-1}]}));await db.exec("update finance_assistant_jobs set status='failed' where request_key='invalid'");assert.equal(await count(),4);
+ await enqueue('jev-confirm');const jevJob=await claim();
+ const requested=await scalar("select finance_assistant_request_confirmation($1,$2,$3::jsonb,'Confirma?') v",[jevJob.id,jevJob.lease_token,JSON.stringify({action:'create',transactions:[{...tx,amount:46}]})]);
+ assert.equal(requested.status,'awaiting_confirmation');assert.equal(await count(),4);
+ await enqueue('jev-cancel',{action:'cancel',confirmation_id:requested.id});await finish(await claim(),{action:'chat'});assert.equal(await count(),4);
  await db.exec('set role anon');await assert.rejects(db.query('select * from finance_assistant_jobs'));await assert.rejects(db.query('select finance_assistant_claim()'));
  }finally{await db.close()}
 });
