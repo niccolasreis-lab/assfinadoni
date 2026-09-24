@@ -35,7 +35,7 @@ A interface mantém o dashboard original e acrescenta uma ilha React/TypeScript 
 
 Use `pnpm install --frozen-lockfile`, `pnpm run build` e `pnpm test`. O build gera `dist` com os arquivos públicos e JS/CSS locais; as APIs Vercel permanecem em `api`. Para adicionar componentes, use o CLI shadcn com a configuração existente. O brilho usa Motion, para quando o carregamento termina e respeita movimento reduzido.
 
-Use `npm test` (ou `node --test`) dentro desta pasta. Para testar a UI com funções Vercel localmente, configure as variáveis e execute `vercel dev`. Nunca use dados reais em um Preview público sem proteção por senha forte.
+Use `pnpm lint`, `pnpm typecheck`, `pnpm test` e `pnpm build` dentro desta pasta. Para testar a UI com funções Vercel localmente, configure as variáveis e execute `vercel dev`. Nunca use dados reais em um Preview público sem proteção por senha forte.
 
 ## Limites conhecidos
 
@@ -49,7 +49,7 @@ O botão “Instalar app” oferece instalação PWA (ou instruções para Safar
 
 O redesign mantém HTML/CSS/JavaScript e a ilha React de carregamento. `public/ui.js` reúne navegação e componentes visuais; `public/charts.js` contém apresentação e consultas históricas com cache exclusivamente em memória. O histórico usa seis resumos mensais da API existente; respostas obsoletas e resultados anteriores a alterações/logout são descartados. O saldo apresentado é o saldo do mês, não um saldo bancário acumulado.
 
-As seções Receitas e Despesas mantêm o tipo ao limpar filtros e trocar escopo. A visão geral mostra cinco lançamentos recentes, com acesso à lista completa. Configurações reúne vínculo Telegram, instalação, tutorial e saída. Metas permanecem fora desta versão; lembretes e notificações ficam na central acessível pelo sino.
+As seções Receitas e Despesas mantêm o tipo ao limpar filtros e trocar escopo. A visão geral mostra cinco lançamentos recentes, com acesso à lista completa. A Central financeira resume contas, cartões e parcelas futuras; Configurações reúne vínculo Telegram, instalação, tutorial e saída. Budgets, metas, alertas e insights ficam protegidos por feature flags nas APIs versionadas.
 
 ### Link do assistente
 
@@ -57,7 +57,7 @@ Defina `telegramBotUrl` em `public/config.js` como `https://t.me/username_do_bot
 
 ### Validação visual reproduzível
 
-`node --test` inclui testes dos gráficos, isolamento do histórico e concorrência. `pnpm run build` inclui typecheck. Não há script de lint configurado.
+`node --test` inclui testes dos gráficos, isolamento do histórico e concorrência. `pnpm run build` inclui typecheck. `pnpm lint` verifica sintaticamente todos os arquivos JavaScript do dashboard.
 
 Com o conteúdo de `dist` servido localmente, execute `node scripts/verify-redesign.cjs` em um ambiente com Playwright disponível. Opcionalmente use `PLAYWRIGHT_MODULE`, `CHROMIUM_EXECUTABLE`, `QA_URL` e `QA_OUTPUT` para indicar o pacote, navegador, URL e diretório de capturas. O script intercepta as APIs somente no navegador de teste e usa dados sintéticos; os fixtures nunca são servidos pelo produto. Verifica 360, 768, 1024 e 1440 px, login, visibilidade de senha, navegação, confirmação, formulários, vazio, erro e saída. A validação local usa a CSP de `vercel.json`.
 
