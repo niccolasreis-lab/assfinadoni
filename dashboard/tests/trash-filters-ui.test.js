@@ -3,14 +3,14 @@ import { readFileSync } from 'node:fs';
 import { runInNewContext } from 'node:vm';
 import test from 'node:test';
 
-const source = readFileSync(new URL('../public/app.js', import.meta.url), 'utf8').replace("import './ui.js';", '');
+const source = readFileSync(new URL('../public/app.js', import.meta.url), 'utf8').replace("import { icon } from './ui.js';", "const icon = () => '';\n");
 
 class Element {
   constructor() {
     this.children = [];
     this.listeners = new Map();
     this.attributes = new Map();
-    this.classList = { toggle() {} };
+    this.classList = { add() {}, remove() {}, toggle() {} };
     this.value = '';
     this.textContent = '';
     this.style = {};
