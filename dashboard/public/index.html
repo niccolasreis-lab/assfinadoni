@@ -89,6 +89,14 @@
           <article class="card"><div class="metric-label"><span>Despesas</span><span class="metric-icon expense" data-icon="down"></span></div><strong id="expense-total">—</strong><small>Saídas do mês</small></article>
         </section>
         <div id="quick-actions" class="quick-actions"><button id="quick-income" class="button secondary" type="button"><span class="income" data-icon="plus"></span>Adicionar receita</button><button id="quick-expense" class="button secondary" type="button"><span class="expense" data-icon="plus"></span>Adicionar despesa</button><a id="open-telegram" class="button ghost" target="_blank" rel="noopener noreferrer" hidden><span data-icon="send"></span>Abrir Telegram</a><span id="telegram-link-status" class="muted">Link do assistente não configurado</span></div>
+        <section id="central-panel" class="panel central-panel" hidden aria-labelledby="central-title">
+          <div class="panel-heading"><div><h2 id="central-title">Central financeira</h2><p class="muted">Fontes de recursos e compromissos cadastrados.</p></div><span id="central-status" class="muted" role="status"></span></div>
+          <div class="central-grid">
+            <article class="central-card"><h3>Contas e carteiras</h3><p id="central-accounts-count" class="central-value">—</p><div id="central-accounts" class="central-list"></div></article>
+            <article class="central-card"><h3>Cartões</h3><p id="central-cards-count" class="central-value">—</p><div id="central-cards" class="central-list"></div></article>
+            <article class="central-card"><h3>Parcelas futuras</h3><p id="central-installments-count" class="central-value">—</p><p class="muted">Valores previstos permanecem separados do realizado.</p></article>
+          </div>
+        </section>
         <section id="history-panel" class="panel history-panel" aria-labelledby="history-title">
           <div class="panel-heading"><div><h2 id="history-title">Seu financeiro ao longo do tempo</h2><p class="muted">Receitas e despesas · últimos 6 meses</p></div><div class="chart-legend"><span class="income">Receitas</span><span class="expense">Despesas</span></div></div>
           <div id="history-chart" class="chart-host" aria-live="polite"></div><div id="history-status" class="muted" role="status"></div><button id="retry-history" class="button ghost" type="button" hidden>Tentar novamente</button>

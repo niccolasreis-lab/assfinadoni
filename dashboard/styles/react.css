@@ -4,6 +4,43 @@
 @import "tailwindcss/utilities.css" layer(utilities);
 @source "../components";
 
+.assistant-launch { position: fixed; right: 24px; bottom: 24px; z-index: 30; display: flex; align-items: center; gap: 8px; min-height: 48px; padding: 12px 18px; border: 1px solid #9770f7; border-radius: 12px; background: #6d28d9; color: #fff; font: 600 14px Inter,sans-serif; cursor: pointer; }
+.assistant-panel { box-sizing: border-box; position: fixed; inset: 16px 16px 16px auto; margin: 0; width: min(480px,calc(100vw - 32px)); max-width: none; height: calc(100dvh - 32px); max-height: none; padding: 0; color: #f8fafc; background: #121722; border: 1px solid #283142; border-radius: 20px; font: 14px/1.5 Inter,sans-serif; }
+.assistant-panel[open] { display: flex; flex-direction: column; }
+.assistant-panel::backdrop { background: rgb(0 0 0 / .5); }
+.assistant-panel header { display: flex; justify-content: space-between; align-items: flex-start; padding: 22px; border-bottom: 1px solid #283142; gap: 12px; }
+.assistant-panel h2 { margin: 0; font-size: 20px; letter-spacing: -.02em; }
+.assistant-panel h3 { margin: 0 0 12px; font-size: 22px; }
+.assistant-panel p { margin: 8px 0; white-space: pre-wrap; overflow-wrap: anywhere; }
+.assistant-panel header p,.assistant-panel small { color: #b6c1d4; }
+.assistant-panel button { display: inline-flex; align-items: center; justify-content: center; gap: 7px; min-height: 44px; padding: 8px 12px; border: 1px solid #344159; border-radius: 10px; background: #171d29; color: #f8fafc; font: inherit; cursor: pointer; }
+.assistant-panel button:disabled { opacity: .5; cursor: default; }
+.assistant-panel button:not(:disabled):hover { background: #29213f; }
+.assistant-panel button:focus-visible,.assistant-launch:focus-visible,.assistant-panel textarea:focus-visible { outline: 2px solid #b499ff; outline-offset: 3px; }
+.assistant-panel .assistant-icon { padding: 8px; min-width: 44px; }
+.assistant-messages { flex: 1; min-height: 0; overflow-y: auto; padding: 20px; scrollbar-color: #655581 #121722; }
+.assistant-empty { position: relative; isolation: isolate; padding: 60px 4px; }
+.assistant-canvas { position: absolute; inset: 0; z-index: -1; pointer-events: none; }
+.assistant-message { padding: 16px 0; border-bottom: 1px solid #283142; }
+.assistant-message details { color: #b6c1d4; font-size: 13px; }
+.assistant-message summary { cursor: pointer; padding: 6px 0; }
+.assistant-receipt { display: grid; gap: 4px; padding: 12px 0; font-variant-numeric: tabular-nums; }
+.assistant-receipt span { color: #cbd5e1; }
+.assistant-actions { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 10px; }
+.assistant-compose { padding: 16px 20px 20px; border-top: 1px solid #283142; }
+.assistant-compose label { display: block; font-weight: 600; margin-bottom: 6px; }
+.assistant-compose textarea { display: block; box-sizing: border-box; resize: vertical; min-height: 68px; max-height: 160px; width: 100%; padding: 12px; color: #f8fafc; background: #080b12; border: 1px solid #344159; border-radius: 10px; font: inherit; caret-color: #b499ff; }
+.assistant-compose textarea::placeholder { color: #94a3b8; }
+.assistant-compose-actions { display: flex; gap: 8px; margin: 12px 0 8px; }
+.assistant-panel .assistant-send { margin-left: auto; background: #6d28d9; border-color: #9770f7; }
+.assistant-file { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 8px; margin-bottom: 12px; }
+.assistant-file span { max-width: 80%; overflow-wrap: anywhere; }
+.assistant-file audio { width: 100%; height: 40px; }
+.assistant-error { color: #fda4af; }
+.assistant-panel ::selection { background: #6d28d9; color: #fff; }
+@media(max-width:900px) { .assistant-launch { bottom: calc(84px + env(safe-area-inset-bottom)); right: 16px; } }
+@media(max-width:600px) { .assistant-panel { inset: 0; width: 100vw; height: 100dvh; border-radius: 0; border: 0; } .assistant-compose { padding-bottom: calc(16px + env(safe-area-inset-bottom)); } }
+
 #initial-status { background: #080B12; color: #cbd5e1; }
 #initial-status h1 { margin: 0; padding: 24px; text-align: center; font-size: 1rem; font-weight: 400; line-height: 1.5; letter-spacing: normal; }
 @media (prefers-reduced-motion: reduce) {

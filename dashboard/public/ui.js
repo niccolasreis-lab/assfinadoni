@@ -26,7 +26,7 @@ const paths = {
   more: '<circle cx="5" cy="12" r="1"/><circle cx="12" cy="12" r="1"/><circle cx="19" cy="12" r="1"/>',
 };
 export const icon = name => `<svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">${paths[name] || paths.wallet}</svg>`;
-const sections = [['overview','Visão geral','overview'],['transactions','Transações','transactions'],['income','Receitas','up'],['expense','Despesas','down'],['categories','Categorias','categories'],['reports','Relatórios','reports'],['settings','Configurações','settings']];
+const sections = [['overview','Visão geral','overview'],['central','Central financeira','wallet'],['transactions','Transações','transactions'],['income','Receitas','up'],['expense','Despesas','down'],['categories','Categorias','categories'],['reports','Relatórios','reports'],['settings','Configurações','settings']];
 let profile;
 let api, section = 'overview', historyContext = '', lastState, renderedPoints;
 const history = createHistoryLoader(async (month, shared) => {
@@ -47,8 +47,9 @@ function updatePanels() {
   $('category-panel').hidden = !overview && !['categories','reports'].includes(section);
   $('filter-type').parentElement.hidden = ['income','expense'].includes(section);
   $('settings-panel').hidden = section !== 'settings';
-  document.querySelector('.cards').hidden = section === 'settings';
-  document.querySelector('.summary-heading').hidden = section === 'settings';
+  $('central-panel').hidden = section !== 'central';
+  document.querySelector('.cards').hidden = section === 'settings' || section === 'central';
+  document.querySelector('.summary-heading').hidden = section === 'settings' || section === 'central';
   $('quick-actions').hidden = !overview && section !== 'settings';
   $('transactions-title').textContent = overview ? 'Últimos lançamentos' : sections.find(s => s[0] === section)?.[1] || 'Transações';
   $('view-all').hidden = !overview;
@@ -62,6 +63,7 @@ async function navigate(next, load = true) {
   if (!sections.some(s => s[0] === next)) next = 'overview';
   section = next; await $('more-dialog').close(); updatePanels(); reveal(document.querySelector('.content'));
   if (load && ['overview','transactions','income','expense'].includes(section)) api.navigate(section);
+  if (load && section === 'central') loadCentral();
   $('workspace-heading').focus({ preventScroll:true });
 }
 async function loadHistory(state, force = false) {
@@ -82,6 +84,23 @@ async function loadHistory(state, force = false) {
   $('history-status').textContent = missing ? 'Parte do histórico está indisponível. Os meses sem dados não foram tratados como zero.' : '';
   $('retry-history').hidden = !missing;
   $('balance-insight').textContent = comparison(state.summary, points[4].summary);
+}
+async function loadCentral() {
+  $('central-status').textContent = 'Carregando...';
+  try {
+    const [accounts, cards, installments] = await Promise.all([
+      api.request('/api/v1/accounts'), api.request('/api/v1/cards'), api.request('/api/v1/installments'),
+    ]);
+    const accountRows = Array.isArray(accounts.accounts) ? accounts.accounts : [];
+    const cardRows = Array.isArray(cards.cards) ? cards.cards : [];
+    const installmentRows = Array.isArray(installments.installments) ? installments.installments : [];
+    $('central-accounts-count').textContent = `${accountRows.length} ${accountRows.length === 1 ? 'fonte' : 'fontes'}`;
+    $('central-cards-count').textContent = `${cardRows.length} ${cardRows.length === 1 ? 'cartão' : 'cartões'}`;
+    $('central-installments-count').textContent = `${installmentRows.length} ${installmentRows.length === 1 ? 'parcela' : 'parcelas'}`;
+    $('central-accounts').replaceChildren(...accountRows.slice(0, 4).map((row) => { const item = document.createElement('span'); item.textContent = row.name; return item; }));
+    $('central-cards').replaceChildren(...cardRows.slice(0, 4).map((row) => { const item = document.createElement('span'); item.textContent = row.nickname || row.name; return item; }));
+    $('central-status').textContent = '';
+  } catch (error) { $('central-status').textContent = error.message || 'Central indisponível.'; }
 }
 function resetHistory() { history.reset(); historyContext = ''; lastState = null; renderedPoints = null; }
 window.FinanceUI = {
@@ -124,7 +143,7 @@ window.FinanceUI = {
   identity(account) { profile?.sync(account); reminders?.sync(account); },
   beforeLogout() { return reminders?.beforeLogout(); },
   authChanged(authenticated) { if(!authenticated) { profile?.reset(); reminders?.reset(); } reveal($(authenticated ? 'dashboard-view' : 'login-view')); },
-  loaded(state) { loadHistory({ month:state.month, includeSharedSummary:state.includeSharedSummary, summary:state.summary, account:state.account }); },
+  loaded(state) { loadHistory({ month:state.month, includeSharedSummary:state.includeSharedSummary, summary:state.summary, account:state.account }); if (section === 'central') loadCentral(); },
   invalidate() { resetHistory(); },
   loading() {
     // Hide the previous context immediately, including while the main request is pending.

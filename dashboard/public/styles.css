@@ -745,6 +745,48 @@ input[type=number] {
   font-size:.75rem;
   margin:6px 0 0;
 }
+.central-panel {
+  margin-bottom:24px;
+}
+.central-grid {
+  display:grid;
+  grid-template-columns:repeat(3,minmax(0,1fr));
+  gap:14px;
+}
+.central-card {
+  min-width:0;
+  padding:18px;
+  border:1px solid var(--line);
+  border-radius:14px;
+  background:var(--surface-raised);
+}
+.central-card h3 {
+  margin:0;
+  color:var(--muted);
+  font-size:.7rem;
+  font-weight:600;
+  text-transform:uppercase;
+  letter-spacing:.04em;
+}
+.central-value {
+  margin:12px 0 14px;
+  color:var(--text);
+  font-size:1.6rem;
+  font-weight:650;
+}
+.central-list {
+  display:flex;
+  flex-direction:column;
+  gap:6px;
+  min-height:20px;
+  color:var(--text);
+  font-size:.75rem;
+  overflow-wrap:anywhere;
+}
+.central-list:empty:after {
+  content:'Nenhum item cadastrado';
+  color:var(--muted);
+}
 .history-panel {
   margin-bottom:24px;
 }
