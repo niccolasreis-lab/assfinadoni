@@ -6,8 +6,7 @@ Legenda: `[ ]` planejado · `[~]` em desenvolvimento · `[x]` concluído · `[!]
 
 - [x] Stack, rotas, migrations e integrações presentes no repositório auditadas.
 - [x] `pnpm test` executado: 73 aprovados, 1 teste SQL opcional inicialmente pulado.
-- [x] Testes SQL com PGlite executados: 2 aprovados.
-- [x] Testes SQL das novas migrations executados com PGlite: 6 aprovados.
+- [x] Testes SQL com PGlite executados: baseline e 6 novas suítes aprovados.
 - [x] `pnpm typecheck` e `pnpm build` executados com sucesso.
 - [x] `PRD.md` criado com limites e contratos aprovados.
 - [x] Inventário de variáveis documentado sem valores.
@@ -15,10 +14,10 @@ Legenda: `[ ]` planejado · `[~]` em desenvolvimento · `[x]` concluído · `[!]
 
 ## Fase 1 — Integridade e idempotência
 
-- [~] Migration de eventos de processamento, anexos, duplicidades e auditoria.
-- [~] Fingerprint determinístico e revisão de duplicidades.
-- [ ] Integração de todos os canais ao mesmo evento idempotente.
-- [ ] Testes de regressão de reentrega e isolamento.
+- [x] Migration de eventos de processamento, anexos, duplicidades e auditoria.
+- [x] Fingerprint determinístico e revisão explícita de duplicidades.
+- [~] Eventos já cobrem assistant jobs e lançamentos; Telegram, uploads e lembretes aguardam validação dos fluxos externos.
+- [x] Testes de idempotência, isolamento e merge seguro adicionados.
 
 ## Fase 2 — Domínio financeiro
 
@@ -27,7 +26,7 @@ Legenda: `[ ]` planejado · `[~]` em desenvolvimento · `[x]` concluído · `[!]
 - [x] APIs internas para contas, cartões, splits e parcelas.
 - [x] Migrations iniciais para budgets, metas, alertas e insights.
 - [x] APIs protegidas por feature flags para planejamento e inteligência.
-- [ ] UI consolidada e backfill de dados legados após validação do schema externo.
+- [~] Central financeira com contas, cartões e parcelas; backfill de dados legados aguarda validação do schema externo.
 
 ## Fase 3 — Assistente, API e projeções
 
@@ -37,23 +36,27 @@ Legenda: `[ ]` planejado · `[~]` em desenvolvimento · `[x]` concluído · `[!]
 - [x] Busca, timeline, relatório JSON/CSV e projeção de fluxo de caixa.
 - [ ] Workflow n8n real conectado ao catálogo após receber export sanitizado.
 
+## Fases 4–8 — Inteligência, planejamento, relatórios e patrimônio
+
+- [x] Fundamentos de categorização, budgets, metas, alertas, insights e flags adicionados.
+- [x] Projeções, timeline, relatórios JSON/CSV, investimentos e patrimônio líquido adicionados.
+- [~] Agentes de IA, evidências de insights e UX completa de planejamento dependem de rollout e dados reais.
+
 ## Assistente tipado
 
 - [x] Registro de ferramentas server-side com validação e confirmação destrutiva.
 - [~] Prompt do worker referencia o catálogo de ferramentas.
 - [ ] Execução de consultas do worker exclusivamente via ferramentas após validar o workflow n8n.
 
-## Fases futuras
+## Fase 9 — Hardening e rollout
 
-- [ ] Domínio financeiro normalizado: contas, cartões, faturas, splits, parcelas e recorrências.
-- [ ] Assistente com ferramentas tipadas e contexto persistente.
-- [ ] Agentes, categorização, alertas, budgets, metas e projeções.
-- [ ] Relatórios, timeline, patrimônio, investimentos, API v1 e MCP.
-- [ ] Hardening, rollout por flags, observabilidade e validação do APK.
+- [x] `pnpm lint` determinístico com 87 arquivos JavaScript verificados.
+- [~] Feature flags, APIs versionadas e gateway MCP prontos para rollout gradual.
+- [ ] Observabilidade operacional, execução de todos os canais e validação do APK.
 
 ## Migrations, deploy e APK
 
 - Migrations aplicadas: as migrations existentes do diretório `supabase/migrations`.
-- Nova migration: será aplicada somente após validação em schema sanitizado.
+- Novas migrations: serão aplicadas somente após validação em schema sanitizado.
 - Deploy: pendente de revisão e dos artefatos externos bloqueados.
 - Versão APK: `[!]` projeto APK não fornecido.
