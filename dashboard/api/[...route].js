@@ -64,7 +64,7 @@ const routes = {
 
 export default async function handler(req, res) {
   const pathname = new URL(req.url || '/', `http://${req.headers?.host || 'localhost'}`).pathname;
-  const key = pathname.replace(/^\\/api\\//, '').replace(/\\/$/, '');
+  const key = pathname.replace(/^\/api\//, '').replace(/\/$/, '');
   const route = routes[key];
   if (!route) return res.status(404).json({ error: 'Rota não encontrada.' });
   return route(req, res);
