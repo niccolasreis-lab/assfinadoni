@@ -97,3 +97,25 @@ Aplique a migração `finance_reminders` antes do deploy. Gere um par VAPID via 
 `scripts/configure-notifications-n8n.py` prepara, sem publicar, os dois workflows a partir de um backup autorizado do workflow ativo. A configuração usa a credencial Supabase já existente e lê somente `dispatch_secret`. Os workflows desabilitam armazenamento de dados de execução para não persistir segredos. Exports preparados e backups ficam fora do repositório. Publique o backend antes de atualizar/ativar os workflows e confira as conexões e credenciais após a publicação.
 
 Testes: `node scripts/verify-reminders.cjs` cobre fluxos e permissões no navegador com fixtures. `FINANCE_SQL_TEST_MODULE=/caminho/@electric-sql/pglite/dist/index.js node --test tests/reminders-sql.test.js` executa a migração e valida isolamento, idempotência e agendamento em PostgreSQL isolado; sem o módulo esse teste é explicitamente pulado. O módulo de teste é opcional e não faz parte das dependências de produção.
+
+## Domínio financeiro evolutivo
+
+As migrations `20260924120000_finance_integrity_foundation.sql`,
+`20260924130000_finance_domain_foundation.sql`,
+`20260924140000_finance_planning_intelligence.sql` e
+`20260924150000_finance_wealth.sql` são aditivas. Elas criam ledger de eventos,
+fingerprints, duplicidades revisáveis, auditoria, anexos, contas, cartões,
+faturas, splits, parcelamentos, assinaturas, budgets, metas, alertas, insights,
+investimentos e patrimônio manual. Aplique-as somente depois de validar o
+schema-base existente em um ambiente sanitizado.
+
+As rotas `/api/v1/*` são wrappers versionados dos contratos internos atuais.
+Incluem contas, cartões, transações, parcelas, budgets, metas, lembretes,
+insights, assinaturas, busca, timeline, relatórios CSV e projeção. O gateway
+`/api/v1/mcp` permanece desligado até `ENABLE_MCP=true`, exige sessão, escopo,
+confirmação para ações destrutivas e registra auditoria.
+
+`pnpm lint` executa a verificação sintática dos arquivos JavaScript; `pnpm test`
+inclui fixtures SQL isoladas e testes de autorização. As flags `ENABLE_GOALS`,
+`ENABLE_SMART_ALERTS`, `ENABLE_AI_AGENTS`, `ENABLE_INVESTMENTS` e
+`ENABLE_FORECAST` começam desligadas para permitir rollout gradual.

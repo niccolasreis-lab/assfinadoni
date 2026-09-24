@@ -35,7 +35,7 @@ implementa Open Finance.
 
 Os padrões são desativados até validação por fase:
 
-`ASSISTANT_ENABLED`, `ENABLE_AI_AGENTS`, `ENABLE_SMART_ALERTS`,
+`ASSISTANT_ENABLED`, `ENABLE_BUDGETS`, `ENABLE_AI_AGENTS`, `ENABLE_SMART_ALERTS`,
 `ENABLE_SMART_CATEGORIZATION`, `ENABLE_INVESTMENTS`, `ENABLE_FORECAST`,
 `ENABLE_GOALS` e `ENABLE_MCP`.
 
@@ -44,4 +44,3 @@ Os padrões são desativados até validação por fase:
 Não haverá conexão automática com bancos, consentimento bancário, sincronização
 de contas, agregação bancária ou infraestrutura de Open Finance. Investimentos,
 ativos e passivos são cadastrados manualmente.
-

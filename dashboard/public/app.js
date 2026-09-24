@@ -357,6 +357,11 @@ async function unshareTransaction(row) {
 }
 
 async function init() {
+  window.addEventListener?.('finance-assistant-changed', () => {
+    if (!state.account) return;
+    window.FinanceUI?.invalidate();
+    loadTransactions();
+  });
   window.FinanceUI?.init({
     request,
     reload: loadTransactions,
