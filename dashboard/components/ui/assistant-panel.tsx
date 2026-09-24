@@ -38,7 +38,7 @@ export function AssistantPanel({reload}:Props) {
   useEffect(()=>{
     if(!open) return
     let active=true, timeout:ReturnType<typeof setTimeout>
-    const poll=async()=>{try{const data=await request('/api/assistant',undefined,abort.current.signal);if(active) merge(data.jobs)}catch(e){if(active)setError((e as Error).message)}finally{if(active)timeout=setTimeout(poll,2500)}}
+    const poll=async()=>{try{const data=await request('/api/assistant',undefined,abort.current.signal);if(active){setError('');merge(data.jobs)}}catch(e){if(active)setError((e as Error).message)}finally{if(active)timeout=setTimeout(poll,2500)}}
     void poll();return()=>{active=false;clearTimeout(timeout)}
   },[open])
   function selectFile(f?:File){setError('');setRetry(null);if(!f)return;if(f.size>MAX_FILE){setError('O arquivo deve ter no máximo 3 MB.');return}if(!/\.pdf$/i.test(f.name)){setError('Anexe um PDF. Para áudio, use o microfone.');return}setFile(f)}
