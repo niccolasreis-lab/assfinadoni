@@ -165,13 +165,17 @@
       <div class="dialog-heading"><h2 id="dialog-title">Novo lançamento</h2><button id="close-dialog" class="icon-button" type="button" aria-label="Fechar formulário"><span data-icon="close"></span></button></div>
       <input id="transaction-id" type="hidden">
       <div class="field-grid"><div><label for="transaction-type">Tipo</label><select id="transaction-type" required><option value="despesa">Despesa</option><option value="receita">Receita</option></select></div><div><label for="amount">Valor (R$)</label><input id="amount" type="number" min="0.01" max="100000000" step="0.01" inputmode="decimal" required placeholder="0.00"></div></div>
-      <div><label for="category">Categoria</label><select id="category" required></select></div>
+      <div class="category-field"><div class="field-label-row"><label for="category">Categoria</label><button id="new-category" class="text-button" type="button">+ Nova categoria</button></div><select id="category" required></select></div>
       <div><label for="description">Descrição</label><input id="description" type="text" maxlength="180" required placeholder="Ex.: almoço, salário, aluguel"></div>
       <div><label for="transaction-date">Data</label><input id="transaction-date" type="date" required></div>
+      <fieldset class="payment-field"><legend>Forma de pagamento</legend><select id="payment-method"><option value="nao_informado">Não informado</option><option value="dinheiro">Dinheiro</option><option value="cartao">Cartão / parcelado</option><option value="misto">Misto: dinheiro + parcelado</option></select><div id="payment-breakdown" class="field-grid" hidden><div><label for="cash-amount">Pago em dinheiro (R$)</label><input id="cash-amount" type="number" min="0" step="0.01" placeholder="0,00"></div><div><label for="installments">Número de parcelas</label><input id="installments" type="number" min="1" max="120" step="1" placeholder="2"></div></div></fieldset>
+      <div class="attachment-field"><label for="transaction-image">Imagem do comprovante (opcional)</label><input id="transaction-image" type="file" accept="image/jpeg,image/png,image/webp"><p id="transaction-image-status" class="muted">JPG, PNG ou WebP · até 1 MB</p><div id="transaction-image-preview" class="attachment-preview" hidden></div></div>
       <p id="form-error" class="message error" role="alert" hidden></p>
       <div class="dialog-actions"><button id="cancel-dialog" class="button ghost" type="button">Cancelar</button><button id="save-transaction" class="button primary" type="submit">Salvar lançamento</button></div>
     </form>
   </dialog>
+
+  <dialog id="category-dialog" aria-labelledby="category-dialog-title"><form id="category-form" class="dialog-body"><div class="dialog-heading"><div><h2 id="category-dialog-title">Nova categoria</h2><p class="muted">Crie uma categoria que ficará disponível nos seus lançamentos.</p></div><button id="close-category-dialog" class="icon-button" type="button" aria-label="Fechar"><span data-icon="close"></span></button></div><label for="new-category-name">Nome da categoria</label><input id="new-category-name" type="text" minlength="2" maxlength="60" required placeholder="Ex.: Pets"><p id="category-error" class="message error" role="alert" hidden></p><div class="dialog-actions"><button id="cancel-category-dialog" class="button ghost" type="button">Cancelar</button><button class="button primary" type="submit">Adicionar categoria</button></div></form></dialog>
 
   <dialog id="share-dialog" aria-labelledby="share-dialog-title">
     <form id="share-form" class="dialog-body">
@@ -185,3 +189,4 @@
   </dialog>
 </body>
 </html>
+

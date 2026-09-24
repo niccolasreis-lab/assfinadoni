@@ -1,4 +1,4 @@
-import { calendarDate, CATEGORIES, localDate, monthBounds, publicAccount, readBody, requireAccount, rpc, sameOrigin, send, uuid, validatedTransaction } from '../lib/server.js';
+import { calendarDate, localDate, monthBounds, publicAccount, readBody, requireAccount, rpc, sameOrigin, send, uuid, validCategoryName, validatedTransaction } from '../lib/server.js';
 
 const pageSize = 50;
 
@@ -17,7 +17,7 @@ function listOptions(query) {
   const q = (queryValue(query.q, 'Busca') || '').trim();
   if (q.length > 120) throw new Error('Busca inválida.');
   const category = queryValue(query.category, 'Categoria') || '';
-  if (category && !CATEGORIES.includes(category)) throw new Error('Categoria inválida.');
+  if (category && !validCategoryName(category)) throw new Error('Categoria inválida.');
   const type = queryValue(query.type, 'Tipo') || '';
   if (type && !['receita', 'despesa'].includes(type)) throw new Error('Tipo inválido.');
   const from = queryValue(query.date_from, 'Data inicial') || '';
@@ -64,7 +64,7 @@ export default async function handler(req, res) {
     if (req.method === 'POST') {
       const values = validatedTransaction(body);
       const created = await rpc('finance_dashboard_create_transaction', { p_account_id: account.id, p_transaction_type: values.transaction_type,
-        p_amount: values.amount, p_category: values.category, p_description: values.description, p_transaction_date: values.transaction_date });
+        p_amount: values.amount, p_category: values.category, p_description: values.description, p_transaction_date: values.transaction_date, p_payment_details: values.payment_details });
       if (!created) throw new Error('Não foi possível criar o lançamento.');
       return send(res, 201, { transaction: created });
     }
@@ -78,7 +78,7 @@ export default async function handler(req, res) {
       const values = validatedTransaction(body);
       const updated = await rpc('finance_dashboard_update_transaction', { p_account_id: account.id, p_transaction_id: id,
         p_transaction_type: values.transaction_type, p_amount: values.amount, p_category: values.category,
-        p_description: values.description, p_transaction_date: values.transaction_date });
+        p_description: values.description, p_transaction_date: values.transaction_date, p_payment_details: values.payment_details });
       if (!updated) return send(res, 404, { error: 'Lançamento não encontrado.' });
       return send(res, 200, { transaction: updated });
     }
@@ -91,3 +91,4 @@ export default async function handler(req, res) {
       { error: validation ? error.message : 'Não consegui concluir a operação. Tente novamente.' });
   }
 }
+

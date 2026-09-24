@@ -1,8 +1,8 @@
-import './ui.js';
-const categories = ['Alimentação', 'Transporte', 'Moradia', 'Saúde', 'Educação', 'Lazer', 'Assinaturas', 'Outros'];
+import { icon } from './ui.js';
+const defaultCategories = ['Alimentação', 'Transporte', 'Moradia', 'Saúde', 'Educação', 'Lazer', 'Assinaturas', 'Outros'];
 const $ = (id) => document.getElementById(id);
 const money = (value) => Number(value || 0).toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' });
-const state = { transactions: [], summary: null, month: '', view: 'active', page: 1, hasMore: false, datesCustomized: false, loadId: 0, deleting: new Set() };
+const state = { transactions: [], summary: null, month: '', view: 'active', page: 1, hasMore: false, datesCustomized: false, loadId: 0, deleting: new Set(), categories: [...defaultCategories] };
 state.scope = 'mine'; state.includeSharedSummary = false; state.account = null;
 state.scopeFilters = {}; state.section = 'overview';
 function saveScopeFilters() {
@@ -112,6 +112,68 @@ function showDashboard(authenticated) {
 
 async function confirmAction(copy) { return window.FinanceUI ? window.FinanceUI.confirm(copy) : window.confirm(copy); }
 
+function openTransactionActions(row) {
+  let dialog = $('transaction-actions-dialog');
+  if (!dialog) {
+    dialog = document.createElement('dialog');
+    dialog.id = 'transaction-actions-dialog';
+    dialog.setAttribute('aria-labelledby', 'transaction-actions-title');
+    document.body.append(dialog);
+  }
+
+  const body = document.createElement('div');
+  body.className = 'dialog-body';
+  const heading = document.createElement('div');
+  heading.className = 'dialog-heading';
+  const headingCopy = document.createElement('div');
+  const title = document.createElement('h2');
+  title.id = 'transaction-actions-title';
+  title.textContent = row.description;
+  const detail = document.createElement('p');
+  detail.className = 'muted';
+  detail.textContent = `${row.transaction_type === 'receita' ? 'Receita' : 'Despesa'} de ${money(row.amount)} · ${formatDate(row.transaction_date)}`;
+  headingCopy.append(title, detail);
+  const close = document.createElement('button');
+  close.type = 'button';
+  close.className = 'icon-button';
+  close.setAttribute('aria-label', 'Fechar ações');
+  close.innerHTML = icon('close');
+  close.addEventListener('click', () => dialog.close());
+  heading.append(headingCopy, close);
+
+  const actions = document.createElement('nav');
+  actions.setAttribute('aria-label', 'Ações do lançamento');
+  const edit = document.createElement('button');
+  edit.type = 'button';
+  edit.className = 'profile-menu-action';
+  edit.textContent = 'Editar lançamento';
+  edit.addEventListener('click', () => { dialog.close(); openForm(row); });
+
+  const share = document.createElement('button');
+  share.type = 'button';
+  share.className = 'profile-menu-action';
+  share.textContent = 'Compartilhar em outro app';
+  share.addEventListener('click', async () => {
+    const text = `${row.description}\n${money(row.amount)} · ${formatDate(row.transaction_date)}\nCategoria: ${row.category}`;
+    try {
+      if (navigator.share) await navigator.share({ title: row.description, text });
+      else { await navigator.clipboard?.writeText(text); message('page-message', 'Lançamento copiado. Cole no WhatsApp, Telegram ou outra rede.'); }
+    } catch (error) { if (error.name !== 'AbortError') message('page-message', 'Não foi possível abrir o compartilhamento.', true); }
+    dialog.close();
+  });
+
+  const remove = document.createElement('button');
+  remove.type = 'button';
+  remove.className = 'profile-menu-action danger';
+  remove.textContent = 'Excluir lançamento';
+  remove.addEventListener('click', () => { dialog.close(); deleteTransaction(row); });
+
+  actions.append(edit, share, remove);
+  body.append(heading, actions);
+  dialog.replaceChildren(body);
+  dialog.showModal();
+}
+
 function render() {
   const rows = state.transactions;
   const summaryAvailable = state.summary && ['income','expense','balance'].every(key => (typeof state.summary[key] === 'number' || typeof state.summary[key] === 'string' && state.summary[key].trim() !== '') && Number.isFinite(Number(state.summary[key])));
@@ -181,6 +243,21 @@ function render() {
       actions.append(edit, remove, share);
     }
     tr.setAttribute('data-type', row.transaction_type);
+    if (state.view !== 'trash') {
+      tr.classList.add('transaction-row-interactive');
+      tr.tabIndex = 0;
+      tr.setAttribute('aria-haspopup', 'dialog');
+      tr.setAttribute('aria-label', `Abrir ações de ${row.description}, ${money(row.amount)}`);
+      tr.addEventListener('click', (event) => {
+        if (event.target.closest('button, a, input, select')) return;
+        openTransactionActions(row);
+      });
+      tr.addEventListener('keydown', (event) => {
+        if (event.target !== tr || !['Enter', ' '].includes(event.key)) return;
+        event.preventDefault();
+        openTransactionActions(row);
+      });
+    }
     tr.append(description, category, date, amount, actions);
     body.append(tr);
   }
@@ -261,10 +338,19 @@ function openForm(row = null) {
   $('save-transaction').textContent = row ? 'Salvar alterações' : 'Adicionar lançamento';
   $('transaction-type').value = row?.transaction_type || 'despesa';
   $('amount').value = row?.amount || '';
-  $('category').value = row?.category || categories[0];
+  $('category').value = row?.category || state.categories[0] || defaultCategories[0];
   $('description').value = row?.description || '';
   $('transaction-date').value = row?.transaction_date || saoPauloToday();
-  $('transaction-date').max = saoPauloToday();
+  const payment = row?.payment_details || {};
+  $('payment-method').value = payment.method || 'nao_informado';
+  $('cash-amount').value = payment.cash_amount || '';
+  $('installments').value = payment.installments || '';
+  $('payment-breakdown').hidden = !['misto', 'cartao'].includes($('payment-method').value);
+  if (row) $('transaction-date').max = saoPauloToday();
+  else $('transaction-date').removeAttribute('max');
+  $('transaction-image').value = '';
+  $('transaction-image-preview').hidden = true;
+  $('transaction-image-status').textContent = 'JPG, PNG ou WebP · até 1 MB';
   $('transaction-dialog').showModal();
 }
 
@@ -273,13 +359,35 @@ async function saveTransaction(event) {
   const id = $('transaction-id').value;
   const row = state.transactions.find((item) => item.id === id);
   if (row && !isOwn(row) && !await confirmAction(`Este lançamento pertence a ${ownerName(row)}. A alteração afetará as duas contas. Continuar?`)) return;
-  const body = { transaction_type: $('transaction-type').value, amount: Number($('amount').value), category: $('category').value, description: $('description').value.trim(), transaction_date: $('transaction-date').value };
+  const body = { transaction_type: $('transaction-type').value, amount: Number($('amount').value), category: $('category').value, description: $('description').value.trim(), transaction_date: $('transaction-date').value, payment_method: $('payment-method').value, cash_amount: Number($('cash-amount').value || 0), installments: Number($('installments').value || 0) };
   if (id) body.id = id;
   const button = $('save-transaction'); button.disabled = true;
   button.textContent = id ? 'Salvando alterações...' : 'Adicionando...';
   try {
-    await request('/api/transactions', { method: id ? 'PATCH' : 'POST', body: JSON.stringify(body) });
+    const scheduled = !id && body.transaction_type === 'despesa' && body.transaction_date > saoPauloToday();
+    if (scheduled) {
+      await request('/api/reminders', { method: 'POST', body: JSON.stringify({
+        kind: 'bill',
+        description: body.description,
+        amount: body.amount,
+        category: body.category,
+        due_date: body.transaction_date,
+        reminder_offsets: [3, 1, 0],
+        reminder_hour: 9,
+        notify_telegram: true,
+        notify_push: true,
+      }) });
+    } else {
+      const result = await request('/api/transactions', { method: id ? 'PATCH' : 'POST', body: JSON.stringify(body) });
+      const image = $('transaction-image').files?.[0];
+      const transactionId = id || result?.transaction?.id || result?.id;
+      if (image && transactionId) await uploadAttachment(transactionId, image);
+    }
     $('transaction-dialog').close();
+    if (scheduled) {
+      message('page-message', 'Conta agendada. Ela só entrará nos totais quando for marcada como paga.');
+      return;
+    }
     const month = body.transaction_date.slice(0, 7);
     if ($('month').value !== month) {
       $('month').value = month;
@@ -291,6 +399,33 @@ async function saveTransaction(event) {
     message('page-message', id ? 'Lançamento atualizado.' : 'Lançamento adicionado.');
   } catch (error) { message('form-error', error.message, true); }
   finally { button.disabled = false; button.textContent = id ? 'Salvar alterações' : 'Adicionar lançamento'; }
+}
+
+function readImageDataUrl(file) {
+  return new Promise((resolve, reject) => { const reader = new FileReader(); reader.onload = () => resolve(reader.result); reader.onerror = () => reject(new Error('Não consegui ler a imagem.')); reader.readAsDataURL(file); });
+}
+
+async function uploadAttachment(transactionId, file) {
+  if (!/^image\/(jpeg|png|webp)$/.test(file.type) || file.size > 900000) throw new Error('A imagem deve ser JPG, PNG ou WebP e ter até 900 KB.');
+  const data_url = await readImageDataUrl(file);
+  await request('/api/transaction-attachments', { method: 'POST', body: JSON.stringify({ transaction_id: transactionId, filename: file.name, content_type: file.type, data_url }) });
+}
+
+async function loadCategories() {
+  try { const data = await request('/api/categories'); state.categories = [...new Set((data.categories || []).map((item) => item.name).concat(defaultCategories))]; }
+  catch { state.categories = [...defaultCategories]; }
+  for (const target of ['category', 'filter-category']) {
+    const select = $(target); const value = select.value; select.replaceChildren();
+    if (target === 'filter-category') { const option = document.createElement('option'); option.value = ''; option.textContent = 'Todas'; select.append(option); }
+    for (const name of state.categories) { const option = document.createElement('option'); option.value = name; option.textContent = name; select.append(option); }
+    select.value = value;
+  }
+}
+
+async function createCategory(event) {
+  event?.preventDefault(); message('category-error', '');
+  try { const data = await request('/api/categories', { method: 'POST', body: JSON.stringify({ name: $('new-category-name').value }) }); await loadCategories(); $('category').value = data.category.name; $('category-dialog').close(); $('new-category-name').value = ''; }
+  catch (error) { message('category-error', error.message, true); }
 }
 
 async function deleteTransaction(row) {
@@ -379,11 +514,7 @@ async function init() {
   state.includeSharedSummary = remembered('finance_include_shared', 'false') === 'true';
   $('month').value = saoPauloToday().slice(0, 7);
   syncMonthDates();
-  for (const name of categories) {
-    for (const target of ['category', 'filter-category']) {
-      const option = document.createElement('option'); option.value = name; option.textContent = name; $(target).append(option);
-    }
-  }
+  await loadCategories();
   $('login-form').addEventListener('submit', async (event) => {
     event.preventDefault(); message('login-error', '');
     const button = $('login-submit'); if (button.disabled) return;
@@ -446,13 +577,20 @@ async function init() {
   $('finish-tutorial').addEventListener('click', () => finishTutorial());
   $('tutorial-new-transaction').addEventListener('click', () => { finishTutorial(false); openForm(); });
   $('transaction-form').addEventListener('submit', saveTransaction);
+  $('new-category').addEventListener('click', () => { message('category-error', ''); $('category-dialog').showModal(); $('new-category-name').focus(); });
+  $('category-form').addEventListener('submit', createCategory);
+  $('close-category-dialog').addEventListener('click', () => $('category-dialog').close());
+  $('cancel-category-dialog').addEventListener('click', () => $('category-dialog').close());
+  $('transaction-image').addEventListener('change', () => { const file = $('transaction-image').files?.[0]; $('transaction-image-status').textContent = file ? `${file.name} · ${(file.size / 1024).toFixed(0)} KB` : 'JPG, PNG ou WebP · até 1 MB'; });
+  $('payment-method').addEventListener('change', () => { $('payment-breakdown').hidden = !['misto', 'cartao'].includes($('payment-method').value); });
   $('close-dialog').addEventListener('click', () => $('transaction-dialog').close());
   $('cancel-dialog').addEventListener('click', () => $('transaction-dialog').close());
   $('share-form').addEventListener('submit', shareTransaction);
   $('close-share-dialog').addEventListener('click', () => $('share-dialog').close());
   $('cancel-share-dialog').addEventListener('click', () => $('share-dialog').close());
-  try { const session = await request('/api/session'); setIdentity(session.account || session.user); showDashboard(session.authenticated); if (session.authenticated) await loadTransactions(); }
+  try { const session = await request('/api/session'); setIdentity(session.account || session.user); showDashboard(session.authenticated); if (session.authenticated) { await loadCategories(); await loadTransactions(); } }
   catch { showDashboard(false); }
 }
 
 init();
+
