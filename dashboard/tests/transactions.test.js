@@ -52,7 +52,7 @@ test('compartilhar e revogar usam conta autenticada e ID do lançamento', async 
 });
 test('filtros inválidos não consultam RPCs e sessão ausente é recusada', async () => {
   await mocked(() => null, async (calls) => {
-    for (const query of [{ scope: 'other' }, { page: '0' }, { category: 'Qualquer' }, { include_shared_summary: '1' }, { date_from: '2026-10-01', date_to: '2026-09-01' }]) { const res = response(); await transactions({ method: 'GET', headers, query }, res); assert.equal(res.statusCode, 400); }
+    for (const query of [{ scope: 'other' }, { page: '0' }, { category: 'x' }, { include_shared_summary: '1' }, { date_from: '2026-10-01', date_to: '2026-09-01' }]) { const res = response(); await transactions({ method: 'GET', headers, query }, res); assert.equal(res.statusCode, 400); }
     assert.ok(calls.every((call) => call.url.pathname.endsWith('/dashboard_accounts')));
     const res = response(); await transactions({ method: 'GET', headers: {}, query: {} }, res); assert.equal(res.statusCode, 401);
   });
