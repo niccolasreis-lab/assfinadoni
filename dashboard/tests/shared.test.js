@@ -8,7 +8,7 @@ test('valida lançamento em BRL e rejeita dados inválidos', () => {
   assert.equal(validatedTransaction(good).amount, '19.99');
   assert.throws(() => validatedTransaction({ ...good, amount: -1 }));
   assert.throws(() => validatedTransaction({ ...good, amount: 1.234 }));
-  assert.throws(() => validatedTransaction({ ...good, category: 'Qualquer' }));
+  assert.throws(() => validatedTransaction({ ...good, category: 'x' }));
   assert.throws(() => validatedTransaction({ ...good, transaction_date: '2099-01-01' }));
   assert.equal(validDate('2026-02-30'), false);
 });
