@@ -10,4 +10,3 @@ export default async function handler(req, res) {
     return send(res, 200, { insights: await rpc('finance_insight_list', { p_user_id: account.finance_user_id, p_limit: Number(req.query?.limit || 20) }) });
   } catch (error) { return send(res, error.status || 400, { error: error.message || 'Pedido inválido.' }); }
 }
-

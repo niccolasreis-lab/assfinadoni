@@ -33,4 +33,3 @@ test('endpoints do domínio usam a carteira autenticada e RPCs tipadas', async (
     assert.equal(calls.find((call) => call.parsed.pathname.endsWith('/rpc/finance_transaction_splits_replace')).body.p_account_id, account.id);
   } finally { globalThis.fetch = old; }
 });
-

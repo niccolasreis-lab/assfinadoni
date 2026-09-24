@@ -11,4 +11,3 @@ export default async function handler(req, res) {
     return send(res, 201, { account: created });
   } catch (error) { return send(res, error.status || 400, { error: error.message || 'Pedido inválido.' }); }
 }
-

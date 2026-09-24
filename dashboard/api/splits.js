@@ -19,4 +19,3 @@ export default async function handler(req, res) {
     return send(res, 200, { splits });
   } catch (error) { return send(res, error.status || 400, { error: error.message || 'Pedido inválido.' }); }
 }
-

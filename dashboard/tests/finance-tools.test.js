@@ -22,4 +22,3 @@ test('ferramenta indisponível não inventa dados e argumentos inválidos são r
   await assert.rejects(executeFinanceTool('get_transactions', { limit: 0 }, context, { rpc: async () => ({}) }), (error) => error.code === 'INVALID_ARGUMENT');
   await assert.rejects(executeFinanceTool('get_balance', {}, {}, { rpc: async () => ({}) }), (error) => error.code === 'UNAUTHORIZED');
 });
-

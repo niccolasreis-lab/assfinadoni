@@ -12,4 +12,3 @@ export default async function handler(req, res) {
     return send(res, 201, { investment: await rpc('finance_investment_create', { p_user_id: account.finance_user_id, p_values: readBody(req) }) });
   } catch (error) { return send(res, error.status || 400, { error: error.message || 'Pedido inválido.' }); }
 }
-

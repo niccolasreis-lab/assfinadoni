@@ -12,4 +12,3 @@ export function requireFeature(name) {
     throw error;
   }
 }
-

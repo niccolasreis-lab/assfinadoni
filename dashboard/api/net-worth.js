@@ -10,4 +10,3 @@ export default async function handler(req, res) {
     return send(res, 200, { net_worth: await rpc('finance_net_worth', { p_user_id: account.finance_user_id }) });
   } catch (error) { return send(res, error.status || 400, { error: error.message || 'Pedido inválido.' }); }
 }
-

@@ -30,4 +30,3 @@ test('patrimônio separa valor informado, investimentos, dívidas e caixa', asyn
     assert.equal(Number(net.net_worth), 1160);
   } finally { await db.close(); }
 });
-

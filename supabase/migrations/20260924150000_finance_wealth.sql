@@ -95,4 +95,3 @@ do $$ declare f record; begin
     execute format('grant execute on function %s to service_role',f.sig);
   end loop;
 end $$;
-

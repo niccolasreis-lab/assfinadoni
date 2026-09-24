@@ -27,4 +27,3 @@ test('gateway MCP lista ferramentas e executa somente com a sessão autenticada'
     assert.ok(calls.some((call) => call.parsed.pathname.endsWith('/rpc/finance_audit_write')));
   } finally { globalThis.fetch = old; }
 });
-

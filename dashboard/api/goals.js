@@ -16,4 +16,3 @@ export default async function handler(req, res) {
     return send(res, 201, { goal: await rpc('finance_goal_create', { p_user_id: account.finance_user_id, p_values: values }) });
   } catch (error) { return send(res, error.status || 400, { error: error.message || 'Pedido inválido.' }); }
 }
-

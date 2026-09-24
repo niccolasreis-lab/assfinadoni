@@ -10,4 +10,3 @@ export default async function handler(req, res) {
     return send(res, 200, { projection: await rpc('finance_cashflow_projection', { p_user_id: account.finance_user_id, p_horizon_days: Number(req.query?.days || 30) }) });
   } catch (error) { return send(res, error.status || 400, { error: error.message || 'Pedido inválido.' }); }
 }
-

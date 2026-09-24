@@ -48,4 +48,3 @@ export default async function handler(req, res) {
     return send(res, error.status || 400, { error: error.message || 'Pedido inválido.' });
   }
 }
-

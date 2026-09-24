@@ -16,4 +16,3 @@ export default async function handler(req, res) {
     }) });
   } catch (error) { return send(res, error.status || 400, { error: error.message || 'Pedido inválido.' }); }
 }
-
