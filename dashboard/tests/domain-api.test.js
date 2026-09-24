@@ -1,9 +1,9 @@
 import assert from 'node:assert/strict';
 import test from 'node:test';
-import accounts from '../api/accounts.js';
-import cards from '../api/cards.js';
-import splits from '../api/splits.js';
-import installments from '../api/installments.js';
+import accounts from '../handlers/accounts.js';
+import cards from '../handlers/cards.js';
+import splits from '../handlers/splits.js';
+import installments from '../handlers/installments.js';
 import { setSession } from '../lib/server.js';
 
 process.env.SESSION_SECRET = 'segredo-de-teste-com-mais-de-trinta-e-dois-caracteres';

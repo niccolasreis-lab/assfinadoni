@@ -1,9 +1,9 @@
 import assert from 'node:assert/strict';
 import test from 'node:test';
-import budgets from '../api/budgets.js';
-import goals from '../api/goals.js';
-import alerts from '../api/alerts.js';
-import insights from '../api/insights.js';
+import budgets from '../handlers/budgets.js';
+import goals from '../handlers/goals.js';
+import alerts from '../handlers/alerts.js';
+import insights from '../handlers/insights.js';
 import { setSession } from '../lib/server.js';
 
 process.env.SESSION_SECRET = 'segredo-de-teste-com-mais-de-trinta-e-dois-caracteres';

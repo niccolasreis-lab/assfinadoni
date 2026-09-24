@@ -1,6 +1,6 @@
 import assert from 'node:assert/strict';
 import test from 'node:test';
-import mcp from '../api/v1/mcp.js';
+import mcp from '../handlers/v1/mcp.js';
 import { setSession } from '../lib/server.js';
 
 process.env.SESSION_SECRET = 'segredo-de-teste-com-mais-de-trinta-e-dois-caracteres';

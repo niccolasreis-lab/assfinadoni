@@ -2,6 +2,10 @@
 
 Dashboard simples para Vercel, ligado às tabelas `finance_users` e `finance_transactions` do mesmo Supabase usado pelo bot. Mostra receitas, despesas, saldo, divisão por categoria e permite criar, editar, filtrar, excluir e restaurar lançamentos.
 
+## Limite de funções Vercel
+
+O projeto permanece compatível com o plano Hobby: as onze funções legadas continuam em `api/` e as rotas financeiras novas são despachadas por `api/[...route].js`. Os caminhos públicos `/api/*` e `/api/v1/*` não mudam; os handlers internos ficam em `handlers/`.
+
 ## Segurança e escopo
 
 Esta versão usa contas individuais vinculadas a chats distintos do Telegram. A sessão assinada identifica a conta e é revalidada a cada requisição. Os RPCs autorizam acesso próprio ou compartilhado, incluindo edição, exclusão e restauração. A chave `service role` fica somente no servidor; nunca use variáveis `NEXT_PUBLIC_*`. Excluir move o lançamento para a lixeira por 30 dias.

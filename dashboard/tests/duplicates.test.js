@@ -1,6 +1,6 @@
 import assert from 'node:assert/strict';
 import test from 'node:test';
-import handler from '../api/duplicates.js';
+import handler from '../handlers/duplicates.js';
 import { setSession } from '../lib/server.js';
 
 process.env.SESSION_SECRET = 'segredo-de-teste-com-mais-de-trinta-e-dois-caracteres';
