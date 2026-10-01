@@ -25,10 +25,11 @@ export function sameOrigin(req) {
   } catch { return false; }
 }
 
-export function readBody(req) {
+export function readBody(req, maxLength = 4096) {
   if (!String(req.headers['content-type'] || '').toLowerCase().startsWith('application/json')) throw new Error('Envie JSON.');
+  if (typeof req.body === 'string' && req.body.length > maxLength) throw new Error('Dados inválidos.');
   const body = typeof req.body === 'string' ? JSON.parse(req.body) : req.body;
-  if (!body || typeof body !== 'object' || Array.isArray(body) || JSON.stringify(body).length > 4096) throw new Error('Dados inválidos.');
+  if (!body || typeof body !== 'object' || Array.isArray(body) || JSON.stringify(body).length > maxLength) throw new Error('Dados inválidos.');
   return body;
 }
 

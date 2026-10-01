@@ -157,9 +157,10 @@ function openTransactionActions(row) {
     const text = `${row.description}\n${money(row.amount)} · ${formatDate(row.transaction_date)}\nCategoria: ${row.category}`;
     try {
       if (navigator.share) await navigator.share({ title: row.description, text });
-      else { await navigator.clipboard?.writeText(text); message('page-message', 'Lançamento copiado. Cole no WhatsApp, Telegram ou outra rede.'); }
-    } catch (error) { if (error.name !== 'AbortError') message('page-message', 'Não foi possível abrir o compartilhamento.', true); }
-    dialog.close();
+      else if (navigator.clipboard?.writeText) { await navigator.clipboard.writeText(text); message('page-message', 'Lançamento copiado. Cole no WhatsApp, Telegram ou outra rede.'); }
+      else { message('page-message', 'Este navegador não permite compartilhar ou copiar. Abra em um navegador atualizado.', true); return; }
+      dialog.close();
+    } catch (error) { if (error.name !== 'AbortError') message('page-message', 'Não foi possível compartilhar ou copiar o lançamento. Tente novamente.', true); }
   });
 
   const remove = document.createElement('button');

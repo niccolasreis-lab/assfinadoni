@@ -4,7 +4,7 @@ import { authenticateNotificationRequest, validatePushSubscription } from '../li
 import { readReminderBody, ReminderValidationError } from '../lib/reminders.js';
 
 function telegramDelivery(value) {
-  return {id:value.id,lease_token:value.lease_token,chat_id:value.chat_id,text:`Você tem ${value.kind === 'bill' ? 'uma conta para acompanhar' : 'uma despesa para revisar'} no Assistente de Finanças. Abra o painel ou use /pendencias. Código: ${value.short_code}.`};
+  return {id:value.id,lease_token:value.lease_token,chat_id:value.chat_id,text:`Você tem ${value.kind === 'bill' ? 'uma conta para acompanhar' : 'uma despesa para revisar'} no Assistente de Finanças. Abra o dashboard e acesse os lembretes para revisar e concluir. Código: ${value.short_code}.`};
 }
 function deliveryIdentity(body) {
   try { return {p_id:uuid(body.id),p_lease_token:uuid(body.lease_token)}; } catch { throw new ReminderValidationError('Entrega inválida.'); }

@@ -111,3 +111,13 @@ Legenda: `[ ]` planejado · `[~]` em desenvolvimento · `[x]` concluído · `[!]
 - Novas migrations: serão aplicadas somente após validação em schema sanitizado.
 - Deploy: pendente de revisão e dos artefatos externos bloqueados.
 - Versão APK: `[!]` projeto APK não fornecido.
+## Validação de 01/10/2026 — dashboard e colaboração
+
+- Colaboração completa confirmada como requisito: destinatário autorizado pode visualizar, editar, excluir e restaurar lançamentos compartilhados.
+- API n8n acessível; workflows financeiros identificados. A listagem não comprova a execução nem o uso do mesmo projeto Supabase.
+- Corrigido upload de imagens: leitor JSON do endpoint agora comporta o limite de anexo existente, mantendo 4 KB nos demais endpoints.
+- Corrigido falso sucesso no compartilhamento externo quando não há Clipboard API; falha mantém as ações abertas para nova tentativa.
+- Notificações Telegram agora orientam revisão pelo dashboard, sem exigir comando com barra na mensagem.
+- Validação inicial: 78 testes aprovados, um ignorado; build aprovado. Após correção do upload: 16 testes específicos aprovados, incluindo teste novo de tamanho e persistência.
+- Pendente: compartilhamento de PDF (ação externa atual envia texto; API de anexos transacionais atual aceita imagens), entrega real de notificações, revisão visual mobile e comparação das conexões de banco dos workflows ativos.
+- Alterações desta etapa são locais; publicação em produção ainda não verificada.
