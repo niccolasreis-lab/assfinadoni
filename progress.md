@@ -1,3 +1,16 @@
+## Evidências de produção — 01/10/2026
+
+- PR #10 incorporada à main: commit 24eccae158fafb195c52b52c2820f2a3f97097f5.
+- Vercel: deployment dpl_3mc72jGobRFgE5xq7RaaXvN1irgx READY, target production; domínio assfinadoni.vercel.app aponta para a versão.
+- Código atualizado de compartilhamento confirmado no app.js publicado; API de sessão respondeu 200 sem autenticação.
+- Supabase jhpappaakmdfxyujnlef: 8 entregas Telegram marcadas sent; último sent_at 2026-09-22T21:45:35.171925Z. Registro histórico não comprova entrega atual ao dispositivo.
+- Nenhuma assinatura push cadastrada. Necessário habilitar notificações num dispositivo autenticado para validar entrega real.
+- Há 3 lembretes pendentes e 2 concluídos; todos com flags push/Telegram habilitadas.
+- Workflows Telegram e notificações ativos apontam para esse Supabase e para o dashboard. Conexão de banco efetiva da Vercel ainda não comparada.
+- Tabelas finance_processing_events e finance_attachments não encontradas no schema public; finance_assistant_jobs existe. Migrations documentadas no repositório não equivalem a migrations aplicadas em produção.
+- Compartilhamento externo atual envia texto; PDF como arquivo permanece pendente.
+- Consultas de histórico n8n retornaram listas vazias; consultas de logs Vercel expiraram. Não há evidência suficiente para certificar todos os fluxos.
+
 # Progresso do projeto
 
 Atualizado em 20/09/2026.
@@ -121,3 +134,5 @@ Legenda: `[ ]` planejado · `[~]` em desenvolvimento · `[x]` concluído · `[!]
 - Validação inicial: 78 testes aprovados, um ignorado; build aprovado. Após correção do upload: 16 testes específicos aprovados, incluindo teste novo de tamanho e persistência.
 - Pendente: compartilhamento de PDF (ação externa atual envia texto; API de anexos transacionais atual aceita imagens), entrega real de notificações, revisão visual mobile e comparação das conexões de banco dos workflows ativos.
 - Alterações desta etapa são locais; publicação em produção ainda não verificada.
+- Verificação adicional em 01/10: um job do dashboard continua queued desde 24/09/2026 15:36 UTC, sem atualização. Não há evidência de processamento desse pedido; investigar serviço worker e conexão de banco.
+- Mensagens do chat agora distinguem pedido com falha de fila atrasada, evitando espera genérica indefinida. Não reprocessado automaticamente nenhum pedido financeiro antigo.
