@@ -2,7 +2,7 @@ import { useEffect, useRef, useState, lazy, Suspense, Component, type ReactNode 
 import { MessageCircle, Mic, Square, Paperclip, Send, X, Trash2, Pencil } from 'lucide-react'
 const CanvasRevealEffect = lazy(() => import('./canvas-effect').then(m => ({ default: m.CanvasRevealEffect })))
 type Transaction = { id?: string; description: string; amount: number; transaction_date: string; deleted_at?: string }
-type Job = { id: string; status: string; result?: { text: string; transcript?: string; transactions?: Transaction[]; confirmation_id?: string; changed?: boolean } }
+type Job = { id: string; status: string; created_at?: string; result?: { text: string; transcript?: string; transactions?: Transaction[]; confirmation_id?: string; changed?: boolean } }
 type Props = { reload: () => void }
 const MAX_FILE = 3 * 1024 * 1024
 class DecorationBoundary extends Component<{children:ReactNode},{failed:boolean}> {
@@ -73,7 +73,7 @@ export function AssistantPanel({reload}:Props) {
         {!jobs.length&&<div className="assistant-empty"><DecorationBoundary><Suspense fallback={null}>{open&&<CanvasRevealEffect/>}</Suspense></DecorationBoundary><h3>O que vamos registrar?</h3><p>“Gastei R$ 45 no almoço” ou “Recebi meu salário”. Você também pode enviar um recibo.</p><small>A conversa acompanha sua conta no Telegram.</small></div>}
         {jobs.map(job=><article key={job.id} className="assistant-message">
           {job.result?.transcript&&<details><summary>O que entendi do anexo</summary><p>{job.result.transcript}</p></details>}
-          <p>{job.result?.text||(job.status==='queued'?'Na fila…':'Conferindo seu pedido…')}</p>
+          <p>{job.result?.text||(job.status==='failed'?'Não foi possível concluir este pedido. Confira os lançamentos antes de tentar novamente.':job.status==='queued'&&job.created_at&&Date.now()-Date.parse(job.created_at)>120000?'O processamento está demorando mais que o esperado. Confira os lançamentos antes de registrar manualmente para evitar duplicidade.':job.status==='queued'?'Na fila…':'Conferindo seu pedido…')}</p>
           {job.result?.transactions?.map((t,index)=><div className="assistant-receipt" key={t.id||index}><strong>{t.description}</strong><span>{Number(t.amount).toLocaleString('pt-BR',{style:'currency',currency:'BRL'})} · {t.transaction_date?.split('-').reverse().join('/')}</span>
             {t.id&&!t.deleted_at&&job.status==='done'&&<div className="assistant-actions"><button onClick={()=>{setRetry(null);setText(`Altere o lançamento ${t.id}: `);input.current?.focus()}}><Pencil size={15}/>Alterar</button><button disabled={sending||busy} onClick={()=>{setRetry(null);setText(`Exclua o lançamento ${t.id}`);input.current?.focus()}}><Trash2 size={15}/>Excluir</button></div>}</div>)}
           {job.status==='awaiting_confirmation'&&job.result?.confirmation_id&&<div className="assistant-actions"><button disabled={sending||busy} onClick={()=>send('confirm',job.result?.confirmation_id)}>Confirmar</button><button disabled={sending||busy} onClick={()=>send('cancel',job.result?.confirmation_id)}>Cancelar</button></div>}

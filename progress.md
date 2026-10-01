@@ -134,3 +134,5 @@ Legenda: `[ ]` planejado · `[~]` em desenvolvimento · `[x]` concluído · `[!]
 - Validação inicial: 78 testes aprovados, um ignorado; build aprovado. Após correção do upload: 16 testes específicos aprovados, incluindo teste novo de tamanho e persistência.
 - Pendente: compartilhamento de PDF (ação externa atual envia texto; API de anexos transacionais atual aceita imagens), entrega real de notificações, revisão visual mobile e comparação das conexões de banco dos workflows ativos.
 - Alterações desta etapa são locais; publicação em produção ainda não verificada.
+- Verificação adicional em 01/10: um job do dashboard continua queued desde 24/09/2026 15:36 UTC, sem atualização. Não há evidência de processamento desse pedido; investigar serviço worker e conexão de banco.
+- Mensagens do chat agora distinguem pedido com falha de fila atrasada, evitando espera genérica indefinida. Não reprocessado automaticamente nenhum pedido financeiro antigo.
