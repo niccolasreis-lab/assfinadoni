@@ -115,3 +115,11 @@ Os padrões são desativados até validação por fase:
 Não haverá conexão automática com bancos, consentimento bancário, sincronização
 de contas, agregação bancária ou infraestrutura de Open Finance. Investimentos,
 ativos e passivos são cadastrados manualmente.
+## Critérios acordados em 01/10/2026
+
+- Dashboard simples para duas pessoas, com visão individual e conjunta e ações acessíveis de revisão, edição, exclusão e compartilhamento de despesas e receitas.
+- Banco único para dashboard e Telegram, com regras de domínio consistentes; n8n atua como orquestrador auxiliar.
+- Manter colaboração completa entre contas autorizadas nos registros compartilhados, com confirmação para alterações e exclusões.
+- Validar o fluxo de PDF desde a interpretação e revisão até o compartilhamento, incluindo o arquivo; o compartilhamento atual de texto não cumpre esse requisito.
+- Validar notificações tanto por testes internos quanto por evidência de entrega real. Testes locais não certificam entrega ao celular.
+- Avaliar arquitetura e interface mobile, clareza de erros, acessibilidade, desempenho e confiabilidade antes de declarar a modernização concluída.

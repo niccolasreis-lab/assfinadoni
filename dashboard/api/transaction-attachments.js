@@ -26,7 +26,7 @@ export default async function handler(req, res) {
     if (!account) return send(res, 401, { error: 'Faça login para continuar.' });
     if (!['GET', 'POST'].includes(req.method)) return send(res, 405, { error: 'Método não permitido.' });
     if (req.method === 'POST' && !sameOrigin(req)) return send(res, 403, { error: 'Origem não autorizada.' });
-    const body = req.method === 'POST' ? readBody(req) : null;
+    const body = req.method === 'POST' ? readBody(req, 1404096) : null;
     const id = uuid(req.query?.transaction_id || body?.transaction_id || '');
     if (!(await canAccess(account, id))) return send(res, 404, { error: 'Lançamento não encontrado.' });
     if (req.method === 'GET') {
@@ -45,4 +45,3 @@ export default async function handler(req, res) {
     return send(res, invalid ? 400 : 500, { error: invalid ? error.message : 'Não consegui salvar a imagem.' });
   }
 }
-
