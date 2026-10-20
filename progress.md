@@ -150,3 +150,8 @@ Legenda: `[ ]` planejado · `[~]` em desenvolvimento · `[x]` concluído · `[!]
 - [x] Oito baselines históricos regularizados com autorização explícita em 20/10/2026; somente metadados, sem reexecutar DDL. Verificação sem versões financeiras pendentes e hashes de lançamentos, voz e funções inalterados. Correspondência em supabase/production-history.json.
 
 Operação e limites: supabase/README.md. Limites/lembretes WhatsApp permanecem autoritativos para os avisos do grupo; flags avançadas web não foram ativadas automaticamente.
+
+
+## 2026-10-20 — Correção de múltiplas movimentações no WhatsApp
+
+O agente de texto e áudio aceita até dez movimentações por mensagem, incluindo entradas e saídas juntas. Mostra cada item e os totais separados antes de confirmar; preserva valores iguais como registros distintos. Receita não é anunciada como compra, e pagamento de fatura não implica pagamento feito no cartão. Foram preservadas credenciais, voz, estado de conversa e idempotência dos lotes. Testes e contrato sem segredos: n8n/finance-text-batch. Não reprocessar mensagens antigas já confirmadas parcialmente.

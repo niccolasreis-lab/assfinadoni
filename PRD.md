@@ -137,3 +137,8 @@ Priorizar os contratos ativos de WhatsApp, confirmação, voz e pagamento híbri
 Novos cadastros web de limites e lembretes não substituem as fontes WhatsApp.
 As migrations e o schema real devem ser verificáveis, com divergências históricas
 documentadas e sem reparo retroativo automático. Ver supabase/README.md.
+
+
+## 2026-10-20 — Correção de múltiplas movimentações no WhatsApp
+
+O agente de texto e áudio aceita até dez movimentações por mensagem, incluindo entradas e saídas juntas. Mostra cada item e os totais separados antes de confirmar; preserva valores iguais como registros distintos. Receita não é anunciada como compra, e pagamento de fatura não implica pagamento feito no cartão. Foram preservadas credenciais, voz, estado de conversa e idempotência dos lotes. Testes e contrato sem segredos: n8n/finance-text-batch. Não reprocessar mensagens antigas já confirmadas parcialmente.
