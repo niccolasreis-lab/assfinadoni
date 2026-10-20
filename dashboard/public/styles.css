@@ -999,6 +999,16 @@ input[type=number] {
 .filters>.button {
   align-self:end;
 }
+#payer-filter-help {
+  display:block;
+  margin-top:5px;
+  color:var(--muted);
+  font-size:.7rem;
+}
+.payer-badge {
+  white-space:normal;
+  overflow-wrap:anywhere;
+}
 .list-context {
   font-size:.7rem;
   margin-bottom:10px;

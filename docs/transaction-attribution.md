@@ -1,6 +1,6 @@
 # Identificação de quem pagou
 
-Status em 20/10/2026: persistência e integração WhatsApp publicadas, com identidades verificadas e cinco cenários nativos aprovados individualmente. O filtro do painel ainda não está implementado.
+Status em 20/10/2026: persistência e integração WhatsApp publicadas, com identidades verificadas e cinco cenários nativos aprovados individualmente. O filtro e os rótulos do painel Casal foram implementados na etapa seguinte.
 
 ## Comportamento
 
@@ -33,7 +33,7 @@ As chaves financeiras recordKey são preservadas. A identificação é gravada d
 
 A consulta por pessoa usa somente os até 50 lançamentos recentes disponíveis e explicita esse recorte. Ausência de atribuição significa desconhecido; receitas e lixeira não entram. Não anuncia esse recorte como total mensal. A visão Casal existente continua com o resumo mensal independente da página.
 
-`payer-attribution-scope.js` valida escopo multicartiera, período e cobertura completa/paginada, mas ainda não é usado pela rota ou UI do painel. A integração visual permanece para uma próxima etapa.
+`payer-attribution-scope.js` valida escopo multicartiera, período e cobertura completa/paginada, e permanece disponível para consumidores de resumos completos. O painel usa uma consulta própria com filtros no banco antes da paginação, mantendo o resumo mensal separado.
 
 ## Validação e operação
 
@@ -57,3 +57,17 @@ node n8n/payer-attribution/test.cjs
 Os cinco cenários nativos (primeira pessoa, outro pagador, conjunto, beneficiário e confirmação por outra pessoa) passaram. Cada relatório de simulação teve aceite do serviço WhatsApp com ID de mensagem; isso não comprova leitura ou recebimento no aparelho. Workflows temporários foram desativados. Recibos: `n8n/payer-attribution/validation.json`. A versão ativa do bot e as preservações verificadas estão em `n8n/payer-attribution/deployment.json`.
 
 O contrato versionado do bot está em `n8n/payer-attribution/contract.json`; snapshots completos e vínculos de identidade permanecem privados. Para reverter a integração, restaurar os nós e conexões revisados da versão anterior sem substituir staticData ou credenciais. Manter os metadados e os lançamentos existentes, sem reprocessar mensagens antigas.
+
+## Filtro no painel Casal
+
+A visão Casal mostra “Quem pagou”: todos, não identificado, pagamentos individuais, uma pessoa cadastrada ou pagamentos conjuntos. Selecionar uma pessoa inclui seus pagamentos individuais; conjuntos têm opção separada. Receitas aparecem em Todos e mostram “não se aplica”. O histórico não identificado continua desconhecido, sem backfill.
+
+`finance_dashboard_couple_payer_transactions` é uma nova RPC de leitura. Delega à RPC antiga a autorização, os filtros anteriores e o resumo mensal; enriquece as linhas com labels de pagador e filtra no banco antes de OFFSET/LIMIT. Devolve somente participantes das carteiras autorizadas, sem contatos. A API obtém a conta da sessão, aceita UUID opcional apenas no filtro individual e rejeita IDs não autorizados. A RPC antiga permanece intacta.
+
+Trocar pagador reinicia a página. O filtro só é enviado em Casal; Minhas, Compartilhadas e Todas mantêm seus períodos e comportamento. Nomes recebidos são renderizados como texto. Despesas conjuntas não são divididas ou somadas novamente.
+
+Validação desta etapa: 182 testes gerais aprovados sem skips; 19 novos testes da consulta e uma integração com todas as migrations aprovados; lint e build aprovados. Os testes incluem mais de 50 linhas por participante, paginação, homônimos em carteiras distintas, lixeira, participante inativo, metadata inválida, XSS e isolamento por sessão. No banco real, ambos os logins retornaram os mesmos IDs/totais da consulta antiga, para todos os filtros aplicáveis, e os dez lançamentos mantiveram o digest anterior.
+
+A migration foi criada pelo CLI como 20261020223006 e alinhada ao registro real da ferramenta, 20261020223443. A consulta é somente leitura; reverter o handler e a interface mantém o caminho antigo sem apagar dados.
+
+Limite da verificação visual: o browser público exige login e o ambiente de testes não disponibilizou o binário local do navegador. Os testes da interface executam os eventos reais do app em DOM isolado; não representam um login manual de produção.

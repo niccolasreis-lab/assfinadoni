@@ -170,6 +170,16 @@ O agente de texto e áudio aceita até dez movimentações por mensagem, incluin
 - [x] Contexto RPC testado no n8n real com as credenciais existentes.
 - [x] Cinco cenários de intenção/classificação passaram individualmente no n8n; cinco recibos de envio de simulação ao grupo registrados. Os fluxos temporários foram desativados.
 - [x] Patch do bot publicado e versão ativa conferida: f0f464c4-d59c-4948-ad05-95af9d77920d. Estado da conversa, credenciais, settings, voz e monitor de áudio preservados. 53 verificações VM aprovadas, incluindo 17 regressões de lote.
-- [ ] Filtro e apresentação de pagador no painel permanecem para outra etapa. A rota Casal atual continua sem essa integração.
+- [x] Filtro e rótulos por pagador implementados no painel Casal: nova RPC de leitura com filtros antes da paginação, API com conta da sessão, UI segura e períodos preservados.
 
 Operação, limites e comandos: docs/transaction-attribution.md e n8n/payer-attribution/README.md. A PR16 mantém o código e o contrato sem segredos para revisão.
+
+## 2026-10-20 — Pagador no painel
+
+- [x] Consulta adicionada sem substituir a RPC Casal antiga ou escrever no ledger.
+- [x] Migration aplicada como 20261020223443; ambos os logins conferidos no banco real para all/unknown/participant/joint.
+- [x] Totais mensais e IDs de linhas sem filtro iguais ao contrato antigo; dez lançamentos e zero atribuições históricas preservados.
+- [x] 182 testes gerais, 19 da nova consulta e integração all-migrations aprovados, sem skips; lint/build aprovados.
+- [x] Casal oferece filtro por tipo/pessoa e labels de histórico/conjunto; outros escopos e datas preservados.
+
+A evidência final de CI e publicação acompanha a PR16 e a implantação Vercel correspondente. Áudio de conclusão autorizado para o mesmo grupo WhatsApp, somente depois da conferência da publicação.

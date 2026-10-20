@@ -37,5 +37,13 @@
     "historicalBackfill": false,
     "participantBindings": "administrative_private",
     "schemaValidatedInIsolation": true
+  },
+  "payerDashboardFilters": {
+    "version": "20261020223443",
+    "name": "finance_dashboard_couple_payer_filters",
+    "cliCreatedVersion": "20261020223006",
+    "filenameAlignedToAppliedToolVersion": true,
+    "readOnly": true,
+    "oldCoupleRpcUnchanged": true
   }
 }
