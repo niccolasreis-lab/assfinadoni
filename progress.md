@@ -155,3 +155,13 @@ Operação e limites: supabase/README.md. Limites/lembretes WhatsApp permanecem 
 ## 2026-10-20 — Correção de múltiplas movimentações no WhatsApp
 
 O agente de texto e áudio aceita até dez movimentações por mensagem, incluindo entradas e saídas juntas. Mostra cada item e os totais separados antes de confirmar; preserva valores iguais como registros distintos. Receita não é anunciada como compra, e pagamento de fatura não implica pagamento feito no cartão. Foram preservadas credenciais, voz, estado de conversa e idempotência dos lotes. Testes e contrato sem segredos: n8n/finance-text-batch. Não reprocessar mensagens antigas já confirmadas parcialmente.
+
+## 2026-10-20 — Acompanhamento de áudio publicado com autorização
+
+- [x] Preparados: envelopes temporários, limites de leitura/transcrição, entrega direta de falha/resultado verificado e consulta por pessoa sem autoria inventada ou receitas na lista de despesas.
+- [x] Preparado monitor assíncrono: primeira checagem após 25 segundos, supressão após resposta, checagem posterior de erro/timeout, sem repetir gravações financeiras.
+- [x] 24 verificações novas passaram; os 17 casos de lote também passaram com o classificador alterado. Teste nativo isolado no n8n comprovou disparo assíncrono e decisão de progresso sem WhatsApp ou banco financeiro.
+- [x] Publicados o monitor e o fluxo principal após autorização explícita do usuário. Versão ativa conferida: `c7e820aa-53f7-40f9-98d5-b2bac586c4d6`. Credenciais e `staticData` existentes preservados. Evidência sem segredos em `n8n/audio-reliability/deployment.json`.
+- [ ] Validar um novo áudio real do grupo após publicação. Não houve reprocessamento de mensagens antigas ou alteração de lançamentos.
+
+Limites: indisponibilidade do n8n/API/WhatsApp pode impedir o aviso; erro de envio não comprova que uma gravação financeira foi desfeita. Consulta por pessoa usa somente as despesas entre os 50 registros recentes disponíveis e não permite determinar autoria histórica.

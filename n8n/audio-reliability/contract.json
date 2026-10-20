@@ -1,0 +1,276 @@
+{
+  "nodes": [
+    {
+      "name": "Classificar comando",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "parameters": {
+        "jsCode": "const clean = value => String(value ?? '').replace(/\\s+/g, ' ').trim();\nconst plain = value => clean(value).normalize('NFD').replace(/[\\u0300-\\u036f]/g, '').toLowerCase();\nconst br = value => Number(value).toLocaleString('pt-BR', {style:'currency',currency:'BRL'});\nconst cents = value => Math.round(Number(value) * 100);\nconst total = rows => rows.reduce((sum, tx) => sum + cents(tx.amount), 0) / 100;\nconst paymentFrom = text => {\n  const t = plain(text);\n  if (/\\bpix\\b/.test(t)) return {method:'pix'};\n  if (/\\bdinheiro\\b/.test(t)) return {method:'dinheiro'};\n  if (/\\bdebito\\b/.test(t)) return {method:'debito'};\n  if (/\\b(?:cartao|credito)\\b/.test(t)) return {method:'cartao',installments:1,cash_amount:'0.00'};\n  return null;\n};\nconst categoryFrom = text => {\n  const t = plain(text);\n  return [\n    [/\\bviage(?:m|ns)\\b/, 'Viagem'], [/\\bcasamento\\b/, 'Casamento'],\n    [/mercado|supermercado|padaria|restaurante|lanche|comida|ifood|alimenta/, 'Alimentação'],\n    [/uber|\\b99\\b|taxi|combust|gasolina|transporte/, 'Transporte'],\n    [/aluguel|condom|\\bluz\\b|energia|\\bagua\\b|internet|moradia/, 'Moradia'],\n    [/farmacia|medico|consulta|saude/, 'Saúde'], [/curso|escola|faculdade|livro|educacao/, 'Educação'],\n    [/cinema|\\bbar\\b|show|lazer/, 'Lazer'], [/netflix|spotify|assinatura/, 'Assinaturas'],\n    [/\\boutros\\b/, 'Outros'],\n  ].find(([pattern]) => pattern.test(t))?.[1] ?? null;\n};\nconst moneyIn = text => {\n  const result = [];\n  const pattern = /(?<![\\p{L}\\d.,/])(?:R\\$\\s*)?(\\d{1,3}(?:\\.\\d{3})+(?:,\\d{1,2})?|\\d+(?:[.,]\\d{1,2})?)(?!\\d|[.,]\\d|\\/\\d)/giu;\n  for (const m of String(text).matchAll(pattern)) {\n    const tail = text.slice(m.index + m[0].length);\n    if (/^\\s*(?:x\\b|vezes\\b|parcelas?\\b|compras?\\b|itens?\\b|dias?\\b|meses\\b|anos?\\b)/i.test(tail)) continue;\n    const prefix = text.slice(Math.max(0,m.index - 45),m.index);\n    const labelled = /(?:valor(?:\\s+(?:pago|total|da compra))?|total(?:\\s+(?:pago|da compra|do pedido))?)\\s*[:\\-]?\\s*$/i.test(prefix);\n    const raw = m[1];\n    const amount = Number(raw.includes(',') || /^\\d{1,3}(?:\\.\\d{3})+$/.test(raw) ? raw.replace(/\\./g,'').replace(',','.') : raw);\n    if (Number.isFinite(amount) && amount > 0 && amount <= 100000000) result.push({amount,raw,match:m[0],index:m.index,labelled,currency:/r\\$/i.test(m[0]),decimal:/[.,]/.test(raw)});\n  }\n  const priority = result.some(x=>x.labelled) ? result.filter(x=>x.labelled) : result.some(x=>x.currency) ? result.filter(x=>x.currency) : result.some(x=>x.decimal) ? result.filter(x=>x.decimal) : result;\n  return priority.filter((x,i,a)=>a.findIndex(y=>cents(y.amount)===cents(x.amount))===i);\n};\nconst pendingRows = p => Array.isArray(p?.transactions) ? p.transactions : p?.tx ? [p.tx] : [];\nconst withMetadata = (tx, category, payment) => ({...tx,category:category || tx.category || 'Outros',payment_details:payment || tx.payment_details || {}});\n\nlet x = $input.first().json;\nlet ai = {};\nif (x.output !== undefined || x.error) {\n  const raw = x.output;\n  try { ai = typeof raw === 'string' ? JSON.parse(raw.replace(/^```(?:json)?\\s*/i,'').replace(/\\s*```$/,'')) : raw ?? {}; } catch {}\n  x = $('Preparar intenção financeira').first().json;\n}\nif (x.route === 'reply' || x.route === 'transaction') return [{json:x}];\nif(x.mediaKind==='text'&&x.intentInput&&(!ai||typeof ai.intent!=='string'))return [{json:{...x,route:'reply',financialStatus:'conversa',replyText:'Não consegui entender seu pedido com segurança agora. Pode me contar de outro jeito?'}}];\n// The native AI interprets language; this boundary validates identities, fields and confirmations.\nconst semanticState=$getWorkflowStaticData('global');semanticState.management??={};\nconst semanticKey=x.chatId+':'+x.senderId;\nlet session=semanticState.management[semanticKey];\nif(session&&(session.userId!==x.user?.id||Date.now()-session.at>15*60*1000)){delete semanticState.management[semanticKey];session=null;}\nconst human=(replyText,financialStatus='gestao_selecao')=>[{json:{...x,route:'reply',replyText,financialStatus}}];\nconst catalog=Array.isArray(x.ledgerContext)?x.ledgerContext.filter(r=>r.user_id===x.user?.id&&!r.deleted_at):[];\nconst allowed=[...catalog,...(session?.rows||[])].filter(r=>r.user_id===x.user?.id&&!r.deleted_at);\nconst semantics=ai.management&&typeof ai.management==='object'?ai.management:{};\nconst act=semantics.action||'none';\nconst currentText=String(x.text||'');\nconst negativeOrQuestion=/\\?/.test(currentText)||/\\b(?:nao|nunca|talvez|ainda nao|se der)\\b/.test(plain(currentText));\nconst brief=r=>`${br(r.amount)} — ${clean(r.description)} (${r.transaction_date})`;\n\nconst personQuery=plain(x.text||'');\nif(/\\b(?:despesas?|gastos?|lancamentos?)\\b/.test(personQuery)&&/\\b(?:ionara|narinha|guiga|nara|nicolas|nic)\\b/.test(personQuery)&&(/\\?/.test(x.text||'')||/\\b(?:quais|cad[eê]|mostr\\w*|ver|consult\\w*|e os|e as)\\b/.test(personQuery))&&!/\\b(?:exclu\\w*|apag\\w*|edit\\w*|alter\\w*)\\b/.test(personQuery)){\n const rows=catalog.filter(r=>r.transaction_type==='despesa').slice(0,10);\n return human('A carteira é compartilhada e os lançamentos não identificam quem fez cada gasto. Por isso, não consigo separar com segurança as despesas de cada um.'+(rows.length?'\\n\\nDespesas recentes da carteira do casal (entre os 50 últimos registros):\\n'+rows.map(r=>'• '+brief(r)).join('\\n'):'\\nNão encontrei despesas entre os 50 últimos registros consultados. Isso não confirma que não existam despesas mais antigas.'),'gestao_consulta_compartilhada');\n}\n\nconst activeProposal=session?.proposal?.semantic===true?session.proposal:null;\n\n\nconst voice=ai.voice||{};\nif(voice.action==='list'){\n const p=x.voiceContext;if(!p)return human('Não consegui consultar a preferência de voz agora.','alerta_voz');\n return human('Voz do Bot do Ni no grupo: lembretes importantes '+(p.important_enabled?'com áudio':'só em texto')+'; resumo semanal '+(p.weekly_enabled?'também falado':'em texto')+'. Ritmo '+(Number(p.speed)<1?'mais tranquilo':Number(p.speed)>1?'mais rápido':'normal')+'.'+(p.muted_until&&Date.parse(p.muted_until)>Date.now()?' Áudios pausados até '+new Date(p.muted_until).toLocaleString('pt-BR',{timeZone:'America/Sao_Paulo'})+'.':'')+' Os valores exatos continuam em texto.','alerta_voz');\n}\nif(voice.action==='clarify')return human('Posso falar os lembretes importantes, incluir áudio no resumo semanal, pausar os áudios ou ajustar a velocidade. Qual dessas opções vocês preferem para o grupo?','alerta_voz');\nif(voice.action==='configure'){\n const v=voice.values||{},values={};for(const k of ['important_enabled','weekly_enabled'])if(typeof v[k]==='boolean')values[k]=v[k];\n if(Object.hasOwn(v,'muted_until')){if(v.muted_until===null)values.muted_until=null;else{const t=Date.parse(v.muted_until);if(!Number.isFinite(t)||t<=Date.now()||t>Date.now()+31*86400000)return human('Até quando vocês querem pausar os áudios?','alerta_voz');values.muted_until=new Date(t).toISOString();}}\n if(v.speed!=null){if(![0.9,1,1.1].includes(Number(v.speed)))return human('Posso usar um ritmo mais tranquilo, normal ou um pouco mais rápido. Qual fica melhor?','alerta_voz');values.speed=Number(v.speed);}\n if(!Object.keys(values).length)return human('O que vocês querem mudar na voz do grupo?','alerta_voz');\n return [{json:{...x,route:'voice_execute',voiceValues:values}}];\n}\n\nconst insight=ai.insight||{};const insightAction=insight.action||'none';\nsemanticState.insightConversations??={};let insightDraft=semanticState.insightConversations[semanticKey];\nif(insightDraft&&Date.now()-insightDraft.at>15*60*1000){delete semanticState.insightConversations[semanticKey];insightDraft=null;}\nconst insightReply=t=>human(t,'alerta_preferencias');\nif(insightAction==='report')return [{json:{...x,route:'insight_execute',insightOperation:'report',insightValues:{period:insight.values?.period==='last_week'?'last_week':'current_week'},spokenReport:insight.spoken===true||(x.voiceContext?.weekly_enabled===true&&!(Date.parse(x.voiceContext?.muted_until||'')>Date.now())),explicitVoice:insight.spoken===true}}];\nif(insightAction==='explain'||(insightDraft?.proposal&&insightAction==='none'&&negativeOrQuestion&&ai.intent==='outro'))return insightReply(insightDraft?.operation==='weekly'?'O resumo usa a semana anterior completa, de segunda a domingo, e chega segunda às 09:00 de São Paulo. Só ativo depois da sua confirmação.': 'O limite vale para o mês atual e os seguintes, pelo calendário de São Paulo. Inclui as despesas já registradas neste mês; receitas e itens excluídos não entram. Os avisos saem em 80% e 100%, entre 09h e 21h, uma vez por faixa no mês. Se o mês já estiver acima do limite, o aviso pode chegar após ativar. A proposta ainda depende da sua confirmação.');\nif(insightAction==='list'){\n if(!x.insightContext)return insightReply('Não consegui consultar os limites agora. Pode tentar novamente?');\n const c=x.insightContext;return insightReply('Resumo semanal: '+(c.weekly?'ativo, segunda às 09:00 (São Paulo), cobrindo segunda a domingo anteriores.':'desativado.')+'\\n'+((c.budgets||[]).filter(b=>b.enabled).map(b=>'• '+b.category+': '+br(b.spent)+' de '+br(b.monthly_limit)+' no mês.').join('\\n')||'Vocês ainda não definiram limites por categoria.')+'\\nAvisos em 80% e 100%, sem repetir cada faixa no mesmo mês.');\n}\nif(insightAction==='cancel'){delete semanticState.insightConversations[semanticKey];return insightReply('Tudo bem, deixei essas preferências como estavam. 😊');}\nif(insightAction==='confirm'){\n if(!insightDraft?.proposal)return insightReply('Não há uma mudança de preferência esperando confirmação agora. O que vocês querem ajustar?');\n if(negativeOrQuestion||insight.confirm_operation_id!==insightDraft.token)return insightReply(insightDraft.summary+' Confirma essa mudança?');\n delete semanticState.insightConversations[semanticKey];return [{json:{...x,route:'insight_execute',insightOperation:insightDraft.operation,insightValues:insightDraft.values,insightSummary:insightDraft.summary}}];\n}\nif(['weekly','budget','disable_budget','clarify'].includes(insightAction)){\n const values={...((insightAction==='clarify'||insightAction===insightDraft?.operation)?insightDraft?.values||{}:{}),...(insight.values||{})};let operation=insightAction==='clarify'?(insightDraft?.operation||'budget'):insightAction;\n if(insight.question){return insightReply('Posso oferecer limites mensais por categoria, com avisos em 80% e 100%, e resumo semanal segunda às 09:00 de São Paulo. Qual dessas opções vocês preferem?');}\n let summary;\n if(operation==='weekly'){\n if(typeof values.enabled!=='boolean')return insightReply('Você quer ativar ou pausar o resumo semanal?');\n summary=values.enabled?'Vou enviar o resumo às segundas, 09:00 de São Paulo, com receitas, despesas e categorias da semana anterior, de segunda a domingo.':'Vou pausar o resumo semanal.';\n }else{\n const names=[...new Set(['Alimentação','Transporte','Moradia','Saúde','Educação','Lazer','Assinaturas','Casamento','Viagem','Outros',...catalog.map(r=>r.category),...(x.insightContext?.budgets||[]).map(r=>r.category)])];\n const category=names.find(c=>plain(c)===plain(values.category));\n if(!category){semanticState.insightConversations[semanticKey]={at:Date.now(),operation,values};return insightReply('Qual categoria vocês querem acompanhar?');}values.category=category;\n if(operation==='disable_budget')summary='Vou pausar os avisos de limite de '+category+'.';\n else{\n const amount=Number(values.monthly_limit);if(!Number.isFinite(amount)||amount<=0||amount>100000000||Math.abs(amount*100-Math.round(amount*100))>0.00001){semanticState.insightConversations[semanticKey]={at:Date.now(),operation:'budget',values};return insightReply('Qual limite mensal vocês querem definir para '+category+'?');}\n values.monthly_limit=amount;operation='budget';summary='Limite mensal de '+br(amount)+' para '+category+'. Avisos ao chegar a 80% e 100%, uma vez por faixa no mês, entre 09h e 21h de São Paulo. O cálculo considera despesas registradas; o mês reinicia pelo calendário.';\n }\n }\n const token=x.messageId+':insight';semanticState.insightConversations[semanticKey]={at:Date.now(),proposal:true,operation,values,token,summary};return insightReply(summary+' Fica bom assim? 😊');\n}\nif(insightDraft?.proposal&&insightAction==='none')delete semanticState.insightConversations[semanticKey];\n\nconst alertIntent=ai.alert||{};const alertAction=alertIntent.action||'none';\nsemanticState.alertConversations??={};let alertDraft=semanticState.alertConversations[semanticKey];\nif(alertDraft&&Date.now()-alertDraft.at>15*60*1000){delete semanticState.alertConversations[semanticKey];alertDraft=null;}\nconst knownAlerts=Array.isArray(x.alertContext)?x.alertContext.filter(r=>r.finance_user_id===x.user?.id&&r.status==='pending'):[];\nconst when=v=>new Date(v).toLocaleString('pt-BR',{timeZone:'America/Sao_Paulo',dateStyle:'short',timeStyle:'short'});\nconst alertSummary=a=>`${a.description}${a.amount?' — '+br(a.amount):''}, em ${when(a.due_at)}`;\nif(alertIntent.unsupported_recurrence===true){semanticState.alertConversations[semanticKey]={at:Date.now(),values:alertIntent.values||{},single_occurrence_offer:true};return human('Por enquanto consigo combinar o aviso para uma data específica. Quer que eu cuide do próximo vencimento?','alerta_esclarecer');}\nif(alertAction==='clarify'&&(alertIntent.candidate_ids||[]).some(id=>knownAlerts.some(a=>a.id===id))){const candidates=knownAlerts.filter(a=>(alertIntent.candidate_ids||[]).includes(a.id));semanticState.alertConversations[semanticKey]={at:Date.now(),clarification:{action:alertIntent.requested_action||'complete',ids:candidates.map(a=>a.id)},values:{}};return human('Qual dessas pendências você quis dizer?\\n'+candidates.map(a=>'• '+alertSummary(a)).join('\\n'),'alerta_esclarecer');}\nif(alertAction==='list')return human(knownAlerts.length?'Vocês têm estes combinados pendentes:\\n'+knownAlerts.slice(0,15).map(a=>'• '+alertSummary(a)).join('\\n')+'\\n\\nSe algum já foi resolvido, é só me contar.':'Não há lembretes pendentes para vocês agora. 😊','alerta_lista');\nif(alertAction==='confirm'&&alertDraft?.proposal){\n if(negativeOrQuestion||alertIntent.confirm_operation_id!==alertDraft.token)return human('Você confirma esse lembrete para '+when(alertDraft.values.due_at)+'?','alerta_confirmacao');\n delete semanticState.alertConversations[semanticKey];return [{json:{...x,route:'alert_execute',alertOperation:alertDraft.operation,alertValues:alertDraft.values}}];\n}\nif(alertAction==='cancel'&&alertDraft&&!alertIntent.target_id){delete semanticState.alertConversations[semanticKey];return human('Tudo bem, não ativei esse aviso. 😊','encerrado');}\nif(['complete','cancel','snooze'].includes(alertAction)){\n const matches=(alertIntent.candidate_ids||[]).filter(id=>knownAlerts.some(a=>a.id===id));\n const target=knownAlerts.find(a=>a.id===alertIntent.target_id);\n if(!target||matches.length>1)return human('Qual pendência você resolveu? '+(knownAlerts.length?knownAlerts.slice(0,5).map(a=>a.description+(a.amount?' ('+br(a.amount)+')':'')).join('; ')+'.':'Pode me dizer qual era o combinado?'),'alerta_esclarecer');\n const explicitStopNotifications=alertAction==='cancel'&&!/\\?/.test(currentText)&&/\\bnao\\s+(?:precisa|preciso|precisamos|quero|queremos)(?:\\s+mais)?(?:\\s+que\\s+voce)?(?:\\s+(?:me|nos))?\\s+(?:avisar|avise|avisa|lembrar|lembre|lembra|mandar|mande|enviar|envie)\\b/.test(plain(currentText))&&!/\\b(?:talvez|ainda nao|se der)\\b/.test(plain(currentText));\n if(negativeOrQuestion&&!explicitStopNotifications)return human(`Você está falando de ${target.description}? Quer que eu encerre os avisos ou só está conferindo?`,'alerta_esclarecer');\n if(alertAction!=='snooze'){delete semanticState.alertConversations[semanticKey];return [{json:{...x,route:'alert_execute',alertOperation:alertAction,alertValues:{id:target.id}}}];}\n const due=Date.parse(alertIntent.values?.due_at||'');if(!Number.isFinite(due)||due<Date.now()||due>Date.now()+366*86400000)return human('Para quando você quer que eu adie esse lembrete?','alerta_esclarecer');\n const values={id:target.id,due_at:new Date(due).toISOString()};const token=x.messageId+':snooze:'+target.id;semanticState.alertConversations[semanticKey]={at:Date.now(),proposal:true,operation:'snooze',token,values};return human(`Posso lembrar de ${target.description} em ${when(values.due_at)}, no horário de São Paulo. Fica bom assim?`,'alerta_confirmacao');\n}\nif(['create','clarify'].includes(alertAction)){\n const values={...(alertDraft?.values||{}),...(alertIntent.values||{})};\n const description=clean(values.description);const due=Date.parse(values.due_at||'');\n if(!description||description.length>180){semanticState.alertConversations[semanticKey]={at:Date.now(),values};return human('O que vocês querem que eu acompanhe? Uma conta, uma fatura ou alguma transferência?','alerta_esclarecer');}\n if(!Number.isFinite(due)||due<Date.now()||due>Date.now()+366*86400000){semanticState.alertConversations[semanticKey]={at:Date.now(),values:{...values,description}};return human(`Quando você quer que eu lembre de ${description}? Pode me falar o dia e o horário.`,'alerta_esclarecer');}\n const amount=values.amount==null?null:Number(values.amount);if(amount!=null&&(!Number.isFinite(amount)||amount<=0||amount>100000000))return human('Qual é o valor certo? Se ainda não souber, posso lembrar sem informar valor.','alerta_esclarecer');\n const transaction=values.transaction_id&&catalog.find(r=>r.id===values.transaction_id);\n const prepared={description,amount,kind:['bill','transfer','payment'].includes(values.kind)?values.kind:'payment',due_at:new Date(due).toISOString(),actor_jid:/^\\d{8,15}@s\\.whatsapp\\.net$/.test(x.senderId||'')?x.senderId:null,source_message_id:x.messageId,transaction_id:transaction?.id||null};\n if(knownAlerts.some(a=>plain(a.description)===plain(description)&&Math.abs(Date.parse(a.due_at)-due)<60000))return human('Esse lembrete já está combinado: '+alertSummary(knownAlerts.find(a=>plain(a.description)===plain(description)&&Math.abs(Date.parse(a.due_at)-due)<60000))+'. 😊','alerta_resultado');\n const token=x.messageId+':alert';semanticState.alertConversations[semanticKey]={at:Date.now(),proposal:true,operation:'create',token,values:prepared};\n return human(`Combinado: ${description}${amount?' de '+br(amount):''}, em ${when(prepared.due_at)}, horário de São Paulo. Vou avisar na véspera (se ainda der tempo) e nesse dia. Está bom assim?`,'alerta_confirmacao');\n}\nif(alertAction==='confirm')return human('Não tenho um novo lembrete aguardando confirmação. O que você quer combinar?','alerta_esclarecer');\nif(alertDraft?.proposal&&alertAction==='none')delete semanticState.alertConversations[semanticKey];\n\nif(act==='cancel'||(ai.conversation_action==='close'&&ai.intent!=='confirmar_pendente'&&act!=='confirm')){\n delete semanticState.management[semanticKey];\n if(ai.conversation_action==='close')delete semanticState.pending?.[x.chatId];\n return human(act==='cancel'?'Tudo bem, deixei como estava. 😊':'Combinado! Até mais. 😊','encerrado');\n}\nif(act==='confirm'&&activeProposal){\n if(Object.keys(semantics.changes||{}).length||negativeOrQuestion||semantics.confirm_operation_id!==activeProposal.token)return human(`Só para confirmar: você quer ${activeProposal.kind==='delete'?'excluir':'salvar as alterações em'} ${brief(activeProposal.record)}?`,'gestao_confirmacao');\n delete session.proposal;session.mode=null;session.at=Date.now();\n return [{json:{...x,route:activeProposal.kind==='delete'?'manage_delete':'manage_update',manageKey:semanticKey,manageRecord:activeProposal.record,manageValues:{...activeProposal.record,...activeProposal.changes},manageChanges:activeProposal.changes||{}}}];\n}\nif(act==='list'){\n delete semanticState.management[semanticKey];return [{json:{...x,route:'manage_list',manageKey:semanticKey,manageMode:null}}];\n}\nif(act==='more'&&session){x={...x,originalText:x.text,text:'mais'};}\nif(['select','edit','delete','clarify'].includes(act)){\n let ids=Array.isArray(semantics.candidate_ids)?[...new Set(semantics.candidate_ids.filter(id=>allowed.some(r=>r.id===id)))]:[];\n let target=allowed.find(r=>r.id===semantics.target_id);\n if(target&&semantics.target_source==='amount'){const matches=allowed.filter((r,i,a)=>Number(r.amount)===Number(target.amount)&&a.findIndex(q=>q.id===r.id)===i);if(matches.length>1)ids=matches.map(r=>r.id);}\n if(ids.length>1||(ids.length===1&&target&&target.id!==ids[0]))target=null;\n if(semantics.target_source==='list'&&!session)target=null;\n if(semantics.target_source==='selected'&&target?.id!==session?.selected?.id)target=null;\n if(!target||act==='clarify'){\n  if(!allowed.length)return human('Não consegui localizar esse lançamento entre os registros recentes. Pode me contar a descrição ou quando foi?');\n  const options=(ids.length?allowed.filter(r=>ids.includes(r.id)):catalog).filter((r,i,a)=>a.findIndex(q=>q.id===r.id)===i).slice(0,5);\n  session??={userId:x.user.id,at:Date.now(),rows:options,page:0,mode:null};session.rows=options;session.at=Date.now();session.clarification={action:act==='clarify'?(semantics.requested_action||'edit'):act,changes:semantics.changes||{},request:currentText};semanticState.management[semanticKey]=session;\n  return human('Quero ter certeza de qual lançamento você está falando. '+(options.length?'Encontrei estes:\\n'+options.map(r=>'• '+brief(r)).join('\\n')+'\\n\\nQual deles? Pode me dizer a descrição, o valor ou a data.':'Pode me dizer a descrição, o valor ou a data?'));\n }\n session??={userId:x.user.id,at:Date.now(),rows:catalog,page:0,mode:null};semanticState.management[semanticKey]=session;session.selected=target;session.at=Date.now();\n delete session.proposal;delete session.clarification;\n if(act==='select')return human(`Certo, ${brief(target)}. O que você quer ajustar nele?`,'gestao_edicao');\n if(act==='delete'){\n  session.mode='delete';session.proposal={kind:'delete',record:target,changes:{},semantic:true,token:x.messageId+':delete:'+target.id};\n  return human(`Você quer excluir ${brief(target)}? Ele ficará na lixeira.`,'gestao_confirmacao');\n }\n const source=semantics.changes||{},changes={};\n if(source.amount!=null){const amount=Number(source.amount);if(!Number.isFinite(amount)||amount<=0||amount>100000000||Math.abs(amount*100-Math.round(amount*100))>0.00001)return human('Não consegui ter certeza do novo valor. Quanto deveria ser?','gestao_edicao');changes.amount=amount.toFixed(2);}\n if(source.description!=null){const d=clean(source.description);if(!d||d.length>180)return human('Como você quer que fique a descrição?','gestao_edicao');changes.description=d;}\n if(source.category!=null){const categories=['Alimentação','Transporte','Moradia','Saúde','Educação','Lazer','Assinaturas','Casamento','Viagem','Outros'];const category=categories.find(c=>plain(c)===plain(source.category));if(!category)return human('Em qual categoria esse gasto deveria ficar?','gestao_edicao');changes.category=category;}\n if(source.payment_method!=null){const methods={pix:'pix',dinheiro:'dinheiro',debito:'debito',cartao:'cartao',credito:'cartao'};const method=methods[plain(source.payment_method)];if(!method)return human('Como foi o pagamento?','gestao_edicao');changes.payment_details=method==='cartao'?{method,installments:1,cash_amount:'0.00'}:{method};}\n if(source.transaction_date!=null){const v=String(source.transaction_date);const date=new Date(v+'T12:00:00Z');if(!/^\\d{4}-\\d{2}-\\d{2}$/.test(v)||isNaN(date)||date.toISOString().slice(0,10)!==v)return human('Qual foi a data certa dessa compra?','gestao_edicao');changes.transaction_date=v;}\n if(source.transaction_type!=null){if(!['despesa','receita'].includes(source.transaction_type))return human('Esse lançamento é uma receita ou uma despesa?','gestao_edicao');changes.transaction_type=source.transaction_type;}\n if(!Object.keys(changes).length){session.mode='edit';return human(`Achei ${brief(target)}. O que mudou?`,'gestao_edicao');}\n session.mode='edit';session.proposal={kind:'update',record:target,changes,semantic:true,token:x.messageId+':update:'+target.id};\n const names={amount:'Valor',description:'Descrição',category:'Categoria',payment_details:'Pagamento',transaction_date:'Data',transaction_type:'Tipo'};\n return human(`Entendi. Em ${brief(target)}, vai ficar assim:\\n`+Object.entries(changes).map(([k,v])=>`${names[k]}: ${k==='amount'?br(v):k==='payment_details'?v.method:v}`).join('\\n')+'\\n\\nEstá certo assim?','gestao_confirmacao');\n}\nif(act==='confirm'&&!activeProposal&&!semanticState.pending?.[x.chatId])return human('Não tenho uma alteração pendente para confirmar. O que você quer fazer?');\nif(activeProposal&&act==='none'){\n delete session.proposal;session.mode=null;\n if(ai.intent==='conversa')return human('Tudo bem. Por enquanto, deixei o lançamento como estava.','conversa');\n}\nif(ai.intent==='resumo')return [{json:{...x,route:'summary'}}];\nconst receipt=semanticState.pending?.[x.chatId];\nif(receipt&&['confirmar_pendente','ajustar_pendente'].includes(ai.intent)&&!negativeOrQuestion){\n const rows=pendingRows(receipt);const categories=['Alimentação','Transporte','Moradia','Saúde','Educação','Lazer','Assinaturas','Casamento','Viagem','Outros'];\n const category=categories.find(v=>plain(v)===plain(ai.category));const pay=['pix','dinheiro','debito','cartao'].includes(ai.payment_method)?paymentFrom(ai.payment_method):null;\n const values=moneyIn(currentText);if(values.length&&(values.length!==1||cents(values[0].amount)!==cents(total(rows))))return human(`O total que tenho aqui é ${br(total(rows))}. É esse mesmo o valor?`,'aguardando_confirmacao');\n const transactions=rows.map(tx=>withMetadata(tx,category,pay));\n if(ai.intent==='confirmar_pendente'&&transactions.length)return [{json:{...x,route:'transaction',transactions,tx:transactions[0],pendingConfirmation:true,proposalKey:receipt.sourceMessageId||x.messageId}}];\n receipt.transactions=transactions;receipt.at=Date.now();const ins=transactions.filter(t=>t.transaction_type==='receita'),outs=transactions.filter(t=>t.transaction_type==='despesa');return human('Confira os itens:\\n'+transactions.map(t=>`• ${t.transaction_type==='receita'?'Entrada':'Saída'}: ${br(t.amount)} — ${t.description} (${t.category}${t.payment_details?.method?', '+t.payment_details.method:''})`).join('\\n')+'\\n'+(ins.length&&outs.length?`Entradas: ${br(total(ins))}. Saídas: ${br(total(outs))}. Resultado: ${br(total(ins)-total(outs))}.`:`Total de ${ins.length?'entradas':'saídas'}: ${br(total(transactions))}.`)+'\\nEstá certo para registrar todos esses itens?','aguardando_confirmacao');\n}\nif(ai.intent==='novo_lancamento'&&!negativeOrQuestion){\n const drafts=Array.isArray(ai.new_transactions)?ai.new_transactions:ai.new_transaction?[ai.new_transaction]:[];\n if(!drafts.length||drafts.length>10)return human('Quero conferir todas as movimentações com você. Envie até dez por vez, com os valores e as descrições. Nenhum item novo foi registrado.','conversa');\n const cats=['Alimentação','Transporte','Moradia','Saúde','Educação','Lazer','Assinaturas','Casamento','Viagem','Outros'];\n const transactions=[];\n for(const draft of drafts){\n  if(!draft||typeof draft!=='object')return human('Há um item que não consegui entender. Pode conferir os valores e as descrições? Nenhum item novo foi registrado.','conversa');\n  const amount=Number(draft.amount),description=clean(draft.description),date=String(draft.transaction_date||x.today),parsed=new Date(date+'T12:00:00Z');\n  if(!Number.isFinite(amount)||amount<=0||amount>100000000||Math.abs(amount*100-Math.round(amount*100))>0.00001||!description||description.length>180||!['receita','despesa'].includes(draft.transaction_type))return human('Há uma movimentação com valor, descrição ou tipo incerto. Pode conferir? Nenhum item novo foi registrado.','conversa');\n  if(!/^\\d{4}-\\d{2}-\\d{2}$/.test(date)||Number(date.slice(0,4))<1||isNaN(parsed)||parsed.toISOString().slice(0,10)!==date)return human('Não consegui confirmar a data de uma movimentação. Quando ela aconteceu? Nenhum item novo foi registrado.','conversa');\n  const category=cats.find(c=>plain(c)===plain(draft.category))||'Outros';const pay=['pix','dinheiro','debito','cartao'].includes(draft.payment_method)?paymentFrom(draft.payment_method):{};\n  transactions.push({amount:amount.toFixed(2),description,category,transaction_date:date,transaction_type:draft.transaction_type,payment_details:pay||{}});\n }\n // Completeness guard only: semantic interpretation remains with the native AI.\n // Count each explicit single-amount line, retaining repeated/equal amounts.\n const lineAmounts=currentText.split(/\\n+/).filter(line=>!/^\\s*(?:total|saldo|restante)\\b/i.test(plain(line))).map(line=>moneyIn(line)).filter(v=>v.length===1).map(v=>cents(v[0].amount));\n if(lineAmounts.length>1){const remaining=transactions.map(tx=>cents(tx.amount));for(const amount of lineAmounts){const i=remaining.indexOf(amount);if(i<0)return human('Recebi várias movimentações e quero conferir todas, sem deixar nenhuma de fora. Pode reenviar a lista para eu revisar os itens juntos? Nenhum item novo foi registrado.','conversa');remaining.splice(i,1);}}\n semanticState.pending??={};semanticState.pending[x.chatId]={transactions,sourceMessageId:x.messageId,at:Date.now()};\n const lines=transactions.map(tx=>`• ${tx.transaction_type==='receita'?'Entrada':'Saída'}: ${br(tx.amount)} — ${tx.description} (${tx.category}${tx.payment_details?.method?', '+tx.payment_details.method:''})`);\n const incoming=transactions.filter(tx=>tx.transaction_type==='receita'),outgoing=transactions.filter(tx=>tx.transaction_type==='despesa');\n const totals=incoming.length&&outgoing.length?`Entradas: ${br(total(incoming))}. Saídas: ${br(total(outgoing))}. Resultado dessas movimentações: ${br(total(incoming)-total(outgoing))}.`:incoming.length?`Total de entradas: ${br(total(incoming))}.`:`Total de saídas: ${br(total(outgoing))}.`;\n return human(`Entendi ${transactions.length} movimentação(ões):\\n${lines.join('\\n')}\\n${totals}\\n\\nEstá certo para registrar ${transactions.length>1?'todos esses itens':'esse item'}?`,'aguardando_confirmacao');\n}\n\nif(ai.intent==='conversa'&&!semanticState.pending?.[x.chatId])return human('Estou por aqui para ajudar com as finanças de vocês. 😊','conversa');\n\nif(ai.intent==='novo_lancamento'&&!ai.new_transaction&&!ai.new_transactions)return human('Me conta: quanto foi e com o que você gastou?','conversa');\nif(ai.intent==='outro')return human('Você está falando de um gasto que já registramos ou de uma compra nova?','conversa');\n\nconst t=clean(x.text), l=plain(t);\nconst reply = replyText => [{json:{...x,route:'reply',replyText}}];\nif (x.mediaKind !== 'text') return [{json:{...x,route:'media'}}];\nconst state = $getWorkflowStaticData('global');\nstate.pending ??= {}; state.recent ??= {};\n// Management is scoped to the sender and shared wallet; displayed indexes never mean database IDs.\nstate.management??={};\nconst manageKey=x.chatId+':'+x.senderId;\nlet mg=state.management[manageKey];\nif(mg&&(mg.userId!==x.user?.id||Date.now()-mg.at>15*60*1000)){delete state.management[manageKey];mg=null;}\nconst manageReply=(message,status='gestao_selecao')=>[{json:{...x,route:'reply',financialStatus:status,replyText:message}}];\nconst deny=/^(?:nao(?:,?\\s+obrigad[oa])?|cancelar|cancela|cancele|desist[oi]|deixa pra la|esquece|voltar)[.!\\s]*$/.test(l);\nconst yes=/^(?:sim|confirmo|confirmar|confirmado|pode (?:excluir|apagar|remover|alterar|editar|salvar)|confirmar (?:exclusao|alteracao|edicao)|pode sim|pode ser|ok)[.!\\s]*$/.test(l);\nconst deletion=/^(?:(?:quero|pode|preciso|gostaria de)\\s+)?(?:exclu\\w*|apag\\w*|remov\\w*)\\b/.test(l);\nconst editing=/^(?:(?:quero|pode|preciso|gostaria de)\\s+)?(?:edit\\w*|alter\\w*|corrig\\w*|mudar|mude|trocar|troque)\\b/.test(l);\nconst listRequest=(!/\\b(?:resumo|saldo|total)\\b/.test(l)&&/\\b(?:lancamentos?|despesas|gastos|compras|registros)\\b/.test(l)&&/\\b(?:list\\w*|mostr\\w*|ver|consult\\w*|quais|exib\\w*)\\b/.test(l))||/^(?:listar|lista|lancamentos|meus lancamentos)[.!\\s]*$/.test(l);\nconst changesFrom=text=>{\n const changes={};\n const body=String(text).replace(/^(?:editar|edite|alterar|altere|mudar|mude|trocar|troque|corrigir|corrija)\\s+(?:(?:o|a|item|lancamento|lançamento)\\s+)?(?:\\d+\\s*[:,]?\\s*)?/i,'');\n const segments=body.split(/\\s*;\\s*|\\s*,\\s*(?=(?:valor|descri[çc][ãa]o|categoria|(?:forma de )?pagamento|data|tipo)\\b)/i);\n for(const segment of segments){\n  const raw=segment.trim(),p=plain(raw).replace(/^(?:o|a)\\s+/,'');\n  if(/^valor\\b/.test(p)){\n   const m=p.match(/^valor\\s*(?:(?:para|de|e)\\s*|[:=]\\s*)?(?:r\\$\\s*)?(\\d[\\d.,]*)[.!]?\\s*$/);const values=m?moneyIn(m[1]):[];\n   if(values.length!==1)throw Error('Informe um valor válido, por exemplo “valor 45,90”. Para combinar campos, separe por ponto e vírgula.');changes.amount=Number(values[0].amount).toFixed(2);\n  }else if(/^descricao\\b/.test(p)){\n   const value=raw.replace(/^(?:a\\s+)?descri[çc][ãa]o\\s*(?:(?:para|e|é)\\s+|[:=]\\s*)?/i,'');if(!clean(value))throw Error('Qual deve ser a nova descrição?');changes.description=clean(value).slice(0,180);\n  }else if(/^categoria\\b/.test(p)){\n   const category=categoryFrom(p.slice('categoria'.length));if(!category)throw Error('Use uma categoria: Alimentação, Transporte, Moradia, Saúde, Educação, Lazer, Assinaturas, Casamento, Viagem ou Outros.');changes.category=category;\n  }else if(/^(?:(?:forma de )?pagamento\\b|pix\\b|dinheiro\\b|debito\\b|credito\\b|cartao\\b)/.test(p)){\n   const paymentText=p.split(/\\bpara\\b/).at(-1);const methods=[/\\bpix\\b/,/\\bdinheiro\\b/,/\\bdebito\\b/,/\\b(?:cartao|credito)\\b/].filter(pattern=>pattern.test(paymentText));\n   if(methods.length>1)throw Error('Encontrei mais de uma forma de pagamento. Para não alterar errado, informe uma forma ou ajuste o pagamento misto no aplicativo.');\n   const pay=paymentFrom(paymentText);if(!pay)throw Error('Qual será a forma de pagamento: Pix, dinheiro, débito ou cartão?');const installments=paymentText.match(/\\b(\\d{1,2})\\s*(?:parcelas|vezes|x)\\b/);if(installments&&pay.method==='cartao'){pay.installments=Number(installments[1]);if(pay.installments<1||pay.installments>60)throw Error('Informe de 1 a 60 parcelas.');}changes.payment_details=pay;\n  }else if(/^data\\b/.test(p)){\n   const match=p.match(/^data\\s*(?:(?:para|e)\\s*|[:=]\\s*)?(\\d{4}-\\d{2}-\\d{2}|\\d{1,2}\\/\\d{1,2}\\/\\d{4})[.!]?\\s*$/);if(!match)throw Error('Informe a data em DD/MM/AAAA.');let v=match[1];if(v.includes('/')){const[a,b,c]=v.split('/');v=`${c}-${b.padStart(2,'0')}-${a.padStart(2,'0')}`;}const d=new Date(v+'T12:00:00Z');if(isNaN(d)||d.toISOString().slice(0,10)!==v)throw Error('Essa data não é válida. Use DD/MM/AAAA.');changes.transaction_date=v;\n  }else if(/^tipo\\b/.test(p)){\n   const match=p.match(/^tipo\\s*(?:(?:para|e)\\s*|[:=]\\s*)?(receita|despesa)[.!]?\\s*$/);if(!match)throw Error('Informe “tipo receita” ou “tipo despesa”.');changes.transaction_type=match[1];\n  }\n }\n return changes;\n};\nconst selectedSummary=r=>`${br(r.amount)} — ${clean(r.description)} (${r.transaction_date}, ${r.category||'Outros'})`;\nconst selectIndex=(()=>{const match=l.match(/^(?:(?:quero|pode)\\s+)?(?:(?:exclu\\w*|apag\\w*|remov\\w*|edit\\w*|alter\\w*|corrig\\w*|selecion\\w*|escolh\\w*|mudar|mude|trocar|troque)\\s+)?(?:(?:o|a|item|numero|n[ºo.]|lancamento|gasto)\\s+)*(\\d{1,2})(?![.,]\\d)(?:\\b|[.!])/);return match?Number(match[1]):null;})();\nif(mg&&(deny||/^(?:nao (?:quero|preciso)(?: mais nada)?|obrigad[oa]|valeu|era so isso|tchau)[.!\\s]*$/.test(l))){delete state.management[manageKey];return manageReply('Cancelei essa operação. Nenhum lançamento foi alterado.','encerrado');}\nif(mg?.proposal&&yes){\n const proposal=mg.proposal;delete mg.proposal;mg.at=Date.now();mg.mode=null;\n return [{json:{...x,route:proposal.kind==='delete'?'manage_delete':'manage_update',manageKey,manageRecord:proposal.record,manageValues:{...proposal.record,...proposal.changes},manageChanges:proposal.changes||{}}}];\n}\nif(mg&&/^(?:mais|proxim[oa](?: pagina)?|ver mais)[.!\\s]*$/.test(l)){\n if((mg.page+1)*10>=mg.rows.length)return manageReply('Você chegou ao fim desta lista de até 50 lançamentos recentes. Diga “listar lançamentos” para atualizar.','gestao_listagem');\n mg.page++;mg.at=Date.now();const start=mg.page*10;return manageReply('Lançamentos recentes (continuação):\\n'+mg.rows.slice(start,start+10).map((r,i)=>`${start+i+1}. ${selectedSummary(r)}`).join('\\n')+'\\n\\nEscolha pelo número: “editar '+(start+1)+'” ou “excluir '+(start+1)+'”.','gestao_listagem');\n}\nif(listRequest||((deletion||editing)&&!mg)){\n if(mg)delete state.management[manageKey];\n return [{json:{...x,route:'manage_list',manageKey,manageMode:deletion?'delete':editing?'edit':null}}];\n}\nif(mg&&deletion&&(/\\b(?:todos|todas|tudo)\\b/.test(l)||/\\d+[.,]\\d/.test(l)))return manageReply('De qual gasto você está falando? Pode me dizer a descrição ou o valor para eu conferir antes de excluir.');\nif(mg&&(selectIndex!==null||deletion||editing||(mg.mode==='edit'&&/^(?:(?:o|a)\\s+)?(?:valor|descricao|categoria|pagamento|data|tipo|pix|dinheiro|cartao|credito|debito)\\b/.test(l)))){\n mg.at=Date.now();\n if(selectIndex!==null){\n  if(selectIndex<1||selectIndex>mg.rows.length||selectIndex>(mg.page+1)*10)return manageReply('Esse número não está na lista exibida. Pode apontar pela descrição ou pelo valor, se preferir.');\n  mg.selected=mg.rows[selectIndex-1];delete mg.proposal;\n }\n const record=mg.selected;\n if(!record)return manageReply('De qual lançamento você está falando? Pode me dizer a descrição, o valor ou apontar na lista.');\n if(editing)mg.mode='edit';else if(deletion)mg.mode='delete';\n if(deletion||mg.mode==='delete'){\n  mg.mode='delete';mg.proposal={kind:'delete',record};\n  return manageReply(`Excluir ${selectedSummary(record)}?\\nIsso moverá o lançamento para a lixeira. Se estiver certo, me confirme. Se não, deixamos como está.`,'gestao_confirmacao');\n }\n if(editing||mg.mode==='edit'){\n  mg.mode='edit';let changes;try{changes=changesFrom(t);}catch(e){return manageReply(e.message,'gestao_edicao');}\n  if(!Object.keys(changes).length)return manageReply(`Selecionado: ${selectedSummary(record)}.\\nO que você quer mudar nele? Pode me contar do seu jeito.`,'gestao_edicao');\n  mg.proposal={kind:'update',record,changes};\n  const labels={amount:'Valor',description:'Descrição',category:'Categoria',payment_details:'Pagamento',transaction_date:'Data',transaction_type:'Tipo'};\n  return manageReply(`Alterar ${selectedSummary(record)}?\\n`+Object.entries(changes).map(([k,v])=>`${labels[k]}: ${k==='amount'?br(v):k==='payment_details'?v.method+(v.installments>1?` em ${v.installments} parcelas`:''):v}`).join('\\n')+'\\n\\nPosso salvar essas alterações? Se estiver certo, me confirme.','gestao_confirmacao');\n }\n return manageReply(`Selecionado: ${selectedSummary(record)}.\\nDeseja editar ou excluir esse lançamento?`);\n}\nif(mg?.proposal){delete mg.proposal;mg.mode=null;}\n\nfor (const store of [state.pending,state.recent]) for (const [key,value] of Object.entries(store)) if (!value?.at || Date.now()-value.at > 30*60*1000) delete store[key];\nconst p=state.pending[x.chatId], rows=pendingRows(p);\nconst recent=state.recent[x.chatId];\nconst amounts=moneyIn(t), category=categoryFrom(t), payment=paymentFrom(t);\nstate.dialog??={};\nconst dialog=state.dialog[x.chatId];\nconst sameDialog=dialog&&dialog.senderId===x.senderId&&Date.now()-dialog.at<30*60*1000;\nconst close=message=>{delete state.pending[x.chatId];state.dialog[x.chatId]={senderId:x.senderId,at:Date.now(),closed:true,awaitingAction:null};return [{json:{...x,route:'reply',financialStatus:'encerrado',replyText:message}}];};\nconst explicitDecline=/^(?:nao,?\\s+(?:quero|preciso|precisa|gostaria)(?:\\s+(?:mais|nada|disso|isso|agora|de nada|mais nada|mais ajuda|(?:ver |consultar |do |de )?(?:o )?resumo(?: do mes)?|registrar (?:mais )?nada))?|nao,?\\s+(?:era so isso|ja terminei)|ja (?:acabou|terminei)|chega|encerrar conversa)[.!\\s]*$/.test(l);\nconst shortNo=/^(?:nao(?:,?\\s*(?:obrigad[oa]|valeu|precisa|quero|por enquanto))?|agora nao|por enquanto nao|nao precisa|nao quero|deixa pra depois)[.!\\s]*$/.test(l);\nconst goodbye=/^(?:obrigad[oa](?:,?\\s*(?:era so isso|por enquanto e so|valeu))?|valeu|era so isso|por (?:hora|ora) e so|tchau|ate (?:mais|logo)|fechou)[.!\\s]*$/.test(l);\nif(shortNo||goodbye||explicitDecline)return close(p&&(shortNo||explicitDecline)?'Tudo bem! Cancelei a proposta pendente, sem registrar. 😊':'Combinado! Até mais. 😊');\nconst shortYes=/^(?:sim|pode ser|pode sim|quero|quero sim|claro|vamos|mostra|mostre|manda|pode mostrar|pode mandar)[.!\\s]*$/.test(l);\nif(shortYes&&sameDialog&&dialog.awaitingAction==='summary')return [{json:{...x,route:'summary'}}];\nif(!p&&shortYes)return [{json:{...x,route:'reply',financialStatus:'esclarecimento',replyText:'Você quer consultar o resumo do mês ou registrar uma despesa?'}}];\n\nconst negative=/\\b(?:nao|nunca|ainda|talvez|depois|se)\\b/.test(l);\nconst question=/\\?/.test(t) || /^(?:quanto|qual|como|quando|por que|sera|voce ja)\\b/.test(l);\nconst explicitConfirm=/\\b(?:confirmar lancamento|confirmo|confirmado|pode (?:registrar|salvar|anotar|lancar)|(?:registrar|registre|salve|anote|lance)(?:\\s+(?:os|as|esses|essas|ambos|ambas|tudo|isso|ele|ela))?)\\b/.test(l) || /^(?:sim|certo|esta certo|ta certo|tudo certo|ok|isso|pode sim|correto)[.!\\s]*$/.test(l);\nconst referPending=/\\b(?:os dois|as duas|ambos|ambas|esses|essas|comprovante|anexo|total|compras|lancamentos|confirmar lancamento)\\b/.test(l);\nconst affirmative=/^(?:sim|certo|esta certo|ta certo|tudo certo|ok|isso|correto)\\b/.test(l);\nif (p && /\\b(?:cancelar|cancele|desconsiderar|desconsidere|esquece|esqueca)\\b/.test(l) && !question) {\n  delete state.pending[x.chatId]; return reply('Cancelei a proposta pendente. Nenhum gasto dessa proposta foi registrado.');\n}\nif (/^(?:excluir|apagar|remover)\\s+(?:o\\s+)?(?:meu\\s+)?(?:ultimo)\\s+(?:lancamento|gasto|registro)[.!]?$/.test(l)) return [{json:{...x,route:'delete'}}];\nconst edit=t.match(/^(?:corrigir|alterar|trocar|mudar)\\s+(?:a\\s+)?(?:descrição|descricao)(?:\\s+do\\s+(?:último|ultimo)\\s+lançamento)?\\s+(?:para|por)\\s+(.+)$/i);\nif(edit)return [{json:{...x,route:'edit',description:clean(edit[1]).slice(0,180)}}];\nif ((ai.intent==='resumo'&&!/\\b(?:nao|depois|talvez)\\b/.test(l)&&/\\b(?:resumo|saldo|gastamos|gastos|despesas|receitas)\\b/.test(l)) || /(?:quanto|total|resumo|saldo|gastamos|gastos).*(?:m[eê]s|mes|hoje|atual)|^\\/(?:saldo|resumo)$/i.test(t)) return [{json:{...x,route:'summary'}}];\nconst exactConfirmation = /^confirmar lancamento[.!]?$/.test(l);\nif (!p && exactConfirmation) return reply(recent?'A última proposta já foi registrada. Não criei outro lançamento.':'Não há proposta pendente para confirmar. Envie o comprovante novamente.');\nif (p && rows.length) {\n  const partial = rows.length>1 && /\\b(?:primeiro|primeira|segundo|segunda|apenas um|somente um|so um|um deles|uma delas)\\b/.test(l);\n  const reference = ai.reference === 'pendente' || referPending || explicitConfirm || (amounts.length===0 && (category || payment));\n  const canConfirm = !negative && !question && !partial && (explicitConfirm || (affirmative && (ai.intent==='confirmar_pendente' || (referPending && amounts.length===1))));\n  if (reference && !negative) {\n    if (partial) return reply('Tenho as compras pendentes separadas. Qual delas você quer registrar? Pode apontar pela descrição ou pelo valor.');\n    const sum=total(rows);\n    if (amounts.length && (amounts.length!==1 || cents(amounts[0].amount)!==cents(sum))) return reply(`O total das ${rows.length} compra(s) pendentes é ${br(sum)}, mas o valor informado é diferente. Qual valor devemos considerar?`);\n    const transactions=rows.map(tx=>withMetadata(tx,category,payment));\n    if (!question) { p.transactions=transactions;p.at=Date.now(); }\n    if (canConfirm) return [{json:{...x,route:'transaction',transactions,tx:transactions[0],pendingConfirmation:true,proposalKey:p.sourceMessageId||x.messageId,intentUsed:ai.intent??null}}];\n    if (negative) return reply('Mantive a proposta pendente, sem registrar. Quando quiser continuar, é só me falar.');\n    return reply(`Tenho ${transactions.length} compra(s), total ${br(sum)}${category?` em ${category}`:''}${payment?` (${payment.method==='pix'?'Pix':payment.method})`:''}. Posso registrar ${transactions.length>1?'todas':'essa compra'}?`);\n  }\n  if (negative && (referPending || /registr|salv|anot|lanc/.test(l))) return reply('Mantive a proposta pendente, sem registrar. Quando quiser continuar, é só me falar.');\n}\nif (!p && recent && !negative) {\n  const sum=Number(recent.total);\n  const repeatsTotal=amounts.length===1 && cents(amounts[0].amount)===cents(sum) && /\\b(?:total|certo|confirm|os dois|as duas|esses|essas)\\b/.test(l);\n  const refersToRecent=ai.reference==='ultimo_registro' && /\\b(?:total|certo|confirm|os dois|as duas|esses|essas|ja|isso)\\b/.test(l);\n  if (repeatsTotal || refersToRecent || (explicitConfirm && referPending)) return reply(`Essas ${recent.transactions.length} compra(s) já foram registradas, total ${br(sum)}. Não criei lançamentos duplicados.`);\n}\nif (/^(?:oi|ola|ajuda|teste)[!. ]*$/.test(l)) return reply('Pode me mandar um gasto, uma foto ou perguntar sobre o resumo do mês. Se houver várias compras na imagem, eu guardo todas para você confirmar. Também posso listar os lançamentos para você escolher qual editar ou excluir.');\nif (negative && amounts.length) return reply('Não registrei nenhum gasto, pois a mensagem não autoriza esse lançamento.');\nif (question && amounts.length) return reply('Entendi como uma pergunta e não registrei nenhum gasto. Para lançar, envie a descrição com o valor e diga que deseja registrar.');\nreturn [{json:{...x,route:'parse',intentUsed:ai.intent??null}}];\n"
+      }
+    },
+    {
+      "name": "Preparar falha do áudio",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "parameters": {
+        "jsCode": "const x=$('Preparar contexto seguro').first().json;return [{json:{...x,route:'reply',financialStatus:'falha_audio',replyText:'Não consegui transcrever esse áudio após as tentativas. Pode gravar novamente ou escrever o pedido em texto?'}}];"
+      }
+    },
+    {
+      "name": "Resposta verificada?",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.2,
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict",
+            "version": 2
+          },
+          "conditions": [
+            {
+              "leftValue": "={{ ['falha_audio','audio_inaudivel','encerrado','resumo','registrado','duplicado','exclusao_processada','edicao_processada'].includes($json.conversationStatus) || /^(gestao_|alerta_)/.test($json.conversationStatus) }}",
+              "rightValue": true,
+              "operator": {
+                "type": "boolean",
+                "operation": "true",
+                "singleValue": true
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      }
+    },
+    {
+      "name": "Usar resposta verificada",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "parameters": {
+        "jsCode": "const x = $input.first().json;\nreturn [{json:{replyText:x.baseReply,conversationStatus:x.conversationStatus,aiResponseUsed:false}}];\n"
+      }
+    },
+    {
+      "name": "Identificar execução do áudio",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "parameters": {
+        "jsCode": "const x=$input.first().json;return [{json:{...x,executionId:String($execution.id),workflowId:String($workflow.id)}}];"
+      }
+    },
+    {
+      "name": "Restaurar contexto do áudio",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "parameters": {
+        "jsCode": "return [{json:$('Identificar execução do áudio').first().json}];"
+      }
+    },
+    {
+      "name": "Iniciar acompanhamento do áudio",
+      "type": "n8n-nodes-base.executeWorkflow",
+      "typeVersion": 1.2,
+      "parameters": {
+        "source": "database",
+        "workflowId": {
+          "__rl": true,
+          "value": "WATCHDOG_ID",
+          "mode": "id"
+        },
+        "mode": "each",
+        "options": {
+          "waitForSubWorkflow": false
+        },
+        "workflowInputs": {
+          "mappingMode": "defineBelow",
+          "value": {
+            "executionId": "={{ $json.executionId }}",
+            "workflowId": "={{ $json.workflowId }}",
+            "chatId": "={{ $json.chatId }}",
+            "messageId": "={{ $json.messageId }}",
+            "senderId": "={{ $json.senderId }}"
+          },
+          "matchingColumns": [],
+          "schema": [
+            {
+              "id": "executionId",
+              "displayName": "executionId",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "canBeUsedToMatch": true,
+              "type": "string"
+            },
+            {
+              "id": "workflowId",
+              "displayName": "workflowId",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "canBeUsedToMatch": true,
+              "type": "string"
+            },
+            {
+              "id": "chatId",
+              "displayName": "chatId",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "canBeUsedToMatch": true,
+              "type": "string"
+            },
+            {
+              "id": "messageId",
+              "displayName": "messageId",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "canBeUsedToMatch": true,
+              "type": "string"
+            },
+            {
+              "id": "senderId",
+              "displayName": "senderId",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "canBeUsedToMatch": true,
+              "type": "string"
+            }
+          ],
+          "attemptToConvertTypes": false,
+          "convertFieldsToString": false
+        }
+      },
+      "onError": "continueRegularOutput"
+    }
+  ],
+  "settingsChanges": {
+    "saveExecutionProgress": true,
+    "executionTimeout": 300
+  },
+  "watchdog": {
+    "initialWaitSeconds": 25,
+    "finalWaitSeconds": 285,
+    "waitForSubWorkflow": false,
+    "readOnlyRetriesOnly": true
+  },
+  "connections": {
+    "Preparar conversa para o agente": {
+      "main": [
+        [
+          {
+            "node": "Resposta verificada?",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Mensagem é áudio?": {
+      "main": [
+        [
+          {
+            "node": "Identificar execução do áudio",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Mensagem de texto?",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Resposta verificada?": {
+      "main": [
+        [
+          {
+            "node": "Usar resposta verificada",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "AI Agent · conversa financeira",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Usar resposta verificada": {
+      "main": [
+        [
+          {
+            "node": "Preparar menção individual",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Identificar execução do áudio": {
+      "main": [
+        [
+          {
+            "node": "Iniciar acompanhamento do áudio",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Iniciar acompanhamento do áudio": {
+      "main": [
+        [
+          {
+            "node": "Restaurar contexto do áudio",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Restaurar contexto do áudio": {
+      "main": [
+        [
+          {
+            "node": "Baixar áudio Evolution",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "readOnlyNodeUpdates": [
+    {
+      "name": "Baixar áudio Evolution",
+      "retryOnFail": true,
+      "maxTries": 2,
+      "waitBetweenTries": 1500,
+      "timeout": 15000
+    },
+    {
+      "name": "Transcrever áudio",
+      "retryOnFail": true,
+      "maxTries": 2,
+      "waitBetweenTries": 1500,
+      "timeout": 20000
+    },
+    {
+      "name": "Transcrever áudio · alternativa",
+      "retryOnFail": false,
+      "maxTries": 2,
+      "waitBetweenTries": 1500,
+      "timeout": 25000
+    }
+  ]
+}

@@ -142,3 +142,7 @@ documentadas e sem reparo retroativo automático. Ver supabase/README.md.
 ## 2026-10-20 — Correção de múltiplas movimentações no WhatsApp
 
 O agente de texto e áudio aceita até dez movimentações por mensagem, incluindo entradas e saídas juntas. Mostra cada item e os totais separados antes de confirmar; preserva valores iguais como registros distintos. Receita não é anunciada como compra, e pagamento de fatura não implica pagamento feito no cartão. Foram preservadas credenciais, voz, estado de conversa e idempotência dos lotes. Testes e contrato sem segredos: n8n/finance-text-batch. Não reprocessar mensagens antigas já confirmadas parcialmente.
+
+## 2026-10-20 — Áudio com acompanhamento e consulta honesta por pessoa
+
+Publicado no n8n com autorização explícita em 20/10/2026: áudio deve reconhecer envelopes temporários do WhatsApp, ter tentativas limitadas e falha entregue sem outra chamada à IA. Um subworkflow independente verifica a execução após 25 segundos e envia aviso de demora somente se ainda não houver resposta; uma checagem posterior cobre erro/timeout. Não repetir gravações financeiras ou envios automaticamente, nem afirmar rollback em erro de resposta. Consultas por pessoa devem explicar a ausência de autoria nos registros da carteira compartilhada e mostrar somente despesas recentes, sem atribuição inventada. Contrato, template sem segredos e testes em `n8n/audio-reliability`.

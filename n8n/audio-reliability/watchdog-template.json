@@ -1,0 +1,372 @@
+{
+  "name": "Finanças do casal · Acompanhamento de áudio",
+  "nodes": [
+    {
+      "id": "1e6ab9d7-6f23-48ff-87a1-6e4f81efd6ab",
+      "name": "Receber acompanhamento",
+      "type": "n8n-nodes-base.executeWorkflowTrigger",
+      "typeVersion": 2,
+      "position": [
+        0,
+        0
+      ],
+      "parameters": {
+        "inputSource": "passthrough"
+      }
+    },
+    {
+      "id": "8ddf994b-23e9-4db3-8ba4-af3c3c9571a9",
+      "name": "Aguardar 25 segundos",
+      "type": "n8n-nodes-base.wait",
+      "typeVersion": 1.1,
+      "position": [
+        200,
+        0
+      ],
+      "parameters": {
+        "amount": 25,
+        "unit": "seconds"
+      },
+      "webhookId": "28d81d71-ec26-4cd0-825a-a1178b2f3ef0"
+    },
+    {
+      "id": "e813407c-01ba-484d-bafe-68fb1c8efe14",
+      "name": "Conferir execução financeira",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        400,
+        0
+      ],
+      "parameters": {
+        "url": "={{ '__N8N_ORIGIN__/api/v1/executions/' + encodeURIComponent($('Receber acompanhamento').first().json.executionId) + '?includeData=true' }}",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "X-N8N-API-KEY",
+              "value": "__N8N_API_KEY__"
+            }
+          ]
+        },
+        "options": {
+          "timeout": 10000,
+          "response": {
+            "response": {
+              "fullResponse": true,
+              "neverError": true,
+              "responseFormat": "json"
+            }
+          }
+        }
+      },
+      "onError": "continueRegularOutput"
+    },
+    {
+      "id": "461ece21-3673-44b7-82ca-6261e4964760",
+      "name": "Decidir aviso do áudio",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        600,
+        0
+      ],
+      "parameters": {
+        "jsCode": "// Only inspect the single parent execution supplied by the finance workflow.\nconst ctx = $('Receber acompanhamento').first().json;\nconst response = $input.first().json;\nconst statusCode = Number(response.statusCode || 200);\nconst execution = response.body || response;\nif (statusCode !== 200 || execution.workflowId !== ctx.workflowId || String(execution.id) !== String(ctx.executionId)) return [];\nconst runs = execution.data?.resultData?.runData || {};\nconst delivered = (runs['Responder WhatsApp'] || []).some(run => !run.error && run.data?.main?.[0]?.some(item => item.json?.key?.id));\nif (delivered || ['success', 'canceled'].includes(execution.status)) return [];\n// Never claim a financial operation failed: a write may already have committed.\nconst failed = ['error', 'crashed'].includes(execution.status);\nconst atFinalCheck = $('Checagem final?').isExecuted;\nif (!failed && atFinalCheck) return [];\nreturn [{json:{...ctx,kind:failed?'failure':'progress',replyText:failed\n ? 'Não consegui concluir a resposta ao seu áudio. Antes de reenviar um pagamento, confira os lançamentos para evitar duplicidade. Se preferir, escreva o pedido em texto.'\n : 'Recebi seu áudio e ainda estou processando. Está demorando mais que o esperado; vou continuar tentando e avisar se não conseguir.'}}];\n"
+      }
+    },
+    {
+      "id": "9dd5d4f4-86cb-4cd5-af85-e16ec1111b5d",
+      "name": "Enviar aviso do áudio",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        800,
+        0
+      ],
+      "parameters": {
+        "method": "POST",
+        "url": "__EXISTING_DELIVERY_URL__",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "apikey",
+              "value": "__EXISTING_DELIVERY_SECRET__"
+            }
+          ]
+        },
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{ JSON.stringify({number:$json.chatId,text:$json.replyText,mentioned:[$json.senderId].filter(j=>/^\\d{8,15}@s\\.whatsapp\\.net$/.test(j||''))}) }}",
+        "options": {
+          "timeout": 20000
+        },
+        "contentType": "json"
+      },
+      "onError": "continueRegularOutput",
+      "retryOnFail": false
+    },
+    {
+      "id": "883fe8be-b101-4964-9cdc-af9ff7fa73b7",
+      "name": "Continuar acompanhamento?",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.2,
+      "position": [
+        900,
+        200
+      ],
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict",
+            "version": 2
+          },
+          "conditions": [
+            {
+              "leftValue": "={{ $('Decidir aviso do áudio').first().json.kind === 'progress' }}",
+              "rightValue": true,
+              "operator": {
+                "type": "boolean",
+                "operation": "true",
+                "singleValue": true
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      }
+    },
+    {
+      "id": "5ee31b36-aeaa-412f-a40c-9f586bf2e024",
+      "name": "Aguardar limite da execução",
+      "type": "n8n-nodes-base.wait",
+      "typeVersion": 1.1,
+      "position": [
+        1000,
+        0
+      ],
+      "parameters": {
+        "amount": 285,
+        "unit": "seconds"
+      },
+      "webhookId": "cba9c0ee-c0cd-4415-a3a1-2ad08b988a11"
+    },
+    {
+      "id": "0772fd2a-2d6a-43db-a170-eabf1e1ec1bd",
+      "name": "Checagem final?",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        1200,
+        0
+      ],
+      "parameters": {
+        "jsCode": "return [{json:$('Receber acompanhamento').first().json}];"
+      }
+    },
+    {
+      "id": "a33c39e3-402b-4754-b703-2c9fad5131af",
+      "name": "Conferir resultado final",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        1400,
+        0
+      ],
+      "parameters": {
+        "url": "={{ '__N8N_ORIGIN__/api/v1/executions/' + encodeURIComponent($('Receber acompanhamento').first().json.executionId) + '?includeData=true' }}",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "X-N8N-API-KEY",
+              "value": "__N8N_API_KEY__"
+            }
+          ]
+        },
+        "options": {
+          "timeout": 10000,
+          "response": {
+            "response": {
+              "fullResponse": true,
+              "neverError": true,
+              "responseFormat": "json"
+            }
+          }
+        }
+      },
+      "onError": "continueRegularOutput"
+    },
+    {
+      "id": "a4bb609c-c7ec-4184-8678-83884db51126",
+      "name": "Decidir aviso final",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        1600,
+        0
+      ],
+      "parameters": {
+        "jsCode": "// Only inspect the single parent execution supplied by the finance workflow.\nconst ctx = $('Receber acompanhamento').first().json;\nconst response = $input.first().json;\nconst statusCode = Number(response.statusCode || 200);\nconst execution = response.body || response;\nif (statusCode !== 200 || execution.workflowId !== ctx.workflowId || String(execution.id) !== String(ctx.executionId)) return [];\nconst runs = execution.data?.resultData?.runData || {};\nconst delivered = (runs['Responder WhatsApp'] || []).some(run => !run.error && run.data?.main?.[0]?.some(item => item.json?.key?.id));\nif (delivered || ['success', 'canceled'].includes(execution.status)) return [];\n// Never claim a financial operation failed: a write may already have committed.\nconst failed = ['error', 'crashed'].includes(execution.status);\nconst atFinalCheck = $('Checagem final?').isExecuted;\nif (!failed && atFinalCheck) return [];\nreturn [{json:{...ctx,kind:failed?'failure':'progress',replyText:failed\n ? 'Não consegui concluir a resposta ao seu áudio. Antes de reenviar um pagamento, confira os lançamentos para evitar duplicidade. Se preferir, escreva o pedido em texto.'\n : 'Recebi seu áudio e ainda estou processando. Está demorando mais que o esperado; vou continuar tentando e avisar se não conseguir.'}}];\n"
+      }
+    },
+    {
+      "id": "59dc9926-29f8-41fc-b8f3-e59527ec5c1f",
+      "name": "Enviar falha final do áudio",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        1800,
+        0
+      ],
+      "parameters": {
+        "method": "POST",
+        "url": "__EXISTING_DELIVERY_URL__",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "apikey",
+              "value": "__EXISTING_DELIVERY_SECRET__"
+            }
+          ]
+        },
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{ JSON.stringify({number:$json.chatId,text:$json.replyText,mentioned:[$json.senderId].filter(j=>/^\\d{8,15}@s\\.whatsapp\\.net$/.test(j||''))}) }}",
+        "options": {
+          "timeout": 20000
+        },
+        "contentType": "json"
+      },
+      "onError": "continueRegularOutput",
+      "retryOnFail": false
+    }
+  ],
+  "connections": {
+    "Receber acompanhamento": {
+      "main": [
+        [
+          {
+            "node": "Aguardar 25 segundos",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Aguardar 25 segundos": {
+      "main": [
+        [
+          {
+            "node": "Conferir execução financeira",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Conferir execução financeira": {
+      "main": [
+        [
+          {
+            "node": "Decidir aviso do áudio",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Decidir aviso do áudio": {
+      "main": [
+        [
+          {
+            "node": "Enviar aviso do áudio",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Enviar aviso do áudio": {
+      "main": [
+        [
+          {
+            "node": "Continuar acompanhamento?",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Continuar acompanhamento?": {
+      "main": [
+        [
+          {
+            "node": "Aguardar limite da execução",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        []
+      ]
+    },
+    "Aguardar limite da execução": {
+      "main": [
+        [
+          {
+            "node": "Checagem final?",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Checagem final?": {
+      "main": [
+        [
+          {
+            "node": "Conferir resultado final",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Conferir resultado final": {
+      "main": [
+        [
+          {
+            "node": "Decidir aviso final",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Decidir aviso final": {
+      "main": [
+        [
+          {
+            "node": "Enviar falha final do áudio",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "settings": {
+    "executionOrder": "v1",
+    "timezone": "America/Sao_Paulo",
+    "saveManualExecutions": false,
+    "saveDataErrorExecution": "none",
+    "saveDataSuccessExecution": "none",
+    "executionTimeout": 360,
+    "callerPolicy": "workflowsFromSameOwner"
+  }
+}
