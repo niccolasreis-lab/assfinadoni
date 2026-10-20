@@ -144,6 +144,8 @@ documentadas e sem reparo retroativo automático. Ver supabase/README.md.
 O agente de texto e áudio aceita até dez movimentações por mensagem, incluindo entradas e saídas juntas. Mostra cada item e os totais separados antes de confirmar; preserva valores iguais como registros distintos. Receita não é anunciada como compra, e pagamento de fatura não implica pagamento feito no cartão. Foram preservadas credenciais, voz, estado de conversa e idempotência dos lotes. Testes e contrato sem segredos: n8n/finance-text-batch. Não reprocessar mensagens antigas já confirmadas parcialmente.
 
 
-## 2026-10-20 — Identificação do pagador: base isolada
+## 2026-10-20 — Identificação do pagador
 
-Primeira etapa em desenvolvimento: distinguir quem enviou a mensagem de quem pagou. Seleções individuais/conjuntas usam participantes registrados na carteira; histórico sem identificação permanece desconhecido. Pagamento conjunto não implica divisão meio a meio. Regras e testes em dashboard/lib/payer-attribution.js e dashboard/tests/payer-attribution.test.js. Sem ativação, integração de rotas ou alteração do schema nesta etapa. Persistência, confirmação no bot e filtro no painel ainda serão implementados e validados. Ver docs/transaction-attribution.md.
+Separar pagador, remetente e confirmador. Novas despesas podem apresentar pagador individual, conjunto ou não identificado antes da confirmação; confirmação por outra pessoa preserva a proposta. Participantes e autorização vêm do cadastro administrativo da carteira. Histórico desconhecido continua desconhecido, pagamento conjunto não presume divisão e beneficiário não vira pagador.
+
+Persistência aditiva e integração WhatsApp publicadas após testes nativos individuais e cinco simulações no grupo, com identidades verificadas. Falhas de identificação preservam o resultado financeiro e não pedem reenvio do pagamento. Consulta por pessoa limita-se aos 50 lançamentos recentes disponíveis e informa esse recorte. O filtro visual do painel ainda será integrado. Contratos, validações, limites e reversão: docs/transaction-attribution.md.

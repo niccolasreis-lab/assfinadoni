@@ -1,10 +1,15 @@
-name: Payer attribution rules
+name: Payer attribution and financial regressions
 on:
   pull_request:
     paths:
-      - 'dashboard/lib/payer-attribution.js'
-      - 'dashboard/tests/payer-attribution.test.js'
-      - 'dashboard/tests/helpers/payer-attribution-cases.js'
+      - 'dashboard/lib/payer-attribution*.js'
+      - 'dashboard/tests/*payer*.test.js'
+      - 'dashboard/tests/helpers/payer-*.js'
+      - 'dashboard/package.json'
+      - 'dashboard/pnpm-lock.yaml'
+      - 'supabase/migrations/**'
+      - 'supabase/proposals/**'
+      - 'n8n/payer-attribution/**'
       - '.github/workflows/payer-attribution.yml'
   workflow_dispatch:
 permissions:
@@ -12,7 +17,7 @@ permissions:
 jobs:
   attribution:
     runs-on: ubuntu-latest
-    timeout-minutes: 5
+    timeout-minutes: 10
     steps:
       - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683
         with:
@@ -20,4 +25,12 @@ jobs:
       - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020
         with:
           node-version: '22'
-      - run: node --test dashboard/tests/payer-attribution.test.js
+      - run: npm install --global pnpm@11.19.0
+      - run: pnpm --dir dashboard install --frozen-lockfile
+      - run: node --test --test-concurrency=1
+        working-directory: dashboard
+        env:
+          FINANCE_SQL_TEST_MODULE: '@electric-sql/pglite'
+      - run: node n8n/payer-attribution/test.cjs
+      - run: pnpm --dir dashboard run lint
+      - run: pnpm --dir dashboard run build

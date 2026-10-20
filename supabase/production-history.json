@@ -28,5 +28,14 @@
     "entriesRecorded": 8,
     "method": "metadata_only_historical_baseline",
     "migrationBodiesReexecuted": false
+  },
+  "payerAttribution": {
+    "version": "20261020220846",
+    "name": "finance_payer_attribution",
+    "cliCreatedVersion": "20261020215110",
+    "filenameAlignedToAppliedToolVersion": true,
+    "historicalBackfill": false,
+    "participantBindings": "administrative_private",
+    "schemaValidatedInIsolation": true
   }
 }

@@ -1,0 +1,11 @@
+{
+  "workflowId": "WDLpOYIbZFtcXgWU",
+  "baseVersionId": "c7e820aa-53f7-40f9-98d5-b2bac586c4d6",
+  "versionId": "f0f464c4-d59c-4948-ad05-95af9d77920d",
+  "active": true,
+  "nodes": 112,
+  "staticDataPreserved": true,
+  "existingCredentialsPreserved": true,
+  "voiceWatchdogPreserved": true,
+  "databaseMigrationVersion": "20261020220846"
+}

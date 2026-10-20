@@ -1,41 +1,59 @@
-# Identificação de quem pagou — primeira etapa
+# Identificação de quem pagou
 
-Status: regras de domínio implementadas, ainda sem integração ou publicação. O banco foi consultado somente para conferir a estrutura; não foram criadas tabelas nem alterados lançamentos. O módulo novo não é importado pelas rotas ou pelo bot.
+Status em 20/10/2026: persistência e integração WhatsApp publicadas, com identidades verificadas e cinco cenários nativos aprovados individualmente. O filtro do painel ainda não está implementado.
 
-## Comportamento definido
+## Comportamento
 
-- Quem envia a mensagem e quem paga são informações distintas. A identidade autenticada do remetente nunca vira pagador por padrão.
-- O cliente ou LLM pode propor um responsável; uma atribuição só será persistida após a confirmação do lançamento/proposta.
-- A seleção recebe IDs de um cadastro de participantes carregado pelo servidor para aquela carteira. Texto, apelido e destinatário de um pagamento não são identidades de autorização.
-- Registros sem atribuição, inclusive o histórico, continuam como "Não identificado". Não fazer backfill pelo nome, Telegram, proprietário da carteira, voz ou descrição.
-- "Pagamento conjunto" exige pelo menos duas identidades distintas e confirmadas. Isso não é divisão de custos, não implica metade para cada pessoa e não é adicionado novamente ao total de cada uma.
-- Um participante inativo não recebe novas atribuições. Sua identidade continua disponível para apresentar o histórico.
-- Valores iguais de lançamentos distintos continuam separados. Duplicação da mesma linha em uma consulta não aumenta o total.
-- O resumo recebe o recorte autorizado e filtrado por período; considera somente despesas ativas da carteira e trabalha em centavos. Ele não é um mecanismo de autorização e não calcula o saldo geral do casal.
+- Quem envia e quem paga são informações distintas. O remetente só pode ser proposto como pagador quando declarar explicitamente que pagou.
+- Cada despesa mostra o pagador antes da confirmação. A seleção fica congelada: outra pessoa confirmar não substitui o pagador pelo confirmador.
+- Participantes vêm do cadastro administrativo da carteira, vinculado às contas ativas e à associação explícita do casal. Nomes e IDs produzidos pelo modelo são propostas, sem autoridade própria.
+- Histórico sem identificação continua como “Não identificado”. Não há backfill pelo nome, telefone, proprietário, voz, cartão ou descrição.
+- Pagamento conjunto exige pessoas distintas verificadas. Não implica divisão meio a meio, não duplica o gasto nem aumenta o total individual de cada participante.
+- Daniel ou outro beneficiário não vira pagador por ser destinatário de um pagamento.
+- Participante inativo não recebe novas atribuições, mas o histórico identificado pode continuar sendo consultado.
+- A autoria de origem permanece desconhecida nesta etapa. Quem confirma a atribuição é auditado separadamente e não vira autor original.
 
-## Integração planejada
+## Persistência e autorização
 
-A estrutura real de finance_transactions possui proprietário da carteira, origem e dados de pagamento, mas não um campo específico para pagador ou autor da mensagem. Não reutilizar user_id, updated_by_account_id ou payment_details para resolver essa ausência.
+`finance_wallet_participants` é um cadastro privado. `finance_transaction_attributions` guarda metadados separados do ledger. Ambas têm RLS, sem acesso por anon/authenticated. As RPCs novas são SECURITY INVOKER, executáveis somente pelo backend.
 
-Preparar um cadastro de participantes por carteira, com associação administrativa explícita às contas/identidades do conector. O cadastro não pode ser fornecido pelo corpo da requisição. Metadados de atribuição devem ser vinculados ao lançamento existente e registrar pagador, autor autenticado, confirmação e auditoria separadamente. A ausência do metadado é válida e mantém compatibilidade com os canais antigos.
+`finance_set_transaction_attribution` exige conta ativa, associação à carteira, confirmação, participantes válidos e revisão esperada. A mesma chave com o mesmo conteúdo é idempotente; retries antigos não desfazem revisões novas. Uma divergência entre a carteira da atribuição e a carteira atual do lançamento é recusada inclusive no caminho de replay.
 
-A persistência deve rejeitar participantes de outra carteira, preservar os vínculos ao restaurar da lixeira e impedir alteração de autoria/escopo pelo cliente. Não modificar as assinaturas dos RPCs usados pelo n8n sem uma camada compatível e testes dos fluxos existentes. Não aplicar DDL até gerar a migration pelo CLI e validá-la numa base isolada.
+`finance_whatsapp_payer_context` resolve a identidade a partir do vínculo administrativo de WhatsApp e retorna participantes sem telefones. `finance_whatsapp_set_payer` exige despesa ativa, confirmação e evento exato de uma ingestão nova (`source=API`, `external_event_id=wa:<mensagem original>:<item>`). Não anota histórico sem essa prova e não cria transações.
 
-Rollout futuro: integração opcional sob ENABLE_PAYER_ATTRIBUTION, padrão desligado. Primeiro conferir schema e isolamento; depois integrar confirmação/consulta no WhatsApp e apresentar filtro no painel. O rollback desliga o recurso sem apagar metadados ou reprocessar lançamentos.
+As escritas de atribuição serializam pelo mesmo lançamento com FOR UPDATE. Os testes locais usam PGlite e não medem concorrência entre conexões PostgreSQL reais. Não foram fabricadas despesas na base de produção para esse teste.
 
-## Verificação
+A migration foi gerada pelo Supabase CLI como `20261020215110`; após aplicação pela ferramenta oficial, o arquivo foi alinhado à versão efetivamente registrada, `20261020220846`. Não houve reparo de histórico nem reexecução de migrations anteriores. Ver `supabase/production-history.json`.
 
-- 25 casos definidos em dashboard/tests/helpers/payer-attribution-cases.js.
-- Esses mesmos casos foram executados no V8 disponível na sessão: 25 passaram. Isso não equivale à suíte Node, lint, build ou teste de banco.
-- O runner Node usa node:test e node:assert/strict, sem dependências novas.
-- Workflow próprio no GitHub Actions executa os casos em Node 22, com permissões somente de leitura e sem acesso a segredos/banco. Execução confirmada com sucesso no run 39457658676, commit b690bccc6d8b7f445a65651aa5dfe493e0fea3f7: os 25 casos passaram em Node 22.
-- O terminal da sessão estava indisponível. Lint, build, migrations e testes completos de integração permanecem pendentes.
+## Integração e compatibilidade
 
-Comando: node --test dashboard/tests/payer-attribution.test.js
+O patch do bot consulta contexto de forma opcional antes do processamento de áudio. Sem contexto, movimentos sem pagador explícito continuam compatíveis; uma identificação explicitamente pedida exige esclarecimento em vez de ser descartada. Propostas novas usam resposta direta verificada para preservar os nomes antes da confirmação, inclusive em áudio transcrito.
 
-A implementação só estará disponível no produto depois de persistência, API, confirmação do bot e interface passarem pelos testes. Esta PR é uma base isolada para essa integração.
+As chaves financeiras recordKey são preservadas. A identificação é gravada depois do resultado financeiro e possui status separado: uma falha informa identificação pendente, sem anunciar falha do pagamento ou pedir seu reenvio. Não há caminho de retry do metadado para o nó de criação financeira.
 
+A consulta por pessoa usa somente os até 50 lançamentos recentes disponíveis e explicita esse recorte. Ausência de atribuição significa desconhecido; receitas e lixeira não entram. Não anuncia esse recorte como total mensal. A visão Casal existente continua com o resumo mensal independente da página.
 
-## Revisão da continuação
+`payer-attribution-scope.js` valida escopo multicartiera, período e cobertura completa/paginada, mas ainda não é usado pela rota ou UI do painel. A integração visual permanece para uma próxima etapa.
 
-O cadastro agora rejeita IDs duplicados independentemente da ordem ativo/inativo; UUIDs são comparados de forma canônica. Metadados de transações fora do recorte selecionado não afetam o resumo. A visão Casal atual reúne várias carteiras e pagina os lançamentos: uma integração futura precisa particionar por carteira e declarar quando o resumo cobre apenas as linhas carregadas. O summary mensal existente deve permanecer separado.
+## Validação e operação
+
+- Regras puras: 30 casos; escopo multicartiera: 16 casos.
+- Persistência e integração com todas as migrations: 47 testes após hardening, incluindo auditoria real e preservação de pagamento híbrido.
+- n8n: 53 verificações VM, incluindo as 17 regressões originais de lote, hashes, troca de confirmador e falhas de RPC.
+- Suíte completa final: 179/179 testes, zero skips. Compilação e lint aprovados. CI ampliada para regressões financeiras, SQL, n8n e build, sem segredos de produção.
+- Contexto RPC executado com sucesso no n8n usando as credenciais existentes. Antes/depois da migration: os dez lançamentos do grupo mantiveram o mesmo digest e nenhuma atribuição histórica foi criada.
+
+Comandos locais:
+
+```sh
+cd dashboard
+FINANCE_SQL_TEST_MODULE=@electric-sql/pglite node --test --test-concurrency=1
+pnpm run lint
+pnpm run build
+cd ..
+node n8n/payer-attribution/test.cjs
+```
+
+Os cinco cenários nativos (primeira pessoa, outro pagador, conjunto, beneficiário e confirmação por outra pessoa) passaram. Cada relatório de simulação teve aceite do serviço WhatsApp com ID de mensagem; isso não comprova leitura ou recebimento no aparelho. Workflows temporários foram desativados. Recibos: `n8n/payer-attribution/validation.json`. A versão ativa do bot e as preservações verificadas estão em `n8n/payer-attribution/deployment.json`.
+
+O contrato versionado do bot está em `n8n/payer-attribution/contract.json`; snapshots completos e vínculos de identidade permanecem privados. Para reverter a integração, restaurar os nós e conexões revisados da versão anterior sem substituir staticData ou credenciais. Manter os metadados e os lançamentos existentes, sem reprocessar mensagens antigas.

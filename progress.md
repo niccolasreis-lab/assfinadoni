@@ -157,23 +157,19 @@ Operação e limites: supabase/README.md. Limites/lembretes WhatsApp permanecem 
 O agente de texto e áudio aceita até dez movimentações por mensagem, incluindo entradas e saídas juntas. Mostra cada item e os totais separados antes de confirmar; preserva valores iguais como registros distintos. Receita não é anunciada como compra, e pagamento de fatura não implica pagamento feito no cartão. Foram preservadas credenciais, voz, estado de conversa e idempotência dos lotes. Testes e contrato sem segredos: n8n/finance-text-batch. Não reprocessar mensagens antigas já confirmadas parcialmente.
 
 
-## 2026-10-20 — Pagador e autor: fundação em desenvolvimento
+## 2026-10-20 — Pagador: persistência e integração WhatsApp
 
-- [x] Schema atual conferido por consulta somente leitura: não há campo próprio para pagador/autor em finance_transactions.
-- [x] Regras puras separando autor e pagador, validação de participante/carteira e resumo em centavos, sem atribuição automática do histórico.
-- [x] 25 casos executados no V8 da sessão passaram; runner equivalente com node:test e CI própria incluídos.
-- [x] GitHub Actions em Node 22 aprovado: 25 casos; run 39457658676, commit b690bccc6d8b7f445a65651aa5dfe493e0fea3f7. Sem dependências ou segredos novos.
-- [!] Terminal indisponível nesta sessão: lint, build e suíte completa ainda não executados.
-- [ ] Gerar/validar migration em base isolada, conectar persistência e autorização, integrar confirmação/consulta no bot e filtro no painel.
-- [ ] Rollout opcional após validação de compatibilidade. Nenhuma mudança de banco, workflow ativo ou lançamento foi feita nesta etapa.
+- [x] Regras puras revisadas por subagentes: pagador diferente de remetente/confirmador; cadastro por carteira e valores em centavos.
+- [x] Escopo multicartiera com período e cobertura explícitos; páginas não são anunciadas como total mensal.
+- [x] Persistência validada isoladamente com todas as migrations, auditoria real, grants/RLS e pagamento híbrido preservado.
+- [x] Corrigidos replay com carteira divergente, UUIDs canônicos, duplicatas no cadastro e metadados fora do recorte.
+- [x] Migration aplicada em produção como 20261020220846; vínculos administrativos de Ni e Ionara conferidos. Nenhum backfill histórico.
+- [x] Antes/depois do schema: os dez lançamentos do grupo mantiveram exatamente o mesmo digest; zero atribuições históricas.
+- [x] Suíte completa local: 179/179 testes, zero skips; lint e build aprovados.
+- [x] Patch n8n: propostas mostram pagador congelado; novos eventos preservam recordKey; falha de metadado não altera status financeiro nem repete pagamento.
+- [x] Contexto RPC testado no n8n real com as credenciais existentes.
+- [x] Cinco cenários de intenção/classificação passaram individualmente no n8n; cinco recibos de envio de simulação ao grupo registrados. Os fluxos temporários foram desativados.
+- [x] Patch do bot publicado e versão ativa conferida: f0f464c4-d59c-4948-ad05-95af9d77920d. Estado da conversa, credenciais, settings, voz e monitor de áudio preservados. 53 verificações VM aprovadas, incluindo 17 regressões de lote.
+- [ ] Filtro e apresentação de pagador no painel permanecem para outra etapa. A rota Casal atual continua sem essa integração.
 
-Detalhes: docs/transaction-attribution.md. Recurso ainda não disponível no produto.
-
-
-### Continuação com revisão paralela
-
-- [x] Subagentes auditaram domínio, rotas, autorização e schema somente por leitura.
-- [x] Corrigidos cadastro duplicado com ativo/inativo em qualquer ordem, UUIDs equivalentes com caixa diferente e metadados fora do recorte de consulta.
-- [x] 30 casos executados individualmente no V8; CI Node deve ser conferida para este commit.
-- [ ] Integração multicartiera deve declarar escopo e paginação; resumo de página não é resumo mensal completo.
-- [!] Testes no grupo autorizados, mas ainda não executados: terminal e acesso direto ao n8n indisponíveis nesta sessão. Pesquisa de plugins não encontrou conector n8n/WhatsApp disponível.
+Operação, limites e comandos: docs/transaction-attribution.md e n8n/payer-attribution/README.md. A PR16 mantém o código e o contrato sem segredos para revisão.
