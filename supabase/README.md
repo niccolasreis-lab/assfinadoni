@@ -36,25 +36,29 @@ As tabelas do domínio web não substituem esses cadastros. Esta sincronização
 transforma limites ou lembretes existentes em lançamentos, nem habilita flags
 novas automaticamente.
 
-## Histórico preservado
+## Histórico regularizado
 
-Estrutura e histórico de versões são verificações distintas. O banco legado já
-tinha lixeira/cron, assistente e Jev sem quatro registros correspondentes. As
-quatro foundations do dia 24/09 foram implantadas juntas pela reconciliation.
-Essas oito versões antigas NÃO foram inseridas retroativamente no histórico
-interno. A tentativa de reparo retroativo foi bloqueada por revisão automática;
-a solução adotada foi preservar e documentar o histórico real.
+Em 20/10/2026, após autorização explícita do usuário e nova verificação do schema,
+foram registrados os oito baselines históricos que faltavam. A operação foi
+atômica e alterou somente metadados em supabase_migrations.schema_migrations;
+nenhuma migration antiga foi reexecutada.
 
-`production-history.json` registra essa correspondência. `verify-sync.sql` é
-somente leitura: missing_tables e missing_functions devem estar vazios e
-public_finance_rpcs deve ser zero; missing_migration_versions mostra honestamente
-essas oito entradas históricas. Qualquer outra diferença exige investigação.
+Lixeira/cron, assistente e Jev já existiam sem quatro registros correspondentes.
+As quatro foundations de 24/09 foram implantadas pela migration de reconciliação
+20261020111147. Os comentários dos oito registros identificam essa procedência;
+não representam uma nova execução dos SQLs antigos na data original.
+
+`production-history.json` documenta as versões e o reparo autorizado.
+`verify-sync.sql` é somente leitura: missing_tables, missing_functions e
+missing_migration_versions devem estar vazios e public_finance_rpcs deve ser zero.
+Os hashes de lançamentos, preferências de voz e definições financeiras foram
+conferidos antes/depois do reparo e permaneceram iguais.
 Há três migrations de outros serviços no mesmo projeto, listadas no manifesto;
-não devem ser removidas ou reproduzidas por este projeto.
+não foram alteradas e não devem ser removidas ou reproduzidas por este projeto.
 
 Não executar db reset, db push --include-all ou migration repair cegamente em
-produção. Uma regularização futura do ledger histórico precisa ser revisada à
-parte, com as versões e definições atuais, sem reconstruir o banco ou despesas.
+produção. Qualquer divergência futura exige comparar schema, versões e definições
+antes de regularizar metadados, sem reconstruir despesas ou funcionalidades.
 
 ## Instalação nova e validação
 

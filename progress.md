@@ -147,6 +147,6 @@ Legenda: `[ ]` planejado · `[~]` em desenvolvimento · `[x]` concluído · `[!]
 - [x] Visão Casal optativa para os dois logins; históricos pessoais preservados.
 - [x] 86 testes passaram, sem skips; lint, typecheck e build passaram.
 - [x] Banco real: dados existentes e quatro definições WhatsApp inalterados; resumo Casal igual ao ledger para ambos.
-- [ ] Oito registros antigos do histórico de migrations permanecem ausentes, embora o schema esteja conferido; revisão automática bloqueou reparo retroativo. Correspondência em supabase/production-history.json.
+- [x] Oito baselines históricos regularizados com autorização explícita em 20/10/2026; somente metadados, sem reexecutar DDL. Verificação sem versões financeiras pendentes e hashes de lançamentos, voz e funções inalterados. Correspondência em supabase/production-history.json.
 
 Operação e limites: supabase/README.md. Limites/lembretes WhatsApp permanecem autoritativos para os avisos do grupo; flags avançadas web não foram ativadas automaticamente.
