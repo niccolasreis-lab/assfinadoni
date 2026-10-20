@@ -177,6 +177,10 @@ function openTransactionActions(row) {
 
 function render() {
   const rows = state.transactions;
+  const couple = state.scope === 'couple';
+  $('include-shared-summary').disabled = couple;
+  $('shared-summary-control').hidden = couple;
+  $('new-transaction').hidden = couple;
   const summaryAvailable = state.summary && ['income','expense','balance'].every(key => (typeof state.summary[key] === 'number' || typeof state.summary[key] === 'string' && state.summary[key].trim() !== '') && Number.isFinite(Number(state.summary[key])));
   const income = summaryAvailable ? Number(state.summary.income) : null;
   const expense = summaryAvailable ? Number(state.summary.expense) : null;
@@ -193,9 +197,10 @@ function render() {
   $('list-context').textContent = state.view === 'trash'
     ? 'Lançamentos excluídos podem ser restaurados por até 30 dias. Eles não entram nos totais.'
     : state.datesCustomized ? 'A lista usa o período escolhido. Os cartões continuam mostrando o mês selecionado.' : 'A lista mostra o mês selecionado.';
+  if (couple) $('list-context').textContent = 'Carteira compartilhada de Nícolas e Ionara, sincronizada com o WhatsApp. Para editar, excluir ou restaurar, converse com o bot no grupo. Seus lançamentos pessoais continuam em Minhas.';
   $('active-view').setAttribute('aria-pressed', state.view === 'active');
   $('trash-view').setAttribute('aria-pressed', state.view === 'trash');
-  for (const scope of ['mine', 'shared', 'all']) $('scope-' + scope).setAttribute('aria-pressed', state.scope === scope);
+  for (const scope of ['mine', 'shared', 'all', 'couple']) $('scope-' + scope).setAttribute('aria-pressed', state.scope === scope);
   $('include-shared-summary').checked = state.includeSharedSummary;
   $('pagination').hidden = state.page === 1 && !state.hasMore;
   $('page-number').textContent = `Página ${state.page}`;
@@ -227,7 +232,9 @@ function render() {
     amount.textContent = `${row.transaction_type === 'receita' ? '+' : '−'} ${money(row.amount)}`;
     const actions = document.createElement('td');
     actions.className = 'right row-actions';
-    if (state.view === 'trash') {
+    if (row.read_only) {
+      const note = document.createElement('span'); note.className = 'muted'; note.textContent = 'Gerenciar no WhatsApp'; actions.append(note);
+    } else if (state.view === 'trash') {
       const restore = document.createElement('button');
       restore.type = 'button'; restore.className = 'text-button'; restore.textContent = 'Restaurar'; restore.setAttribute('aria-label', `Restaurar ${row.description}, ${money(row.amount)}`); restore.disabled = state.deleting.has(row.id); restore.addEventListener('click', () => restoreTransaction(row));
       actions.append(restore);
@@ -244,7 +251,7 @@ function render() {
       actions.append(edit, remove, share);
     }
     tr.setAttribute('data-type', row.transaction_type);
-    if (state.view !== 'trash') {
+    if (state.view !== 'trash' && !row.read_only) {
       tr.classList.add('transaction-row-interactive');
       tr.tabIndex = 0;
       tr.setAttribute('aria-haspopup', 'dialog');
@@ -310,7 +317,7 @@ async function loadTransactions() {
   $('dashboard-view').setAttribute('aria-busy', 'true');
   message('page-message', state.view === 'trash' ? 'Carregando lixeira...' : 'Carregando lançamentos...');
   try {
-    const data = await request(`/api/transactions?${params.join('&')}`);
+    const data = await request(`/api/${state.scope === 'couple' ? 'couple' : 'transactions'}?${params.join('&')}`);
     if (loadId !== state.loadId || month !== $('month').value) return;
     state.month = month;
     state.transactions = data.transactions;
@@ -332,6 +339,8 @@ async function loadTransactions() {
 }
 
 function openForm(row = null) {
+  if (row?.read_only) return;
+  if (!row && state.scope === 'couple') { message('page-message', 'Para registrar na carteira do casal, envie o gasto ao bot no grupo. Para um lançamento pessoal, selecione Minhas.'); return; }
   $('transaction-form').reset();
   message('form-error', '');
   $('transaction-id').value = row?.id || '';
@@ -511,7 +520,7 @@ async function init() {
     },
   });
   const scope = remembered('finance_scope', 'mine');
-  state.scope = ['mine', 'shared', 'all'].includes(scope) ? scope : 'mine';
+  state.scope = ['mine', 'shared', 'all', 'couple'].includes(scope) ? scope : 'mine';
   state.includeSharedSummary = remembered('finance_include_shared', 'false') === 'true';
   $('month').value = saoPauloToday().slice(0, 7);
   syncMonthDates();
@@ -560,7 +569,7 @@ async function init() {
   });
   $('active-view').addEventListener('click', () => { if (state.view !== 'active') { state.view = 'active'; state.page = 1; loadTransactions(); } });
   $('trash-view').addEventListener('click', () => { if (state.view !== 'trash') { state.view = 'trash'; state.page = 1; loadTransactions(); } });
-  for (const scope of ['mine', 'shared', 'all']) $('scope-' + scope).addEventListener('click', () => { if (state.scope !== scope) { saveScopeFilters(); state.scope = scope; restoreScopeFilters(scope); remember('finance_scope', scope); loadTransactions(); } });
+  for (const scope of ['mine', 'shared', 'all', 'couple']) $('scope-' + scope).addEventListener('click', () => { if (state.scope !== scope) { saveScopeFilters(); state.scope = scope; restoreScopeFilters(scope); remember('finance_scope', scope); loadTransactions(); } });
   $('include-shared-summary').addEventListener('change', () => { state.includeSharedSummary = Boolean($('include-shared-summary').checked); remember('finance_include_shared', String(state.includeSharedSummary)); loadTransactions(); });
   $('filter-form').addEventListener('submit', (event) => { event.preventDefault(); state.page = 1; loadTransactions(); });
   for (const id of ['filter-category', 'filter-type']) $(id).addEventListener('change', () => { state.page = 1; loadTransactions(); });

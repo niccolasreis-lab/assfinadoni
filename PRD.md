@@ -123,3 +123,17 @@ ativos e passivos são cadastrados manualmente.
 - Validar o fluxo de PDF desde a interpretação e revisão até o compartilhamento, incluindo o arquivo; o compartilhamento atual de texto não cumpre esse requisito.
 - Validar notificações tanto por testes internos quanto por evidência de entrega real. Testes locais não certificam entrega ao celular.
 - Avaliar arquitetura e interface mobile, clareza de erros, acessibilidade, desempenho e confiabilidade antes de declarar a modernização concluída.
+
+
+## Sincronização e visão do casal — 20/10/2026
+
+Preservar as carteiras pessoais e oferecer visão Casal optativa dos lançamentos
+do grupo WhatsApp, com resumo mensal, filtros, histórico, paginação e lixeira.
+Acesso exige sessão ativa e associação explícita; a visão é somente leitura e
+as alterações desses gastos continuam pela conversa no grupo. Não duplicar
+lançamentos ou converter lembretes em despesas durante sincronização.
+
+Priorizar os contratos ativos de WhatsApp, confirmação, voz e pagamento híbrido.
+Novos cadastros web de limites e lembretes não substituem as fontes WhatsApp.
+As migrations e o schema real devem ser verificáveis, com divergências históricas
+documentadas e sem reparo retroativo automático. Ver supabase/README.md.

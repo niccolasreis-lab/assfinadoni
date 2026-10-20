@@ -62,14 +62,14 @@ export function createHistoryLoader(fetchSummary) {
   return {
     cancel() { generation++; },
     reset() { generation++; cache.clear(); },
-    async load({ month, shared, account, summary }) {
+    async load({ month, shared, account, summary, scope = 'mine' }) {
       const ticket = ++generation;
       const points = await Promise.all(monthsEndingAt(month).map(async m => {
         if (m === month) return { month:m, summary:validSummary(summary) ? summary : null };
-        const key = `${account}:${shared}:${m}`;
+        const key = `${account}:${scope}:${shared}:${m}`;
         try {
           let value = cache.get(key);
-          if (!value) value = await fetchSummary(m, shared);
+          if (!value) value = await fetchSummary(m, shared, scope);
           if (!validSummary(value)) throw new Error('Resumo indisponível');
           if (ticket === generation) cache.set(key, value);
           return { month:m, summary:value };

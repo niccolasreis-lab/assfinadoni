@@ -239,6 +239,7 @@ create or replace function public.finance_assistant_enqueue(
 returns jsonb language plpgsql security invoker set search_path=public as $$
 declare j finance_assistant_jobs; event jsonb; event_id uuid; source_name text;
 begin
+  if p_account_id is not null and not exists(select 1 from dashboard_accounts where id=p_account_id and finance_user_id=p_user_id and active) then raise exception 'Unknown account'; end if;
   source_name:=case when p_channel='telegram' then 'TELEGRAM' when p_channel='dashboard' then 'WEB' else 'API' end;
   event:=finance_processing_event_begin(p_user_id,source_name,p_key,p_key,p_hash,jsonb_build_object('channel',p_channel));
   event_id:=(event->'event'->>'id')::uuid;

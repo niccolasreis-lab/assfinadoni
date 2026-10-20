@@ -29,8 +29,8 @@ export const icon = name => `<svg class="icon" viewBox="0 0 24 24" fill="none" s
 const sections = [['overview','Visão geral','overview'],['central','Central financeira','wallet'],['transactions','Transações','transactions'],['income','Receitas','up'],['expense','Despesas','down'],['categories','Categorias','categories'],['reports','Relatórios','reports'],['settings','Configurações','settings']];
 let profile;
 let api, section = 'overview', historyContext = '', lastState, renderedPoints;
-const history = createHistoryLoader(async (month, shared) => {
-  const result = await api.request(`/api/transactions?month=${month}&page=1&scope=mine&include_shared_summary=${shared}`);
+const history = createHistoryLoader(async (month, shared, scope) => {
+  const result = await api.request(`/api/${scope === 'couple' ? 'couple' : 'transactions'}?month=${month}&page=1&scope=mine&include_shared_summary=${shared}`);
   return result.summary;
 });
 function drawIcons() { document.querySelectorAll('[data-icon]').forEach(node => { node.innerHTML = icon(node.dataset.icon); }); }
@@ -68,14 +68,14 @@ async function navigate(next, load = true) {
 }
 async function loadHistory(state, force = false) {
   lastState = state;
-  const key = `${state.account?.username || ''}:${state.month}:${state.includeSharedSummary}`;
+  const key = `${state.account?.username || ''}:${state.scope || 'mine'}:${state.month}:${state.includeSharedSummary}`;
   if (!force && key === historyContext) return;
   historyContext = key;
   $('history-chart').innerHTML = '<div class="skeleton" aria-label="Carregando histórico"></div>';
   $('history-table').replaceChildren(); $('retry-history').hidden = true;
   $('history-status').textContent = 'Carregando histórico...';
   $('balance-insight').textContent = 'Comparando com o mês anterior...';
-  const points = await history.load({ month:state.month, shared:state.includeSharedSummary, account:state.account?.username || '', summary:state.summary });
+  const points = await history.load({ month:state.month, shared:state.includeSharedSummary, account:state.account?.username || '', summary:state.summary, scope:state.scope });
   if (!points) return;
   renderedPoints = points;
   const markup = historyMarkup(points, $('history-chart').clientWidth);
@@ -143,7 +143,7 @@ window.FinanceUI = {
   identity(account) { profile?.sync(account); reminders?.sync(account); },
   beforeLogout() { return reminders?.beforeLogout(); },
   authChanged(authenticated) { if(!authenticated) { profile?.reset(); reminders?.reset(); } reveal($(authenticated ? 'dashboard-view' : 'login-view')); },
-  loaded(state) { loadHistory({ month:state.month, includeSharedSummary:state.includeSharedSummary, summary:state.summary, account:state.account }); if (section === 'central') loadCentral(); },
+  loaded(state) { loadHistory({ month:state.month, includeSharedSummary:state.includeSharedSummary, summary:state.summary, account:state.account, scope:state.scope }); if (section === 'central') loadCentral(); },
   invalidate() { resetHistory(); },
   loading() {
     // Hide the previous context immediately, including while the main request is pending.

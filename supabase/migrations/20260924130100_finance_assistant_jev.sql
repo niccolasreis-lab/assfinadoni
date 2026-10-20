@@ -1,7 +1,7 @@
 -- Jev telemetry is appended after the atomic assistant operation completes.
 -- It remains in the existing result JSON so dashboard and Telegram consumers
 -- can display a repaired response without a second public table.
-create function public.finance_assistant_record_quality(p_id uuid,p_quality jsonb,p_text text default null)
+create or replace function public.finance_assistant_record_quality(p_id uuid,p_quality jsonb,p_text text default null)
 returns jsonb language plpgsql security invoker set search_path=public as $$
 declare j finance_assistant_jobs; merged jsonb;
 begin
@@ -16,7 +16,7 @@ end $$;
 
 -- Jev can request confirmation before the normal finish RPC performs a
 -- mutation. The existing confirm/cancel jobs then reuse finance_assistant_finish.
-create function public.finance_assistant_request_confirmation(p_id uuid,p_lease uuid,p_operation jsonb,p_text text,p_transcript text default '')
+create or replace function public.finance_assistant_request_confirmation(p_id uuid,p_lease uuid,p_operation jsonb,p_text text,p_transcript text default '')
 returns jsonb language plpgsql security invoker set search_path=public as $$
 declare j finance_assistant_jobs; op jsonb:=p_operation; items jsonb:='[]';
 begin
