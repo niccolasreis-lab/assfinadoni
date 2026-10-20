@@ -1,0 +1,49 @@
+{
+  "date": "2026-10-20",
+  "nativeContextExecution": "278275",
+  "cases": [
+    {
+      "case": 1,
+      "scenario": "primeira pessoa: Ni pagou",
+      "executionId": "278271",
+      "messageId": "3EB094D8256D70680DED9C",
+      "passed": true,
+      "groupAccepted": true
+    },
+    {
+      "case": 2,
+      "scenario": "pagador diferente do remetente: Ionara",
+      "executionId": "278281",
+      "messageId": "3EB037EAB5C43F40C534BB",
+      "passed": true,
+      "groupAccepted": true
+    },
+    {
+      "case": 3,
+      "scenario": "pagamento conjunto",
+      "executionId": "278290",
+      "messageId": "3EB0CD110FBDD493764940",
+      "passed": true,
+      "groupAccepted": true
+    },
+    {
+      "case": 4,
+      "scenario": "Daniel é beneficiário; pagador não informado",
+      "executionId": "278298",
+      "messageId": "3EB0768EA1FC52B4DB7200",
+      "passed": true,
+      "groupAccepted": true
+    },
+    {
+      "case": 5,
+      "scenario": "outra pessoa confirma sem trocar o pagador",
+      "executionId": "278308",
+      "messageId": "3EB0602E77105B2C0E402F",
+      "passed": true,
+      "groupAccepted": true
+    }
+  ],
+  "financialWriteNodes": 0,
+  "deliveryMeaning": "WhatsApp service acknowledged with message ID; device delivery/read not asserted",
+  "temporaryWorkflowsDisabled": true
+}

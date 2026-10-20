@@ -15,12 +15,17 @@ export default async function handler(req, res) {
     const page = value('page', '1'); const view = value('view', 'active');
     const q = value('q').trim(); const category = value('category'); const type = value('type');
     const from = value('date_from'); const to = value('date_to');
+    const payerKind = value('payer_kind', 'all'); const payerId = value('payer_id');
     if (!/^\d{4}-(0[1-9]|1[0-2])$/.test(month) || !/^[1-9]\d{0,3}$/.test(page)
       || !['active', 'trash'].includes(view) || q.length > 120 || category && !validCategoryName(category)
       || type && !['receita', 'despesa'].includes(type) || from && !calendarDate(from)
-      || to && !calendarDate(to) || from && to && from > to) throw new Error('Filtro inválido.');
-    const result = await rpc('finance_dashboard_couple_transactions', { p_account_id: account.id,
-      p_values: { month, page: Number(page), view, q, category, type, date_from: from, date_to: to } });
+      || to && !calendarDate(to) || from && to && from > to
+      || !['all', 'unknown', 'participant', 'joint'].includes(payerKind)
+      || payerId && !/^[0-9a-f]{8}-[0-9a-f]{4}-[1-8][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(payerId)
+      || payerKind !== 'participant' && payerId) throw new Error('Filtro inválido.');
+    const result = await rpc('finance_dashboard_couple_payer_transactions', { p_account_id: account.id,
+      p_values: { month, page: Number(page), view, q, category, type, date_from: from, date_to: to,
+        payer_kind: payerKind, payer_id: payerId.toLowerCase() } });
     return send(res, 200, { ...result, month, account: publicAccount(account) });
   } catch (error) {
     if (error.code === '42501') return send(res, 403, { error: 'Sua conta ainda não tem acesso à carteira do casal.' });

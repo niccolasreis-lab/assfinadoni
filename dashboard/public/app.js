@@ -4,7 +4,35 @@ const $ = (id) => document.getElementById(id);
 const money = (value) => Number(value || 0).toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' });
 const state = { transactions: [], summary: null, month: '', view: 'active', page: 1, hasMore: false, datesCustomized: false, loadId: 0, deleting: new Set(), categories: [...defaultCategories] };
 state.scope = 'mine'; state.includeSharedSummary = false; state.account = null;
-state.scopeFilters = {}; state.section = 'overview';
+state.scopeFilters = {}; state.section = 'overview'; state.payerFilter = 'all'; state.payerParticipants = [];
+function payerFilterParams() {
+  if (state.scope !== 'couple') return [];
+  const [kind, id] = state.payerFilter.split(':');
+  return [`payer_kind=${encodeURIComponent(kind)}`, ...(kind === 'participant' && id ? [`payer_id=${encodeURIComponent(id)}`] : [])];
+}
+function renderPayerFilter() {
+  $('payer-filter-control').hidden = state.scope !== 'couple';
+  const select = $('filter-payer');
+  select.replaceChildren();
+  const options = [['all', 'Todos os pagadores'], ['unknown', 'Sem pagador identificado'], ['participant', 'Pagamento individual'], ['joint', 'Pagamento conjunto']];
+  const seen = new Set();
+  for (const person of state.payerParticipants) {
+    if (!person || typeof person.id !== 'string' || seen.has(person.id)) continue;
+    seen.add(person.id);
+    options.push([`participant:${person.id}`, `${person.display_name || 'Pessoa cadastrada'}${person.active === false ? ' (inativo)' : ''}`]);
+  }
+  if (!options.some(([value]) => value === state.payerFilter)) options.push([state.payerFilter, 'Pessoa selecionada']);
+  for (const [value, label] of options) { const option = document.createElement('option'); option.value = value; option.textContent = label; select.append(option); }
+  select.value = state.payerFilter;
+}
+function payerLabel(row) {
+  if (row.transaction_type === 'receita') return 'Pagador: não se aplica a receitas';
+  const payer = row.payer;
+  const labels = Array.isArray(payer?.labels) ? payer.labels.filter(label => typeof label === 'string' && label.trim()) : [];
+  if (payer?.kind === 'participant' && labels.length === 1) return `Pagador: ${labels[0]}`;
+  if (payer?.kind === 'joint' && labels.length >= 2) return `Pagamento conjunto: ${labels.join(' + ')} · sem divisão presumida`;
+  return 'Pagador não identificado';
+}
 function saveScopeFilters() {
   state.scopeFilters[state.scope] = { q: $('filter-search').value, category: $('filter-category').value, type: $('filter-type').value, from: $('filter-from').value, to: $('filter-to').value, customized: state.datesCustomized, page: state.page };
 }
@@ -66,7 +94,7 @@ function syncMonthDates() {
 
 function hasActiveFilters() {
   const bounds = monthBounds($('month').value);
-  return Boolean($('filter-search').value.trim() || $('filter-category').value || $('filter-type').value || $('filter-from').value !== bounds.from || $('filter-to').value !== bounds.to);
+  return Boolean($('filter-search').value.trim() || $('filter-category').value || $('filter-type').value || $('filter-from').value !== bounds.from || $('filter-to').value !== bounds.to || state.scope === 'couple' && state.payerFilter !== 'all');
 }
 
 function formatDate(value) {
@@ -178,6 +206,7 @@ function openTransactionActions(row) {
 function render() {
   const rows = state.transactions;
   const couple = state.scope === 'couple';
+  renderPayerFilter();
   $('include-shared-summary').disabled = couple;
   $('shared-summary-control').hidden = couple;
   $('new-transaction').hidden = couple;
@@ -197,7 +226,7 @@ function render() {
   $('list-context').textContent = state.view === 'trash'
     ? 'Lançamentos excluídos podem ser restaurados por até 30 dias. Eles não entram nos totais.'
     : state.datesCustomized ? 'A lista usa o período escolhido. Os cartões continuam mostrando o mês selecionado.' : 'A lista mostra o mês selecionado.';
-  if (couple) $('list-context').textContent = 'Carteira compartilhada de Nícolas e Ionara, sincronizada com o WhatsApp. Para editar, excluir ou restaurar, converse com o bot no grupo. Seus lançamentos pessoais continuam em Minhas.';
+  if (couple) $('list-context').textContent = 'Carteira do casal, sincronizada com o WhatsApp. Os filtros alteram a lista; os cartões continuam mostrando o mês selecionado. Pagamentos conjuntos não pressupõem divisão de valores. Para editar, excluir ou restaurar, converse com o bot no grupo.';
   $('active-view').setAttribute('aria-pressed', state.view === 'active');
   $('trash-view').setAttribute('aria-pressed', state.view === 'trash');
   for (const scope of ['mine', 'shared', 'all', 'couple']) $('scope-' + scope).setAttribute('aria-pressed', state.scope === scope);
@@ -217,6 +246,7 @@ function render() {
     owner.textContent = isOwn(row) ? 'Meu lançamento' : `De ${ownerName(row)}`;
     metadata.append(owner);
     if (isShared(row)) { const badge = document.createElement('span'); badge.className = 'badge shared-badge'; badge.textContent = 'Compartilhado'; metadata.append(badge); }
+    if (couple) { const badge = document.createElement('span'); badge.className = 'badge payer-badge'; badge.textContent = payerLabel(row); metadata.append(badge); }
     description.append(metadata);
     if (state.view === 'trash' && row.deleted_at) {
       const note = document.createElement('small'); note.className = 'deleted-note';
@@ -293,7 +323,7 @@ async function loadTransactions() {
   saveScopeFilters();
   const loadId = ++state.loadId;
   const month = $('month').value;
-  const params = [`month=${encodeURIComponent(month)}`, `page=${state.page}`, `scope=${state.scope}`, `include_shared_summary=${state.includeSharedSummary}`];
+  const params = [`month=${encodeURIComponent(month)}`, `page=${state.page}`, `scope=${state.scope}`, `include_shared_summary=${state.includeSharedSummary}`, ...payerFilterParams()];
   if (state.view === 'trash') params.push('view=trash');
   else {
     const q = $('filter-search').value.trim();
@@ -321,6 +351,7 @@ async function loadTransactions() {
     if (loadId !== state.loadId || month !== $('month').value) return;
     state.month = month;
     state.transactions = data.transactions;
+    if (state.scope === 'couple') state.payerParticipants = Array.isArray(data.payer_participants) ? data.payer_participants : [];
     state.summary = data.summary || null;
     state.hasMore = Boolean(data.pagination?.hasMore);
     setIdentity(data.account || data.user);
@@ -532,6 +563,7 @@ async function init() {
       const data = await request('/api/session', { method: 'POST', body: JSON.stringify({ username: $('username').value.trim().toLowerCase(), password: $('password').value }) });
       state.loadId++; state.transactions = []; state.summary = null; state.page = 1; state.hasMore = false;
       state.view = 'active'; state.scope = 'mine'; state.includeSharedSummary = false; state.scopeFilters = {}; state.datesCustomized = false;
+      state.payerFilter = 'all'; state.payerParticipants = [];
       restoreScopeFilters('mine'); remember('finance_scope', 'mine'); remember('finance_include_shared', 'false');
       state.section = 'overview'; window.FinanceUI?.reset();
       setIdentity(data.account || data.user); $('password').value = ''; render(); showDashboard(true); await loadTransactions(); await loadCategories();
@@ -573,9 +605,11 @@ async function init() {
   $('include-shared-summary').addEventListener('change', () => { state.includeSharedSummary = Boolean($('include-shared-summary').checked); remember('finance_include_shared', String(state.includeSharedSummary)); loadTransactions(); });
   $('filter-form').addEventListener('submit', (event) => { event.preventDefault(); state.page = 1; loadTransactions(); });
   for (const id of ['filter-category', 'filter-type']) $(id).addEventListener('change', () => { state.page = 1; loadTransactions(); });
+  $('filter-payer').addEventListener('change', () => { state.payerFilter = $('filter-payer').value; state.page = 1; loadTransactions(); });
   for (const id of ['filter-from', 'filter-to']) $(id).addEventListener('change', () => { state.datesCustomized = true; state.page = 1; loadTransactions(); });
   $('clear-filters').addEventListener('click', () => {
     $('filter-search').value = ''; $('filter-category').value = ''; $('filter-type').value = '';
+    if (state.scope === 'couple') state.payerFilter = 'all';
     state.datesCustomized = false; syncMonthDates(); state.page = 1; loadTransactions();
   });
   $('previous-page').addEventListener('click', () => { if (state.page > 1) { state.page--; loadTransactions(); } });

@@ -155,3 +155,31 @@ Operação e limites: supabase/README.md. Limites/lembretes WhatsApp permanecem 
 ## 2026-10-20 — Correção de múltiplas movimentações no WhatsApp
 
 O agente de texto e áudio aceita até dez movimentações por mensagem, incluindo entradas e saídas juntas. Mostra cada item e os totais separados antes de confirmar; preserva valores iguais como registros distintos. Receita não é anunciada como compra, e pagamento de fatura não implica pagamento feito no cartão. Foram preservadas credenciais, voz, estado de conversa e idempotência dos lotes. Testes e contrato sem segredos: n8n/finance-text-batch. Não reprocessar mensagens antigas já confirmadas parcialmente.
+
+
+## 2026-10-20 — Pagador: persistência e integração WhatsApp
+
+- [x] Regras puras revisadas por subagentes: pagador diferente de remetente/confirmador; cadastro por carteira e valores em centavos.
+- [x] Escopo multicartiera com período e cobertura explícitos; páginas não são anunciadas como total mensal.
+- [x] Persistência validada isoladamente com todas as migrations, auditoria real, grants/RLS e pagamento híbrido preservado.
+- [x] Corrigidos replay com carteira divergente, UUIDs canônicos, duplicatas no cadastro e metadados fora do recorte.
+- [x] Migration aplicada em produção como 20261020220846; vínculos administrativos de Ni e Ionara conferidos. Nenhum backfill histórico.
+- [x] Antes/depois do schema: os dez lançamentos do grupo mantiveram exatamente o mesmo digest; zero atribuições históricas.
+- [x] Suíte completa local: 179/179 testes, zero skips; lint e build aprovados.
+- [x] Patch n8n: propostas mostram pagador congelado; novos eventos preservam recordKey; falha de metadado não altera status financeiro nem repete pagamento.
+- [x] Contexto RPC testado no n8n real com as credenciais existentes.
+- [x] Cinco cenários de intenção/classificação passaram individualmente no n8n; cinco recibos de envio de simulação ao grupo registrados. Os fluxos temporários foram desativados.
+- [x] Patch do bot publicado e versão ativa conferida: f0f464c4-d59c-4948-ad05-95af9d77920d. Estado da conversa, credenciais, settings, voz e monitor de áudio preservados. 53 verificações VM aprovadas, incluindo 17 regressões de lote.
+- [x] Filtro e rótulos por pagador implementados no painel Casal: nova RPC de leitura com filtros antes da paginação, API com conta da sessão, UI segura e períodos preservados.
+
+Operação, limites e comandos: docs/transaction-attribution.md e n8n/payer-attribution/README.md. A PR16 mantém o código e o contrato sem segredos para revisão.
+
+## 2026-10-20 — Pagador no painel
+
+- [x] Consulta adicionada sem substituir a RPC Casal antiga ou escrever no ledger.
+- [x] Migration aplicada como 20261020223443; ambos os logins conferidos no banco real para all/unknown/participant/joint.
+- [x] Totais mensais e IDs de linhas sem filtro iguais ao contrato antigo; dez lançamentos e zero atribuições históricas preservados.
+- [x] 182 testes gerais, 19 da nova consulta e integração all-migrations aprovados, sem skips; lint/build aprovados.
+- [x] Casal oferece filtro por tipo/pessoa e labels de histórico/conjunto; outros escopos e datas preservados.
+
+A evidência final de CI e publicação acompanha a PR16 e a implantação Vercel correspondente. Áudio de conclusão autorizado para o mesmo grupo WhatsApp, somente depois da conferência da publicação.
