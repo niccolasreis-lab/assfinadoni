@@ -162,7 +162,7 @@ O agente de texto e áudio aceita até dez movimentações por mensagem, incluin
 - [x] Schema atual conferido por consulta somente leitura: não há campo próprio para pagador/autor em finance_transactions.
 - [x] Regras puras separando autor e pagador, validação de participante/carteira e resumo em centavos, sem atribuição automática do histórico.
 - [x] 25 casos executados no V8 da sessão passaram; runner equivalente com node:test e CI própria incluídos.
-- [ ] Consultar resultado do GitHub Actions da PR; não presumir aprovação do Node pelo resultado do V8.
+- [x] GitHub Actions em Node 22 aprovado: 25 casos; run 39457658676, commit b690bccc6d8b7f445a65651aa5dfe493e0fea3f7. Sem dependências ou segredos novos.
 - [!] Terminal indisponível nesta sessão: lint, build e suíte completa ainda não executados.
 - [ ] Gerar/validar migration em base isolada, conectar persistência e autorização, integrar confirmação/consulta no bot e filtro no painel.
 - [ ] Rollout opcional após validação de compatibilidade. Nenhuma mudança de banco, workflow ativo ou lançamento foi feita nesta etapa.

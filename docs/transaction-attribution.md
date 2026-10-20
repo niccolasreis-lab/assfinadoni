@@ -28,7 +28,7 @@ Rollout futuro: integração opcional sob ENABLE_PAYER_ATTRIBUTION, padrão desl
 - 25 casos definidos em dashboard/tests/helpers/payer-attribution-cases.js.
 - Esses mesmos casos foram executados no V8 disponível na sessão: 25 passaram. Isso não equivale à suíte Node, lint, build ou teste de banco.
 - O runner Node usa node:test e node:assert/strict, sem dependências novas.
-- Workflow próprio no GitHub Actions executa os casos em Node 22, com permissões somente de leitura e sem acesso a segredos/banco. O resultado deve ser consultado no commit da PR.
+- Workflow próprio no GitHub Actions executa os casos em Node 22, com permissões somente de leitura e sem acesso a segredos/banco. Execução confirmada com sucesso no run 39457658676, commit b690bccc6d8b7f445a65651aa5dfe493e0fea3f7: os 25 casos passaram em Node 22.
 - O terminal da sessão estava indisponível. Lint, build, migrations e testes completos de integração permanecem pendentes.
 
 Comando: node --test dashboard/tests/payer-attribution.test.js
