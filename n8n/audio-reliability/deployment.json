@@ -1,0 +1,12 @@
+{
+  "workflowId": "WDLpOYIbZFtcXgWU",
+  "versionId": "c7e820aa-53f7-40f9-98d5-b2bac586c4d6",
+  "watchdogId": "doJFiI8wmYqFnX6l",
+  "staticDataPreserved": true,
+  "existingCredentialsPreserved": true,
+  "publishedAt": "2026-10-20T15:20:31.714537+00:00",
+  "userAuthorized": true,
+  "localChecks": 41,
+  "nativeTest": "isolated asynchronous parent/child without delivery or financial writes",
+  "liveGroupAudioTest": "pending"
+}
