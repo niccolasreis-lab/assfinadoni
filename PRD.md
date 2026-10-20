@@ -142,3 +142,8 @@ documentadas e sem reparo retroativo automático. Ver supabase/README.md.
 ## 2026-10-20 — Correção de múltiplas movimentações no WhatsApp
 
 O agente de texto e áudio aceita até dez movimentações por mensagem, incluindo entradas e saídas juntas. Mostra cada item e os totais separados antes de confirmar; preserva valores iguais como registros distintos. Receita não é anunciada como compra, e pagamento de fatura não implica pagamento feito no cartão. Foram preservadas credenciais, voz, estado de conversa e idempotência dos lotes. Testes e contrato sem segredos: n8n/finance-text-batch. Não reprocessar mensagens antigas já confirmadas parcialmente.
+
+
+## 2026-10-20 — Identificação do pagador: base isolada
+
+Primeira etapa em desenvolvimento: distinguir quem enviou a mensagem de quem pagou. Seleções individuais/conjuntas usam participantes registrados na carteira; histórico sem identificação permanece desconhecido. Pagamento conjunto não implica divisão meio a meio. Regras e testes em dashboard/lib/payer-attribution.js e dashboard/tests/payer-attribution.test.js. Sem ativação, integração de rotas ou alteração do schema nesta etapa. Persistência, confirmação no bot e filtro no painel ainda serão implementados e validados. Ver docs/transaction-attribution.md.

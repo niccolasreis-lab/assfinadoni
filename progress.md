@@ -155,3 +155,16 @@ Operação e limites: supabase/README.md. Limites/lembretes WhatsApp permanecem 
 ## 2026-10-20 — Correção de múltiplas movimentações no WhatsApp
 
 O agente de texto e áudio aceita até dez movimentações por mensagem, incluindo entradas e saídas juntas. Mostra cada item e os totais separados antes de confirmar; preserva valores iguais como registros distintos. Receita não é anunciada como compra, e pagamento de fatura não implica pagamento feito no cartão. Foram preservadas credenciais, voz, estado de conversa e idempotência dos lotes. Testes e contrato sem segredos: n8n/finance-text-batch. Não reprocessar mensagens antigas já confirmadas parcialmente.
+
+
+## 2026-10-20 — Pagador e autor: fundação em desenvolvimento
+
+- [x] Schema atual conferido por consulta somente leitura: não há campo próprio para pagador/autor em finance_transactions.
+- [x] Regras puras separando autor e pagador, validação de participante/carteira e resumo em centavos, sem atribuição automática do histórico.
+- [x] 25 casos executados no V8 da sessão passaram; runner equivalente com node:test e CI própria incluídos.
+- [ ] Consultar resultado do GitHub Actions da PR; não presumir aprovação do Node pelo resultado do V8.
+- [!] Terminal indisponível nesta sessão: lint, build e suíte completa ainda não executados.
+- [ ] Gerar/validar migration em base isolada, conectar persistência e autorização, integrar confirmação/consulta no bot e filtro no painel.
+- [ ] Rollout opcional após validação de compatibilidade. Nenhuma mudança de banco, workflow ativo ou lançamento foi feita nesta etapa.
+
+Detalhes: docs/transaction-attribution.md. Recurso ainda não disponível no produto.
