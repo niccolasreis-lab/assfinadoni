@@ -4,5 +4,6 @@
 .vercel/
 supabase/.temp/
 node_modules/
+node_modules
 finance-telegram-*.workflow.json
 build-conversational-workflow.mjs

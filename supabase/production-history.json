@@ -1,0 +1,25 @@
+{
+  "checkedAt": "2026-10-20",
+  "projectRef": "jhpappaakmdfxyujnlef",
+  "schemaStatus": "verified",
+  "historyStatus": "preserved_without_retroactive_repair",
+  "schemaCoveredByReconciliation": [
+    "20260924120000",
+    "20260924130000",
+    "20260924140000",
+    "20260924150000"
+  ],
+  "legacySchemaPresentWithoutHistory": [
+    "20260917070158",
+    "20260917152553",
+    "20260918120432",
+    "20260924130100"
+  ],
+  "reconciliationVersion": "20261020111147",
+  "coupleVersion": "20261020111206",
+  "externalMigrationNames": [
+    "create_wedding_invitation_schema",
+    "expose_secure_rsvp_rpc",
+    "n8n_health_readonly_role"
+  ]
+}

@@ -209,3 +209,27 @@ test('destinatário vê proprietário e ações completas, mas edição/exclusã
   actions[2].dispatch('click');
   assert.equal(mutations.length, 0);
 });
+
+test('Casal é optativo, usa sua API e mantém consulta sem ações de escrita', async () => {
+  const calls=[];
+  const ui=mount(async(path)=>{
+    calls.push(path);
+    if(path==='/api/session') return json({authenticated:true,account:{username:'nicolasreis',name:'Nícolas'}});
+    if(path==='/api/categories') return json({categories:[]});
+    const couple=path.startsWith('/api/couple?');
+    return json({transactions:couple?[{id:'couple',read_only:true,is_owner:false,owner_name:'Finanças do casal',description:'Mercado casal',amount:40,category:'Alimentação',transaction_type:'despesa',transaction_date:'2026-10-10'}]:[],summary:{income:0,expense:couple?40:900,balance:couple?-40:-900,byCategory:{}}});
+  });
+  await until(()=>calls.includes('/api/categories'));
+  assert.ok(calls.some(path=>path.startsWith('/api/transactions?')&&path.includes('scope=mine')));
+  ui.element('scope-couple').dispatch('click');
+  await until(()=>ui.element('transaction-rows').children[0]?.children[0]?.textContent==='Mercado casal');
+  assert.ok(calls.some(path=>path.startsWith('/api/couple?')));
+  assert.equal(ui.element('new-transaction').hidden,true);
+  assert.equal(ui.element('shared-summary-control').hidden,true);
+  const row=ui.element('transaction-rows').children[0];
+  assert.deepEqual(row.children[4].children.map(action=>action.textContent),['Gerenciar no WhatsApp']);
+  assert.equal(row.listeners.has('click'),false);
+  ui.element('scope-mine').dispatch('click');
+  await until(()=>ui.element('new-transaction').hidden===false);
+  assert.ok(calls.at(-1).startsWith('/api/transactions?'));
+});

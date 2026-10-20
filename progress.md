@@ -136,3 +136,17 @@ Legenda: `[ ]` planejado · `[~]` em desenvolvimento · `[x]` concluído · `[!]
 - Alterações desta etapa são locais; publicação em produção ainda não verificada.
 - Verificação adicional em 01/10: um job do dashboard continua queued desde 24/09/2026 15:36 UTC, sem atualização. Não há evidência de processamento desse pedido; investigar serviço worker e conexão de banco.
 - Mensagens do chat agora distinguem pedido com falha de fila atrasada, evitando espera genérica indefinida. Não reprocessado automaticamente nenhum pedido financeiro antigo.
+
+
+## 2026-10-20 — Banco e WhatsApp sincronizados
+
+- [x] Adicionadas 21 tabelas e funções pendentes sem alterar lançamentos existentes.
+- [x] Versionadas nove migrations WhatsApp recuperadas do histórico remoto.
+- [x] Preservados Agent nativo, OpenAI, imagens, áudio, confirmação, edição/exclusão, menções, typing, follow-up, alertas e resumo falado do n8n. Os workflows/credenciais não foram reimportados.
+- [x] Guards da fila e pagamento híbrido preservados; funções financeiras sem EXECUTE público.
+- [x] Visão Casal optativa para os dois logins; históricos pessoais preservados.
+- [x] 86 testes passaram, sem skips; lint, typecheck e build passaram.
+- [x] Banco real: dados existentes e quatro definições WhatsApp inalterados; resumo Casal igual ao ledger para ambos.
+- [ ] Oito registros antigos do histórico de migrations permanecem ausentes, embora o schema esteja conferido; revisão automática bloqueou reparo retroativo. Correspondência em supabase/production-history.json.
+
+Operação e limites: supabase/README.md. Limites/lembretes WhatsApp permanecem autoritativos para os avisos do grupo; flags avançadas web não foram ativadas automaticamente.
