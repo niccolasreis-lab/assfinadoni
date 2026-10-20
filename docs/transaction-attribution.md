@@ -34,3 +34,8 @@ Rollout futuro: integração opcional sob ENABLE_PAYER_ATTRIBUTION, padrão desl
 Comando: node --test dashboard/tests/payer-attribution.test.js
 
 A implementação só estará disponível no produto depois de persistência, API, confirmação do bot e interface passarem pelos testes. Esta PR é uma base isolada para essa integração.
+
+
+## Revisão da continuação
+
+O cadastro agora rejeita IDs duplicados independentemente da ordem ativo/inativo; UUIDs são comparados de forma canônica. Metadados de transações fora do recorte selecionado não afetam o resumo. A visão Casal atual reúne várias carteiras e pagina os lançamentos: uma integração futura precisa particionar por carteira e declarar quando o resumo cobre apenas as linhas carregadas. O summary mensal existente deve permanecer separado.

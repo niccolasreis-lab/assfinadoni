@@ -4,14 +4,18 @@ function id(value) {
   if(typeof value!=='string'||!UUID.test(value)) throw new Error('Identificador de participante ou carteira inválido.');
   return value.toLowerCase();
 }
+function sameWallet(value,wallet) {
+  return typeof value==='string'&&UUID.test(value)&&value.toLowerCase()===wallet;
+}
 function registry(walletId,participants,{historical=false}={}) {
   const wallet=id(walletId);
   if(!Array.isArray(participants))throw new Error('Participantes inválidos.');
-  const result=new Map();
+  const result=new Map(),seen=new Set();
   for(const p of participants) {
-    if(!p||typeof p!=='object'||p.finance_user_id!==wallet)continue;
+    if(!p||typeof p!=='object'||!sameWallet(p.finance_user_id,wallet))continue;
     const key=id(p.id);
-    if(result.has(key))throw new Error('Cadastro de participante duplicado.');
+    if(seen.has(key))throw new Error('Cadastro de participante duplicado.');
+    seen.add(key);
     if(historical||p.active===true)result.set(key,p);
   }
   return result;
@@ -55,17 +59,19 @@ function cents(value) {
 export function summarizeExpensesByPayer({walletId,participants,transactions,attributions=[]}) {
   const wallet=id(walletId),allowed=registry(wallet,participants,{historical:true});
   if(!Array.isArray(transactions)||!Array.isArray(attributions))throw new Error('Consulta de despesas inválida.');
+  const selected=transactions.filter(row=>sameWallet(row?.user_id,wallet)&&!row.deleted_at&&row.transaction_type==='despesa');
+  const selectedIds=new Set(selected.map(row=>id(row.id)));
   const metadata=new Map();
   for(const row of attributions) {
-    if(row?.finance_user_id!==wallet)continue;
-    const txid=id(row.transaction_id);
+    if(!sameWallet(row?.finance_user_id,wallet))continue;
+    const txid=typeof row.transaction_id==='string'&&UUID.test(row.transaction_id)?row.transaction_id.toLowerCase():null;
+    if(!selectedIds.has(txid))continue;
     if(metadata.has(txid))throw new Error('Responsável duplicado para o mesmo lançamento.');
     metadata.set(txid,selection({kind:row.kind,participant_ids:row.participant_ids},allowed));
   }
   const individual=new Map(),seen=new Map();
   let total=0,unknown=0,joint=0,count=0;
-  for(const row of transactions) {
-    if(row?.user_id!==wallet||row.deleted_at||row.transaction_type!=='despesa')continue;
+  for(const row of selected) {
     const txid=id(row.id),amount=cents(row.amount);
     if(seen.has(txid)) {
       if(seen.get(txid)!==amount)throw new Error('Lançamento duplicado com valores divergentes.');

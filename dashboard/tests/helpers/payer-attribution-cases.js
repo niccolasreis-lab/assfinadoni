@@ -9,6 +9,13 @@ export function payerAttributionCases(assert,api) {
  const att=(transaction_id,kind,participant_ids=[])=>({transaction_id,finance_user_id:W,kind,participant_ids});
  const sum=(transactions,attributions=[],extra={})=>api.summarizeExpensesByPayer({...ctx,transactions,attributions,...extra});
  return [
+
+ ['cadastro duplicado inativo seguido de ativo é recusado',()=>assert.throws(()=>api.normalizePayerSelection(null,{walletId:W,participants:[{id:A,finance_user_id:W,active:false},{id:A,finance_user_id:W,active:true}]}))],
+ ['cadastro duplicado ativo seguido de inativo é recusado',()=>assert.throws(()=>api.normalizePayerSelection(null,{walletId:W,participants:[{id:A,finance_user_id:W,active:true},{id:A,finance_user_id:W,active:false}]}))],
+ ['carteira e participante em maiúsculas são canônicos',()=>{const wallet='dddddddd-dddd-4ddd-8ddd-dddddddddddd';const p=[{id:A.toUpperCase(),finance_user_id:wallet.toUpperCase(),active:true}];assert.equal(api.normalizePayerSelection({kind:'participant',participant_ids:[A.toUpperCase()]},{walletId:wallet,participants:p}).participant_ids[0],A)}],
+ ['resumo canonicaliza carteira nas transações e atribuições',()=>{const wallet='dddddddd-dddd-4ddd-8ddd-dddddddddddd';const p=[{id:A,finance_user_id:wallet,active:true}];const r=api.summarizeExpensesByPayer({walletId:wallet.toUpperCase(),participants:p,transactions:[{...tx(T,10),user_id:wallet.toUpperCase()}],attributions:[{...att(T,'participant',[A]),finance_user_id:wallet.toUpperCase()}]});assert.equal(r.individual_cents[0].amount_cents,1000)}],
+ ['metadados fora do recorte não derrubam o resumo',()=>{const r=sum([tx(T,10)],[att(T,'participant',[A]),att(T2,'participant',[B]),att(T2,'participant',[B])]);assert.equal(r.total_cents,1000)}],
+
  ['ausência de responsável permanece desconhecida',()=>assert.deepEqual(choose(undefined),{kind:'unknown',participant_ids:[]})],
  ['autor identificado não se torna pagador',()=>{assert.equal(api.normalizeRecorder(A,ctx),A);assert.equal(choose(null).kind,'unknown')}],
  ['pagador pode ser diferente do autor',()=>{assert.equal(api.normalizeRecorder(A,ctx),A);assert.deepEqual(choose({kind:'participant',participant_ids:[B]}),{kind:'participant',participant_ids:[B]})}],

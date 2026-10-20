@@ -168,3 +168,12 @@ O agente de texto e áudio aceita até dez movimentações por mensagem, incluin
 - [ ] Rollout opcional após validação de compatibilidade. Nenhuma mudança de banco, workflow ativo ou lançamento foi feita nesta etapa.
 
 Detalhes: docs/transaction-attribution.md. Recurso ainda não disponível no produto.
+
+
+### Continuação com revisão paralela
+
+- [x] Subagentes auditaram domínio, rotas, autorização e schema somente por leitura.
+- [x] Corrigidos cadastro duplicado com ativo/inativo em qualquer ordem, UUIDs equivalentes com caixa diferente e metadados fora do recorte de consulta.
+- [x] 30 casos executados individualmente no V8; CI Node deve ser conferida para este commit.
+- [ ] Integração multicartiera deve declarar escopo e paginação; resumo de página não é resumo mensal completo.
+- [!] Testes no grupo autorizados, mas ainda não executados: terminal e acesso direto ao n8n indisponíveis nesta sessão. Pesquisa de plugins não encontrou conector n8n/WhatsApp disponível.
