@@ -149,3 +149,8 @@ O agente de texto e áudio aceita até dez movimentações por mensagem, incluin
 Separar pagador, remetente e confirmador. Novas despesas podem apresentar pagador individual, conjunto ou não identificado antes da confirmação; confirmação por outra pessoa preserva a proposta. Participantes e autorização vêm do cadastro administrativo da carteira. Histórico desconhecido continua desconhecido, pagamento conjunto não presume divisão e beneficiário não vira pagador.
 
 Persistência aditiva e integração WhatsApp publicadas após testes nativos individuais e cinco simulações no grupo, com identidades verificadas. Falhas de identificação preservam o resultado financeiro e não pedem reenvio do pagamento. Consulta por pessoa limita-se aos 50 lançamentos recentes disponíveis e informa esse recorte. O filtro “Quem pagou” e os rótulos por lançamento estão implementados na visão Casal. A filtragem ocorre no banco antes da paginação, preservando os totais mensais e os outros escopos. Contratos, validações, limites e reversão: docs/transaction-attribution.md.
+
+
+## 2026-10-22 — Leitura de imagens no WhatsApp
+
+Imagens usam o caminho multimodal existente após validação dos bytes e MIME. O bot apresenta cada movimentação e pede confirmação; não cria despesas ao reconhecer uma foto. Se a data não estiver visível, informa a data de referência antes de confirmar. Propostas de anexo verificadas preservam essa mensagem sem reescrita pelo agente de conversa. Pagador não é inferido do remetente ou do cartão. Erros temporários de leitura permitem no máximo duas tentativas; envio ao WhatsApp e escrita financeira não recebem novas tentativas automáticas. Código e testes sanitizados: n8n/image-reading.

@@ -183,3 +183,18 @@ Operação, limites e comandos: docs/transaction-attribution.md e n8n/payer-attr
 - [x] Casal oferece filtro por tipo/pessoa e labels de histórico/conjunto; outros escopos e datas preservados.
 
 A evidência final de CI e publicação acompanha a PR16 e a implantação Vercel correspondente. Áudio de conclusão autorizado para o mesmo grupo WhatsApp, somente depois da conferência da publicação.
+
+
+## 2026-10-22 — Correção de reconhecimento das imagens
+
+- [x] Causa reproduzida: modelo anterior recusava a solicitação HTTP400; alias de texto não extraía pagamentos.
+- [x] Rota multimodal existente validada com a imagem original: três itens de R$4,98, R$10,00 e R$5,27, total R$20,25.
+- [x] Validação de bytes/MIME e resposta estruturada; lotes inválidos não viram propostas parciais.
+- [x] Data ausente fica explícita antes da confirmação, preservada pela resposta direta. Pagador permanece desconhecido.
+- [x] Retry somente da leitura Gemini, no máximo duas tentativas com intervalo de 2 segundos para erros transitórios HTTP503.
+- [x] 30 testes de imagem, 53 de pagador e 17 de lote aprovados. QA nativa da cadeia até a resposta final aprovada sem escrita/envio.
+- [x] Publicado e ativo: 3f344999-861b-4fa6-ba47-6e32d70caed0. Nós e conexões partiram da versão publicada; draft inativo incompleto foi preservado em backup privado.
+- [x] Credenciais, settings, voz e estado da conversa preservados. Doze lançamentos existentes com digest idêntico antes/depois.
+- [x] Relatório TESTE/SIMULAÇÃO enviado uma vez ao grupo verificado, com recibo confirmado; workflow temporário desativado.
+
+Código, contrato sanitizado e limites em n8n/image-reading. Imagens reais, snapshots completos e segredos não integram o repositório.
