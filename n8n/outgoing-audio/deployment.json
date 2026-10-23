@@ -1,0 +1,17 @@
+{
+  "publishedDate": "2026-10-23",
+  "workflowId": "WDLpOYIbZFtcXgWU",
+  "versionId": "deae5575-aa2c-4830-abcd-5cd705130eb4",
+  "voiceInMainWorkflow": true,
+  "localChecks": 30,
+  "nativeIntentionAndTTS": "passed, database and send stubbed",
+  "mainWorkflowSimulation": "sent once, outgoing media recovered and decoded",
+  "outgoingCodec": "opus",
+  "outgoingSampleRate": 48000,
+  "outgoingChannels": 1,
+  "outgoingSeconds": 7.213,
+  "oldTemporaryWorkflowsDeleted": 19,
+  "newNativeQAWorkflowDeleted": true,
+  "financialTestWrites": 0,
+  "existingFinanceImagesPayerAndInboundMonitorPreserved": true
+}

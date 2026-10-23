@@ -198,3 +198,18 @@ A evidência final de CI e publicação acompanha a PR16 e a implantação Verce
 - [x] Relatório TESTE/SIMULAÇÃO enviado uma vez ao grupo verificado, com recibo confirmado; workflow temporário desativado.
 
 Código, contrato sanitizado e limites em n8n/image-reading. Imagens reais, snapshots completos e segredos não integram o repositório.
+
+
+## 2026-10-23 — Respostas de voz e limpeza do n8n
+
+- [x] Voz explícita para respostas gerais no mesmo principal, preservando preferências dos resumos.
+- [x] Fala baseada no texto com recibo; preparo vazio/erro TTS/check negativo não encerram silenciosamente.
+- [x] Geração limitada a duas tentativas; entrega mantém tentativa única, com estado incerto sem reenvio.
+- [x] Trinta verificações de voz e regressões de pagador53/lote17/imagem30 aprovadas.
+- [x] Modelos reais de intenção e TTS testados com banco/envio substituídos por fixtures; WAV decodificado independentemente.
+- [x] Versão ativa `deae5575-aa2c-4830-abcd-5cd705130eb4`, 117 nós, credenciais/settings/estado e recursos financeiros preservados.
+- [x] Uma simulação pela entrada autenticada principal entregou voz no grupo; mídia recuperada e validada OGG/Opus, mono48kHz, 7,213s. Nenhuma escrita financeira de teste.
+- [x] Dezenove fluxos temporários antigos revalidados por ID, guardados em backup e excluídos; QA nativa nova também excluída.
+- [x] Principal e monitor de áudio recebido preservados; os doze lançamentos anteriores mantêm o digest, além dos dois registros legítimos posteriores.
+
+Contrato, limites e validação sanitizados: n8n/outgoing-audio.

@@ -154,3 +154,8 @@ Persistência aditiva e integração WhatsApp publicadas após testes nativos in
 ## 2026-10-22 — Leitura de imagens no WhatsApp
 
 Imagens usam o caminho multimodal existente após validação dos bytes e MIME. O bot apresenta cada movimentação e pede confirmação; não cria despesas ao reconhecer uma foto. Se a data não estiver visível, informa a data de referência antes de confirmar. Propostas de anexo verificadas preservam essa mensagem sem reescrita pelo agente de conversa. Pagador não é inferido do remetente ou do cartão. Erros temporários de leitura permitem no máximo duas tentativas; envio ao WhatsApp e escrita financeira não recebem novas tentativas automáticas. Código e testes sanitizados: n8n/image-reading.
+
+
+## 2026-10-23 — Voz integrada à conversa principal
+
+Pedidos naturais de resposta em áudio podem acompanhar respostas gerais do bot. A fala usa o texto efetivamente entregue, sem recalcular finanças por outra IA. Resumos automáticos preservam preferências e pedido explícito de texto prevalece. Falhas têm resultado e aviso seguros; envio incerto não causa reenvio automático. Apenas a geração tem até duas tentativas. Fluxos temporários de QA/envio único obsoletos são removidos após conferência por ID e backup, preservando produção e testes automatizados úteis.
