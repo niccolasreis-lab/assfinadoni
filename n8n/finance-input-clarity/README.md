@@ -1,0 +1,13 @@
+# Clareza do tipo de movimentação e pedidos recorrentes
+
+O screenshot de 23/10/2026 mostra “Cancelamento Internet” proposto e confirmado como entrada, apesar de uma explicação anterior de que era despesa. O classificador aceitava qualquer tipo válido vindo da IA; a palavra cancelamento não tem, por si, evidência de recebimento de dinheiro.
+
+Este overlay muda somente o código de `Classificar comando` e acrescenta instruções ao agente de intenção. Se a IA propuser receita para um cancelamento sem evidência de estorno, reembolso ou recebimento no item correspondente, o lote inteiro pede esclarecimento. Uma entrada em outra linha não justifica a classificação. Receber um boleto, pedir um estorno, negar recebimento ou mencionar estorno futuro também não comprovam receita. Despesas declaradas e devoluções efetivamente recebidas continuam permitidas. A resposta de esclarecimento usa um status verificado, sem reescrita pela IA de conversa.
+
+Um pedido explícito como “Inclua 100,00 despesa recorrente, INTERNET VIVO” tem um fallback antes da resposta genérica para falha da IA. Ele preserva valor e descrição, explica que despesas recorrentes automáticas ainda não são cadastradas pelo WhatsApp e pergunta a data do próximo vencimento para uma possível ocorrência única. Não grava gasto pago, não cria agenda, não inventa data ou frequência e não consome outra proposta financeira pendente.
+
+`python n8n/finance-input-clarity/build-private.py --source /caminho/privado/workflow.json` prepara um snapshot privado e um contrato sanitizado. O comando não usa rede nem publica. A base deve ser revalidada ao integrar com outras mudanças. `node n8n/finance-input-clarity/test.cjs` verifica 20 cenários, incluindo o screenshot, as distinções de receita e o overlay dos 53 checks de pagadores com as 17 regressões de lote.
+
+Limites: não altera registros existentes, não cria recorrência automática e não transforma o esclarecimento de um cancelamento em confirmação financeira. O lote ambíguo não é armazenado como uma proposta confirmável; uma continuação que omita os valores pode precisar que o bot peça os dados novamente. A correção de registros históricos e o cadastro de novas agendas exigem ações próprias e não são realizados pelo builder.
+
+Publicado em 23/10/2026 na versão ativa `c632d864-f243-4098-b86c-e2d3635c9136`, após rebase na versão com voz. Os dois casos foram executados individualmente no n8n, sem banco/envio; o workflow temporário foi excluído. Voz, imagens, credenciais, configurações e conexões foram preservadas. O estado de conversa evoluiu por uso legítimo durante a publicação; o PUT omitiu staticData e não restaurou snapshots. Nenhum registro financeiro existente foi alterado por esta correção preventiva.

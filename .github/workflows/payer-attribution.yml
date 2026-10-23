@@ -17,6 +17,7 @@ on:
       - 'n8n/payer-attribution/**'
       - 'n8n/image-reading/**'
       - 'n8n/outgoing-audio/**'
+      - 'n8n/finance-input-clarity/**'
       - '.github/workflows/payer-attribution.yml'
   workflow_dispatch:
 permissions:
@@ -41,5 +42,6 @@ jobs:
       - run: node n8n/payer-attribution/test.cjs
       - run: node n8n/image-reading/test.cjs
       - run: node n8n/outgoing-audio/test.cjs
+      - run: node n8n/finance-input-clarity/test.cjs
       - run: pnpm --dir dashboard run lint
       - run: pnpm --dir dashboard run build

@@ -159,3 +159,8 @@ Imagens usam o caminho multimodal existente após validação dos bytes e MIME. 
 ## 2026-10-23 — Voz integrada à conversa principal
 
 Pedidos naturais de resposta em áudio podem acompanhar respostas gerais do bot. A fala usa o texto efetivamente entregue, sem recalcular finanças por outra IA. Resumos automáticos preservam preferências e pedido explícito de texto prevalece. Falhas têm resultado e aviso seguros; envio incerto não causa reenvio automático. Apenas a geração tem até duas tentativas. Fluxos temporários de QA/envio único obsoletos são removidos após conferência por ID e backup, preservando produção e testes automatizados úteis.
+
+
+## 2026-10-23 — Clareza de cancelamentos e pedidos recorrentes
+
+Cancelamento de serviço não comprova receita. Se uma proposta da IA indicar entrada sem evidência de recebimento no item correspondente, esclarecer o sentido antes de pedir confirmação do lote. Estorno pendente ou recebimento de boleto não contam como dinheiro recebido. Pedidos explícitos de despesa recorrente com valor/descrição têm resposta segura mesmo se a IA falhar: explicar o limite atual do WhatsApp e oferecer lembrete para o próximo vencimento, sem cadastrar pagamentos automáticos ou inventar data. Registros já confirmados não são reescritos pelo classificador.
