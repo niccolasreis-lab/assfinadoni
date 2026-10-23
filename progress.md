@@ -213,3 +213,16 @@ Código, contrato sanitizado e limites em n8n/image-reading. Imagens reais, snap
 - [x] Principal e monitor de áudio recebido preservados; os doze lançamentos anteriores mantêm o digest, além dos dois registros legítimos posteriores.
 
 Contrato, limites e validação sanitizados: n8n/outgoing-audio.
+
+
+## 2026-10-23 — Casos do screenshot de internet
+
+- [x] Reproduzida proposta de cancelamento como receita sem evidência de recebimento; novo guard pede esclarecimento do lote sem gravar.
+- [x] Distinções de taxa, devolução recebida, estorno futuro/solicitado, boleto e receita de outro item verificadas.
+- [x] Pedido de despesa recorrente100INTERNETVIVO sobrevive a falha da intenção, preserva dados e oferece lembrete de próximo vencimento; não há recorrência automática nem pagamento implícito.
+- [x] 20 verificações, incluindo regressões53pagadores/17lote, aprovadas; dois casos individuais passaram no n8n sem banco/envio. Workflow de QA excluído.
+- [x] Rebase preservou a voz publicada. Versão ativa c632d864-f243-4098-b86c-e2d3635c9136; somenteClassificarcomando e promptintenção modificados.
+- [x] Credenciais/settings/rotas preservados. Uma confirmação legítima simultânea consumiu sua proposta; nenhum snapshot de conversa foi restaurado.
+- [ ] O registro histórico do cancelamento219,85 segue com o tipo confirmado anteriormente; correção depende de esclarecer se houve cobrança paga ou devolução recebida.
+
+Escopo e limites: n8n/finance-input-clarity. Os testes não criaram despesas nem alteraram o histórico.

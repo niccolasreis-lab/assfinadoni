@@ -1,0 +1,13 @@
+{
+  "publishedDate": "2026-10-23",
+  "versionId": "c632d864-f243-4098-b86c-e2d3635c9136",
+  "active": true,
+  "localChecks": 20,
+  "nativeCases": 2,
+  "nativeFinancialWrites": 0,
+  "nativeGroupSends": 0,
+  "temporaryNativeWorkflowDeleted": true,
+  "existingVoicePreserved": true,
+  "existingFinancialRecordsUnmodifiedByPatch": true,
+  "runtimeState": "Live user confirmation consumed its pending proposal during publication; no state was overwritten or restored."
+}
