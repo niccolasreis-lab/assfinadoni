@@ -164,3 +164,12 @@ Pedidos naturais de resposta em áudio podem acompanhar respostas gerais do bot.
 ## 2026-10-23 — Clareza de cancelamentos e pedidos recorrentes
 
 Cancelamento de serviço não comprova receita. Se uma proposta da IA indicar entrada sem evidência de recebimento no item correspondente, esclarecer o sentido antes de pedir confirmação do lote. Estorno pendente ou recebimento de boleto não contam como dinheiro recebido. Pedidos explícitos de despesa recorrente com valor/descrição têm resposta segura mesmo se a IA falhar: explicar o limite atual do WhatsApp e oferecer lembrete para o próximo vencimento, sem cadastrar pagamentos automáticos ou inventar data. Registros já confirmados não são reescritos pelo classificador.
+
+
+## 2026-10-23 — Categorias e consultas por conversa natural
+
+O agente recebe o catálogo real da carteira e interpreta criação, listagem e aplicação de categorias em linguagem livre. Nomes desconhecidos pedem esclarecimento; categorias explícitas não viramOutros silenciosamente. Recorrencia é um rótulo, sem criar agenda automática. Aplicar a categoria em proposta reapresenta confirmação; em registro existente usa a edição confirmável já implementada. O contexto fica restrito à mesma carteira, conversa e pessoa, com expiração.
+
+Consultas podem combinar período, tipo, categoria e descrição, listar resultados ou agrupar por categoria. São executadas como filtros tipados e validados; não há SQL livre daIA. Totais e contagens consideram o conjunto completo antes do limite de exibição, e a mensagem informa a cobertura. Continuações preservam apenas os filtros verificados da mesma pessoa. Consultas por pagador conservam seu caminho e limites anteriores; subtotal somente dos itens exibidos pede esclarecimento em vez de anunciar outro escopo.
+
+O painel lista categorias pessoais e das carteiras compartilhadas explicitamente autorizadas para a conta, preservando nomes reais dos filtros. Criar categoria não recategoriza despesas antigas. Interpretação e conversa precisam retornar mensagens completas; a configuração dos modelos contempla o orçamento de raciocínio e respostas concisas.

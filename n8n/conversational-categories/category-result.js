@@ -1,0 +1,13 @@
+const x=$('Classificar comando').first().json,r=$input.first().json;
+const state=$getWorkflowStaticData('global');state.categoryConversations??={};
+const key=x.chatId+':'+x.senderId;
+const rows=Array.isArray(r.categories)?r.categories:[];
+const raw=r.category?.name??(typeof r.category==='string'?r.category:null);
+const name=typeof raw==='string'&&raw.trim()?raw.trim():rows.find(c=>categoryKey(c.name)===categoryKey(x.categoryValues?.name))?.name;
+if(r.ok!==true||!validCategoryName(name))return [{json:{...x,route:'reply',financialStatus:'alerta_categoria',replyText:'Não consegui confirmar a criação da categoria agora. Nenhum lançamento foi alterado.'}}];
+const old=state.categoryConversations[key];
+const prior=old?.userId===x.user.id&&Date.now()-Number(old.at)<=15*60*1000&&categoryKey(old.name)===categoryKey(name)?old:{};
+state.categoryConversations[key]={...prior,at:Date.now(),userId:x.user.id,name,target:x.categoryTarget||'none',phase:'created'};
+if(x.categoryTarget==='pending')return categoryPendingReply(x,name,{apply_all:x.categoryApplyAll===true,item_numbers:x.categoryItemNumbers,expectedProposalKey:x.categoryExpectedProposalKey??null},state);
+if(x.categoryTarget==='selected'||x.categoryTarget==='recent')return categoryExistingReply(x,name,x.categoryTarget,state);
+return [{json:{...x,route:'reply',financialStatus:'alerta_categoria',replyText:(r.created===false?'A categoria '+name+' já está disponível.':'Criei a categoria '+name+'.')+(x.categoryTarget&&x.categoryTarget!=='none'?' Em qual lançamento você quer usá-la?':' Nenhum lançamento foi alterado.')}}];
