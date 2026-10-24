@@ -226,3 +226,21 @@ Contrato, limites e validação sanitizados: n8n/outgoing-audio.
 - [ ] O registro histórico do cancelamento219,85 segue com o tipo confirmado anteriormente; correção depende de esclarecer se houve cobrança paga ou devolução recebida.
 
 Escopo e limites: n8n/finance-input-clarity. Os testes não criaram despesas nem alteraram o histórico.
+
+
+## 2026-10-23 — Categoria Recorrencia e consultas conversacionais
+
+- [x] Removida a lista fixa como única fonte do WhatsApp: catálogo real antes de texto, áudio e anexos, com validação canônica.
+- [x] Recorrencia criada uma vez, aceitandoRecorrência como equivalente na mesma carteira. Categoria não cria agenda.
+- [x] Criação/listagem/aplicação semânticas, contexto por pessoa/carteira e continuidade de propostas; edição de registros continua confirmável.
+- [x] RPCs de catálogo e consulta comsecurityinvoker e execução somente pelo backend; escopo, filtros e agregações completos verificados.
+- [x] Continuação de consultas, lista limitada ebreakdown com totais completos antes do limite de linhas.
+- [x] Corrigidos corpoRPC com delimitador incompatível e orçamento que cortavaJSON/conversa; modelos e credenciais preservados.
+- [x] Migration20261024005716 aplicada; workflow125nós ativo na versão1a8a88a7-a770-439c-8dab-a4c3a581d57a.
+- [x]42checks de workflow com regressões53/20/30 sobrepostas;228testes backend sem skips, incluindoSQL17/API10; lint/build aprovados.
+- [x] Oito casos nativos com modelos/RPCs reais aprovados individualmente; nenhum lançamento de teste, workflows temporários excluídos.
+- [x] Dezesseis lançamentos permaneceram idênticos; apenas o cadastro da categoria foi criado.
+- [x] Consulta de leitura pela entrada autenticada principal validada no grupo, com mensagem identificada e sem escrita financeira.
+- [x] API lista nomes pessoais e compartilhados pelas associações da sessão; POST continua pessoal. Defaultsweb alinhados comCasamento/Viagem.
+
+Contratos e limites: n8n/conversational-categories. Evidências deCI e publicação do painel acompanham aPR desta etapa.

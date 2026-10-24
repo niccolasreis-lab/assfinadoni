@@ -1,5 +1,5 @@
 import { icon } from './ui.js';
-const defaultCategories = ['Alimentação', 'Transporte', 'Moradia', 'Saúde', 'Educação', 'Lazer', 'Assinaturas', 'Outros'];
+const defaultCategories = ['Alimentação', 'Transporte', 'Moradia', 'Saúde', 'Educação', 'Lazer', 'Assinaturas', 'Casamento', 'Viagem', 'Outros'];
 const $ = (id) => document.getElementById(id);
 const money = (value) => Number(value || 0).toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' });
 const state = { transactions: [], summary: null, month: '', view: 'active', page: 1, hasMore: false, datesCustomized: false, loadId: 0, deleting: new Set(), categories: [...defaultCategories] };

@@ -1,0 +1,18 @@
+{
+  "publishedDate": "2026-10-23",
+  "workflowId": "WDLpOYIbZFtcXgWU",
+  "versionId": "1a8a88a7-a770-439c-8dab-a4c3a581d57a",
+  "nodes": 125,
+  "migrationVersion": "20261024005716",
+  "categoryCreated": "Recorrencia",
+  "nativeCases": 8,
+  "localWorkflowChecks": 42,
+  "dashboardTests": 228,
+  "apiChecks": 10,
+  "sqlChecks": 17,
+  "financialTestWrites": 0,
+  "existingLedgerUnchanged": true,
+  "credentialsAndSettingsPreserved": true,
+  "financeWritersVoiceAndInboundMonitorPreserved": true,
+  "temporaryNativeWorkflowsDeleted": true
+}

@@ -1,0 +1,31 @@
+const x=$('Classificar comando').first().json,r=$input.first().json;
+initCategoryCatalog(x);
+const money=value=>Number(value).toLocaleString('pt-BR',{style:'currency',currency:'BRL'});
+const shortDescription=value=>String(value).replace(/[\p{C}\s]+/gu,' ').trim().slice(0,180);
+const failure=()=>[{json:{...x,route:'reply',financialStatus:'gestao_consulta_livre',replyText:'Não consegui concluir essa consulta agora. Não vou estimar valores nem alterar lançamentos.'}}];
+const coverage=r.coverage,totals=r.totals,rows=r.transactions;
+const numeric=value=>(typeof value==='number'||typeof value==='string'&&value.trim()!=='')&&Number.isFinite(Number(value));
+if(r.ok!==true||coverage?.complete!==true||!Number.isInteger(coverage.matchedCount)||!Number.isInteger(coverage.shownCount)||coverage.matchedCount<coverage.shownCount||coverage.shownCount<0||coverage.limit!==x.queryValues.limit||!Array.isArray(rows)||rows.length!==coverage.shownCount||rows.length>50||!totals||!['income','expense','net'].every(k=>numeric(totals[k]))||Number(totals.income)<0||Number(totals.expense)<0||Math.abs(Math.round(Number(totals.income)*100)-Math.round(Number(totals.expense)*100)-Math.round(Number(totals.net)*100))>0)return failure();
+const type=row=>row.transaction_type??row.type;
+const date=row=>row.transaction_date??row.date;
+if(rows.some(row=>!row||!row.id||!['receita','despesa'].includes(type(row))||!numeric(row.amount)||Number(row.amount)<=0||typeof row.description!=='string'||typeof row.category!=='string'||!/^\d{4}-\d{2}-\d{2}$/.test(date(row)||''))||new Set(rows.map(row=>row.id)).size!==rows.length)return failure();
+if(!r.filters||typeof r.filters!=='object'||Array.isArray(r.filters))return failure();
+const filters={...x.queryValues,...r.filters};
+if(['date_from','date_to','type','category','search','limit'].some(k=>(filters[k]??null)!==(x.queryValues[k]??null))||filters.action!==x.queryValues.action)return failure();
+if(rows.some(row=>filters.type&&type(row)!==filters.type||filters.category&&categoryKey(row.category)!==categoryKey(filters.category)||filters.date_from&&date(row)<filters.date_from||filters.date_to&&date(row)>filters.date_to))return failure();
+const period=filters.date_from||filters.date_to?'Período: '+(filters.date_from||'início do histórico')+' até '+(filters.date_to||'fim do histórico')+'.':'Período: todo o histórico registrado.';
+const scope=period+(filters.category?' Categoria: '+filters.category+'.':'')+(filters.search?' Texto contém: '+filters.search+'.':'');
+const aggregate=filters.type==='despesa'?'Total de saídas: '+money(totals.expense)+'.':filters.type==='receita'?'Total de entradas: '+money(totals.income)+'.':'Entradas: '+money(totals.income)+'. Saídas: '+money(totals.expense)+'. Resultado dos lançamentos consultados: '+money(totals.net)+'.';
+let detail='';
+if(filters.action==='list')detail=rows.length?'\n'+rows.map((row,i)=>(i+1)+'. '+(type(row)==='receita'?'Entrada: ':'Saída: ')+money(row.amount)+' — '+shortDescription(row.description)+' ('+date(row)+', '+String(resolveCategory(row.category)||row.category).slice(0,60)+')').join('\n'):'\nNenhum lançamento corresponde aos filtros.';
+if(filters.action==='breakdown'){
+ const groups=r.breakdown;
+ if(!Array.isArray(groups)||groups.some(g=>typeof g.category!=='string'||!['receita','despesa'].includes(g.type)||!Number.isInteger(g.count)||g.count<1||!numeric(g.total)||Number(g.total)<0))return failure();
+ const groupTotal=t=>groups.filter(g=>g.type===t).reduce((sum,g)=>sum+Math.round(Number(g.total)*100),0);
+ if(groups.reduce((sum,g)=>sum+g.count,0)!==coverage.matchedCount||groupTotal('receita')!==Math.round(Number(totals.income)*100)||groupTotal('despesa')!==Math.round(Number(totals.expense)*100))return failure();
+ detail=groups.length?'\n'+groups.map(g=>'• '+g.category+' — '+(g.type==='receita'?'entradas: ':'saídas: ')+money(g.total)+' ('+g.count+' lançamento(s)).').join('\n'):'\nNenhum lançamento corresponde aos filtros.';
+}
+const display=filters.action==='list'?' Mostrando '+coverage.shownCount+' de '+coverage.matchedCount+' lançamentos; os totais incluem todos os registros que correspondem aos filtros.':' '+coverage.matchedCount+' lançamento(s) corresponde(m) aos filtros.';
+const state=$getWorkflowStaticData('global');state.queryConversations??={};
+state.queryConversations[x.chatId+':'+x.senderId]={at:Date.now(),userId:x.user.id,filters,coverage,totals};
+return [{json:{...x,route:'reply',financialStatus:'gestao_consulta_livre',queryCoverage:coverage,queryFilters:filters,replyText:scope+'\n'+aggregate+detail+'\n'+display.trim()}}];
