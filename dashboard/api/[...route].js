@@ -42,6 +42,7 @@ const routes = {
   splits,
   subscriptions,
   timeline,
+  mcp,
   'v1/accounts': accounts,
   'v1/alerts': alerts,
   'v1/assistant': assistant,
