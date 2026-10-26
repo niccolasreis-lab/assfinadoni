@@ -45,6 +45,10 @@ export default async function handler(req, res) {
     }
     return send(res, 405, { error: 'Método não permitido.' });
   } catch (error) {
+    res.setHeader('X-Finance-Auth-Diagnostic', [stage, error.code || error.status || 'runtime',
+      /^https:\/\/[a-z0-9-]+\.supabase\.co\/?$/.test(String(process.env.SUPABASE_URL || '')) ? 'url-ok' : 'url-invalid',
+      process.env.SUPABASE_SERVICE_ROLE_KEY ? 'key-present' : 'key-missing',
+      String(process.env.SESSION_SECRET || '').length >= 32 ? 'session-ok' : 'session-invalid'].join('.'));
     console.error('finance_session_error', {
       stage, code: error.code || null, status: error.status || null,
       config: {
