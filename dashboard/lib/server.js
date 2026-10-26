@@ -155,7 +155,14 @@ export function validatedTransaction(input) {
   if (!Number.isInteger(installments) || installments < 0 || installments > 120) throw new Error('Número de parcelas inválido.');
   if (payment_method === 'misto' && (cash_amount <= 0 || cash_amount >= amount || installments < 2)) throw new Error('Informe o valor em dinheiro e pelo menos 2 parcelas.');
   if (payment_method === 'cartao' && installments < 1) throw new Error('Informe o número de parcelas.');
-  return { transaction_type, amount: amount.toFixed(2), category, description, transaction_date, payment_details: { method: payment_method, cash_amount: cash_amount.toFixed(2), installments } };
+  const payment_details = { method: payment_method, cash_amount: cash_amount.toFixed(2), installments };
+  if (Object.hasOwn(input, 'card_name')) {
+    if (input.card_name != null && typeof input.card_name !== 'string') throw new Error('Nome do cartão inválido.');
+    const card = String(input.card_name || '').trim().replace(/\s+/g, ' ');
+    if (card.length > 80 || card && (!/^[\p{L}\p{N} .&()/'-]+$/u.test(card) || /\d[\d .-]{10,}\d/.test(card))) throw new Error('Informe apenas o nome ou apelido do cartão.');
+    payment_details.card_name = ['cartao', 'misto'].includes(payment_method) ? card || null : null;
+  }
+  return { transaction_type, amount: amount.toFixed(2), category, description, transaction_date, payment_details };
 }
 
 function config() {

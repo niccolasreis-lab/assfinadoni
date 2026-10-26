@@ -133,3 +133,31 @@ confirmação para ações destrutivas e registra auditoria.
 inclui fixtures SQL isoladas e testes de autorização. As flags `ENABLE_GOALS`,
 `ENABLE_SMART_ALERTS`, `ENABLE_AI_AGENTS`, `ENABLE_INVESTMENTS` e
 `ENABLE_FORECAST` começam desligadas para permitir rollout gradual.
+
+## Cartões e eventos do WhatsApp
+
+A migração `20261026192356_finance_atomic_events_and_card_binding.sql` cria a
+unicidade de `(user_id, external_event_id)` para eventos não nulos, preserva a
+reserva de eventos excluídos permanentemente e oferece a RPC de gravação
+`finance_whatsapp_record_transaction`. A RPC é exclusiva do backend, exige uma
+proposta confirmada, serializa o mesmo evento e retorna o lançamento existente
+em uma repetição. Um payload financeiro divergente é recusado.
+
+O campo opcional `payment_details.card_name` é vinculado a um cadastro mínimo na
+mesma carteira. Nomes normalizados iguais reutilizam o cartão ativo; carteiras
+diferentes mantêm cadastros separados. Não são inferidos bandeira, limite,
+fechamento, vencimento, titular nem plano de parcelas. Número completo e CVV não
+fazem parte desse cadastro. O cliente antigo pode editar outros campos sem
+apagar o cartão; uma troca explícita para Pix/dinheiro remove o vínculo.
+
+A Central lista cartões pessoais e os das carteiras do casal autorizadas pela
+sessão, marcando os compartilhados como “Casal”. Os lançamentos mostram o nome
+do cartão; o formulário pessoal aceita esse nome opcional.
+
+Para adaptar uma exportação íntegra do n8n após a migração, execute
+`python3 n8n/integrate-cards.py entrada.json saida.json` a partir da raiz do
+repositório. O script não publica o fluxo nem obtém credenciais. O arquivo de
+saída deve ficar fora do Git, pois uma exportação pode conter dados privados.
+Execute `node n8n/test-card-workflow.cjs saida.json` antes de publicar. Preserve
+ID, webhook, estado e credenciais do workflow existente. Os testes SQL ficam em
+`dashboard/tests/atomic-cards-sql.test.js`.

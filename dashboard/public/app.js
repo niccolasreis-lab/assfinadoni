@@ -247,6 +247,7 @@ function render() {
     metadata.append(owner);
     if (isShared(row)) { const badge = document.createElement('span'); badge.className = 'badge shared-badge'; badge.textContent = 'Compartilhado'; metadata.append(badge); }
     if (couple) { const badge = document.createElement('span'); badge.className = 'badge payer-badge'; badge.textContent = payerLabel(row); metadata.append(badge); }
+    if (row.payment_details?.card_name) { const badge = document.createElement('span'); badge.className = 'badge'; badge.textContent = `Cartão: ${row.payment_details.card_name}`; metadata.append(badge); }
     description.append(metadata);
     if (state.view === 'trash' && row.deleted_at) {
       const note = document.createElement('small'); note.className = 'deleted-note';
@@ -386,6 +387,7 @@ function openForm(row = null) {
   $('payment-method').value = payment.method || 'nao_informado';
   $('cash-amount').value = payment.cash_amount || '';
   $('installments').value = payment.installments || '';
+  $('card-name').value = payment.card_name || '';
   $('payment-breakdown').hidden = !['misto', 'cartao'].includes($('payment-method').value);
   if (row) $('transaction-date').max = saoPauloToday();
   else $('transaction-date').removeAttribute('max');
@@ -401,6 +403,7 @@ async function saveTransaction(event) {
   const row = state.transactions.find((item) => item.id === id);
   if (row && !isOwn(row) && !await confirmAction(`Este lançamento pertence a ${ownerName(row)}. A alteração afetará as duas contas. Continuar?`)) return;
   const body = { transaction_type: $('transaction-type').value, amount: Number($('amount').value), category: $('category').value, description: $('description').value.trim(), transaction_date: $('transaction-date').value, payment_method: $('payment-method').value, cash_amount: Number($('cash-amount').value || 0), installments: Number($('installments').value || 0) };
+  body.card_name = $('card-name').value.trim();
   if (id) body.id = id;
   const button = $('save-transaction'); button.disabled = true;
   button.textContent = id ? 'Salvando alterações...' : 'Adicionando...';

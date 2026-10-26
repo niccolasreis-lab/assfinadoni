@@ -61,11 +61,11 @@ export async function executeFinanceTool(name, rawArgs = {}, rawContext, depende
       return call('finance_transactions_query', { p_user_id: context.userId, p_search: args.search == null ? null : String(args.search), p_date_from: optionalDate(args.date_from), p_date_to: optionalDate(args.date_to), p_type: args.type == null ? null : String(args.type), p_category: args.category == null ? null : String(args.category), p_limit: limit(args.limit) });
     case 'create_transaction': {
       const tx = validatedTransaction(args);
-      return call('finance_dashboard_create_transaction', { p_account_id: context.accountId, p_transaction_type: tx.transaction_type, p_amount: tx.amount, p_category: tx.category, p_description: tx.description, p_transaction_date: tx.transaction_date });
+      return call('finance_dashboard_create_transaction', { p_account_id: context.accountId, p_transaction_type: tx.transaction_type, p_amount: tx.amount, p_category: tx.category, p_description: tx.description, p_transaction_date: tx.transaction_date, p_payment_details: tx.payment_details });
     }
     case 'update_transaction': {
       const tx = validatedTransaction(args);
-      return call('finance_dashboard_update_transaction', { p_account_id: context.accountId, p_transaction_id: uuid(args.id), p_transaction_type: tx.transaction_type, p_amount: tx.amount, p_category: tx.category, p_description: tx.description, p_transaction_date: tx.transaction_date });
+      return call('finance_dashboard_update_transaction', { p_account_id: context.accountId, p_transaction_id: uuid(args.id), p_transaction_type: tx.transaction_type, p_amount: tx.amount, p_category: tx.category, p_description: tx.description, p_transaction_date: tx.transaction_date, p_payment_details: tx.payment_details });
     }
     case 'delete_transaction':
       return call('finance_dashboard_delete_transaction', { p_account_id: context.accountId, p_transaction_id: uuid(args.id) });

@@ -89,7 +89,7 @@ async function loadCentral() {
   $('central-status').textContent = 'Carregando...';
   try {
     const [accounts, cards, installments] = await Promise.all([
-      api.request('/api/v1/accounts'), api.request('/api/v1/cards'), api.request('/api/v1/installments'),
+      api.request('/api/v1/accounts'), api.request('/api/v1/cards?scope=all'), api.request('/api/v1/installments'),
     ]);
     const accountRows = Array.isArray(accounts.accounts) ? accounts.accounts : [];
     const cardRows = Array.isArray(cards.cards) ? cards.cards : [];
@@ -98,7 +98,7 @@ async function loadCentral() {
     $('central-cards-count').textContent = `${cardRows.length} ${cardRows.length === 1 ? 'cartão' : 'cartões'}`;
     $('central-installments-count').textContent = `${installmentRows.length} ${installmentRows.length === 1 ? 'parcela' : 'parcelas'}`;
     $('central-accounts').replaceChildren(...accountRows.slice(0, 4).map((row) => { const item = document.createElement('span'); item.textContent = row.name; return item; }));
-    $('central-cards').replaceChildren(...cardRows.slice(0, 4).map((row) => { const item = document.createElement('span'); item.textContent = row.nickname || row.name; return item; }));
+    $('central-cards').replaceChildren(...cardRows.slice(0, 4).map((row) => { const item = document.createElement('span'); item.textContent = `${row.nickname || row.name}${row.wallet_scope === 'couple' ? ' · Casal' : ''}`; return item; }));
     $('central-status').textContent = '';
   } catch (error) { $('central-status').textContent = error.message || 'Central indisponível.'; }
 }

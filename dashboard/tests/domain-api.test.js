@@ -21,12 +21,17 @@ test('endpoints do domínio usam a carteira autenticada e RPCs tipadas', async (
     if (parsed.pathname.endsWith('/dashboard_accounts')) return { ok: true, status: 200, json: async () => [account] };
     if (parsed.pathname.endsWith('/rpc/finance_account_list')) return { ok: true, status: 200, json: async () => [] };
     if (parsed.pathname.endsWith('/rpc/finance_card_list')) return { ok: true, status: 200, json: async () => [] };
+    if (parsed.pathname.endsWith('/rpc/finance_dashboard_card_list')) return { ok: true, status: 200, json: async () => [] };
     if (parsed.pathname.endsWith('/rpc/finance_installment_list')) return { ok: true, status: 200, json: async () => [] };
     return { ok: true, status: 200, json: async () => ({ id: 'created' }) };
   };
   try {
     const a = response(); await accounts({ method: 'POST', headers, body: { name: 'Carteira', type: 'cash' } }, a); assert.equal(a.statusCode, 201);
     const c = response(); await cards({ method: 'GET', headers, query: {} }, c); assert.equal(c.statusCode, 200);
+    const sharedCards = response(); await cards({ method: 'GET', headers, query: { scope: 'all', user_id: 'foreign-wallet' } }, sharedCards); assert.equal(sharedCards.statusCode, 200);
+    const cardCall = calls.find(call => call.parsed.pathname.endsWith('/rpc/finance_dashboard_card_list') && call.body.p_scope === 'all');
+    assert.deepEqual(cardCall.body, { p_account_id: account.id, p_scope: 'all' });
+    const invalidCards = response(); await cards({ method: 'GET', headers, query: { scope: 'foreign-wallet' } }, invalidCards); assert.equal(invalidCards.statusCode, 400);
     const s = response(); await splits({ method: 'PATCH', headers, body: { transaction_id: '33333333-3333-4333-8333-333333333333', splits: [{ account_id: '44444444-4444-4444-8444-444444444444', amount: 20 }] } }, s); assert.equal(s.statusCode, 200);
     const i = response(); await installments({ method: 'GET', headers, query: { plan_id: '55555555-5555-4555-8555-555555555555' } }, i); assert.equal(i.statusCode, 200);
     assert.equal(calls.find((call) => call.parsed.pathname.endsWith('/rpc/finance_account_create')).body.p_user_id, account.finance_user_id);
