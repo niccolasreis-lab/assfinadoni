@@ -101,7 +101,7 @@ export function readSession(req) {
 export async function authenticated(req) {
   const session = readSession(req);
   if (!session) return null;
-  const params = new URLSearchParams({ select: 'id,username,display_name,finance_user_id,session_version,active,finance_users(name,telegram_chat_id)', id: `eq.${session.aid}`, active: 'eq.true', limit: '1' });
+  const params = new URLSearchParams({ select: 'id,username,display_name,finance_user_id,session_version,active,finance_users!dashboard_accounts_finance_user_id_fkey(name,telegram_chat_id)', id: `eq.${session.aid}`, active: 'eq.true', limit: '1' });
   const rows = await supabase(`dashboard_accounts?${params}`);
   if (!Array.isArray(rows) || rows.length !== 1 || rows[0].active !== true || Number(rows[0].session_version) !== session.v) return null;
   const row = rows[0];

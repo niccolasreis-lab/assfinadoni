@@ -20,7 +20,7 @@ export default async function handler(req, res) {
       let username;
       try { username = normalizeUsername(body.username); }
       catch { username = `invalid_${Buffer.from(String(body.username || '')).toString('hex').slice(0, 20)}`; }
-      const params = new URLSearchParams({ select: 'id,username,display_name,password_hash,finance_user_id,session_version,active,locked_until,finance_users(name,telegram_chat_id)', username: `eq.${username}`, limit: '1' });
+      const params = new URLSearchParams({ select: 'id,username,display_name,password_hash,finance_user_id,session_version,active,locked_until,finance_users!dashboard_accounts_finance_user_id_fkey(name,telegram_chat_id)', username: `eq.${username}`, limit: '1' });
       stage = 'account_lookup';
       const rows = /^[a-z0-9_]{3,40}$/.test(username) ? await supabase(`dashboard_accounts?${params}`) : [];
       const account = Array.isArray(rows) && rows.length === 1 ? rows[0] : null;
@@ -45,10 +45,6 @@ export default async function handler(req, res) {
     }
     return send(res, 405, { error: 'Método não permitido.' });
   } catch (error) {
-    res.setHeader('X-Finance-Auth-Diagnostic', [stage, error.code || error.status || 'runtime',
-      /^https:\/\/[a-z0-9-]+\.supabase\.co\/?$/.test(String(process.env.SUPABASE_URL || '')) ? 'url-ok' : 'url-invalid',
-      process.env.SUPABASE_SERVICE_ROLE_KEY ? 'key-present' : 'key-missing',
-      String(process.env.SESSION_SECRET || '').length >= 32 ? 'session-ok' : 'session-invalid'].join('.'));
     console.error('finance_session_error', {
       stage, code: error.code || null, status: error.status || null,
       config: {
