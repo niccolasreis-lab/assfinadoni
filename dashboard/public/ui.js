@@ -159,7 +159,10 @@ window.FinanceUI = {
     resetHistory(); profile?.reset(); reminders?.reset(); section='overview'; updatePanels();
     $('history-chart').replaceChildren(); $('history-table').replaceChildren(); $('history-status').textContent=''; $('balance-insight').textContent='';
     $('password').type='password'; $('toggle-password').setAttribute('aria-pressed','false'); $('toggle-password').setAttribute('aria-label','Mostrar senha');
-    document.querySelectorAll('dialog').forEach(dialog=>dialog.closeImmediately());
+    document.querySelectorAll('dialog').forEach(dialog=>{
+      if (typeof dialog.closeImmediately === 'function') dialog.closeImmediately();
+      else if (dialog.open) dialog.close();
+    });
   },
   confirm(copy) {
     const dialog=$('confirm-dialog');

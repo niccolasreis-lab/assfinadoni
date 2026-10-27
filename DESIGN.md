@@ -1,18 +1,18 @@
 ---
 name: Assistente de Finanças — Nicolas & Ionara
-description: Clareza financeira em uma interface grafite e violeta.
+description: Clareza financeira em painéis claros, vidro suave e detalhes lilás.
 colors:
-  primary: "#7C3AED"
-  primary-deep: "#6D28D9"
-  positive: "#22C55E"
-  negative: "#F43F5E"
-  gold: "#F4B000"
-  background: "#080B12"
-  surface: "#121722"
-  surface-raised: "#171D29"
-  text: "#F8FAFC"
-  muted: "#94A3B8"
-  border: "#283142"
+  primary: "#6550DD"
+  primary-deep: "#5740C9"
+  positive: "#17775E"
+  negative: "#B13959"
+  gold: "#6854B3"
+  background: "#EEEDF5"
+  surface: "#FFFFFF"
+  surface-raised: "#F5F4FA"
+  text: "#262537"
+  muted: "#656477"
+  border: "#DCDBE8"
 typography:
   headline:
     fontFamily: Inter
@@ -119,3 +119,6 @@ O avatar abre um menu ancorado com nome, foto e acesso à edição sincronizada.
 Entradas de seção e diálogos duram 220 ms; saídas, 150 ms. Uma borda violeta em gradiente aparece no hover/foco dos módulos sem deslocar layout. Áreas informativas não recebem cursor de ação. Movimento reduzido mantém estados e foco sem deslocamentos.
 
 O sino dá acesso a contas a pagar e pendências. A central diferencia consulta indisponível, lista vazia, concluído e cancelado. Formulários mostram a preferência de canal, antecedência e horário em São Paulo. Os avisos externos são discretos; somente a interface autenticada revela detalhes. Contas futuras não integram os totais antes da confirmação.
+
+
+A direção visual de 27/10/2026 foi adaptada da referência fornecida pelo usuário: superfícies claras, cartões iridescentes em CSS e bordas suaves. O texto tem contraste mais alto que a referência. Os gráficos e totais usam exclusivamente as consultas existentes. Não há números de cartão, saldos fictícios nem novas APIs. A navegação lateral permanece no desktop e a navegação inferior no celular.

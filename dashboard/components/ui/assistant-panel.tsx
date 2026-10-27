@@ -66,7 +66,7 @@ export function AssistantPanel({reload}:Props) {
       if(!alive.current)return;merge([job]);setRetry(null);setText('');setFile(null)
     }catch(e){if(alive.current)setError((e as Error).message)}finally{if(alive.current)setSending(false)}
   }
-  return <><button ref={opener} className="assistant-launch" onClick={()=>setOpen(true)} aria-haspopup="dialog"><MessageCircle size={20}/>Assistente IA</button>
+  return <><button ref={opener} className="assistant-launch" onClick={()=>setOpen(true)} aria-haspopup="dialog" aria-label="Abrir assistente financeiro" title="Assistente financeiro"><MessageCircle size={20}/>Assistente IA</button>
     <dialog ref={dialog} className="assistant-panel" aria-labelledby="assistant-title" onCancel={()=>setOpen(false)} onClose={()=>{setOpen(false);opener.current?.focus()}}>
       <header><div><h2 id="assistant-title">Assistente IA</h2><p>Texto, áudio ou PDF. Seu financeiro, em conversa.</p></div><button aria-label="Fechar assistente" className="assistant-icon" onClick={()=>setOpen(false)}><X/></button></header>
       <div className="assistant-messages" role="log" aria-live="polite" aria-relevant="additions text">

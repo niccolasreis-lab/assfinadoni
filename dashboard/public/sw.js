@@ -1,6 +1,6 @@
 /* Only the explicitly public offline screen and branding are stored on disk.
  * API responses, dashboard HTML, app code and financial data are never cached. */
-const CACHE = 'financeiro-public-offline-v3';
+const CACHE = 'financeiro-public-offline-v4';
 const PUBLIC_ASSETS = ['/offline.html', '/offline.css', '/icons/icon-192.png', '/icons/icon-512.png'];
 
 self.addEventListener('install', event => {

@@ -3,11 +3,12 @@
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
-  <meta name="theme-color" content="#080B12">
+  <meta name="theme-color" content="#eeedf5">
   <title>Assistente de Finanças — Nicolas &amp; Ionara</title>
   <link rel="stylesheet" href="/styles.css">
   <link rel="stylesheet" href="/reminders.css">
   <link rel="stylesheet" href="/react.css">
+  <link rel="stylesheet" href="/glass.css">
   <link rel="manifest" href="/manifest.webmanifest">
   <link rel="apple-touch-icon" href="/icons/icon-192.png">
   <meta name="apple-mobile-web-app-capable" content="yes">
@@ -61,7 +62,7 @@
       </header>
       <div class="content">
         <div class="heading-row" id="workspace-heading" tabindex="-1">
-          <div><h1 id="welcome-title">Seu mês, sem complicação.</h1><p id="welcome-copy" class="muted">Organize seus lançamentos e compartilhe só o que escolher.</p></div>
+          <div><p class="workspace-kicker">SEU ESPAÇO FINANCEIRO</p><h1 id="welcome-title">Seu mês, sem complicação.</h1><p id="welcome-copy" class="muted">Organize seus lançamentos e compartilhe só o que escolher.</p></div>
           <div class="heading-actions"><label class="month-label" for="month">Mês</label><input id="month" type="month"><button id="new-transaction" class="button primary" type="button"><span data-icon="plus"></span> Novo lançamento</button></div>
         </div>
         <section id="settings-panel" class="panel settings-panel" hidden aria-labelledby="settings-title">
@@ -84,9 +85,9 @@
         <p id="page-message" class="message" role="status" hidden></p>
         <div class="summary-heading"><h2>Resumo do mês</h2><label id="shared-summary-control" class="toggle-control" for="include-shared-summary"><input id="include-shared-summary" type="checkbox"><span class="toggle-track" aria-hidden="true"></span><span>Incluir compartilhados nos totais</span></label></div>
         <section class="cards" aria-label="Resumo mensal" aria-live="polite">
-          <article class="card balance"><div class="metric-label"><span>Saldo do mês</span><span data-icon="wallet"></span></div><strong id="balance-total">—</strong><small>Receitas menos despesas no período</small><p id="balance-insight" class="balance-insight">Comparando com o mês anterior...</p></article>
-          <article class="card"><div class="metric-label"><span>Receitas</span><span class="metric-icon income" data-icon="up"></span></div><strong id="income-total">—</strong><small>Entradas do mês</small></article>
-          <article class="card"><div class="metric-label"><span>Despesas</span><span class="metric-icon expense" data-icon="down"></span></div><strong id="expense-total">—</strong><small>Saídas do mês</small></article>
+          <article class="card balance"><div class="card-grain" aria-hidden="true"></div><div class="metric-label"><span>Saldo do mês</span><span data-icon="wallet"></span></div><strong id="balance-total">—</strong><small>Receitas menos despesas no período</small><p id="balance-insight" class="balance-insight">Comparando com o mês anterior...</p></article>
+          <article class="card card-income"><div class="metric-label"><span>Receitas</span><span class="metric-icon income" data-icon="up"></span></div><strong id="income-total">—</strong><small>Entradas do mês</small></article>
+          <article class="card card-expense"><div class="metric-label"><span>Despesas</span><span class="metric-icon expense" data-icon="down"></span></div><strong id="expense-total">—</strong><small>Saídas do mês</small></article>
         </section>
         <div id="quick-actions" class="quick-actions"><button id="quick-income" class="button secondary" type="button"><span class="income" data-icon="plus"></span>Adicionar receita</button><button id="quick-expense" class="button secondary" type="button"><span class="expense" data-icon="plus"></span>Adicionar despesa</button><a id="open-telegram" class="button ghost" target="_blank" rel="noopener noreferrer" hidden><span data-icon="send"></span>Abrir Telegram</a><span id="telegram-link-status" class="muted">Link do assistente não configurado</span></div>
         <section id="central-panel" class="panel central-panel" hidden aria-labelledby="central-title">
@@ -97,11 +98,14 @@
             <article class="central-card"><h3>Parcelas futuras</h3><p id="central-installments-count" class="central-value">—</p><p class="muted">Valores previstos permanecem separados do realizado.</p></article>
           </div>
         </section>
+        <div class="analytics-grid">
         <section id="history-panel" class="panel history-panel" aria-labelledby="history-title">
           <div class="panel-heading"><div><h2 id="history-title">Seu financeiro ao longo do tempo</h2><p class="muted">Receitas e despesas · últimos 6 meses</p></div><div class="chart-legend"><span class="income">Receitas</span><span class="expense">Despesas</span></div></div>
           <div id="history-chart" class="chart-host" aria-live="polite"></div><div id="history-status" class="muted" role="status"></div><button id="retry-history" class="button ghost" type="button" hidden>Tentar novamente</button>
           <details class="chart-details"><summary>Ver valores por mês</summary><div id="history-table" class="table-wrap"></div></details>
         </section>
+          <section id="category-panel" class="panel category-panel"><div class="panel-heading"><h2>Despesas por categoria</h2></div><div id="category-chart" class="category-chart"></div><div id="category-list" class="category-list"></div></section>
+        </div>
         <div class="columns">
           <section id="transactions-panel" class="panel transactions-panel" aria-label="Lançamentos e lixeira">
             <div class="panel-heading"><h2 id="transactions-title">Lançamentos</h2><div class="view-switch" role="group" aria-label="Visualizar lançamentos"><button id="active-view" class="view-button" type="button" aria-pressed="true">Lançamentos</button><button id="trash-view" class="view-button" type="button" aria-pressed="false">Lixeira</button></div><span id="transaction-count" class="count">0 registros</span></div>
@@ -120,7 +124,7 @@
             <p id="empty-state" class="empty" hidden></p>
             <nav id="pagination" class="pagination" aria-label="Páginas de lançamentos" hidden><button id="previous-page" class="button ghost" type="button">Anterior</button><span id="page-number" aria-live="polite">Página 1</span><button id="next-page" class="button ghost" type="button">Próxima</button></nav>
           </section>
-          <section id="category-panel" class="panel category-panel"><div class="panel-heading"><h2>Despesas por categoria</h2></div><div id="category-chart" class="category-chart"></div><div id="category-list" class="category-list"></div></section>
+
         </div>
       </div>
       </div>
