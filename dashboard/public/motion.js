@@ -1,35 +1,57 @@
-// Animation never delays API requests or session cleanup. Interrupted motion is safe.
-const preferenceKey = 'finance_motion_v1';
-let enabled = true;
-try { enabled = localStorage.getItem(preferenceKey) !== 'off'; } catch { /* Storage may be unavailable. */ }
+// Presentation preferences never change API requests or financial state.
+const preferenceKey = 'finance_motion_v2';
+const modes = new Set(['off', 'soft', 'full']);
+const preference = window.matchMedia('(prefers-reduced-motion: reduce)');
+function readMode() {
+  try {
+    const saved = localStorage.getItem(preferenceKey);
+    if (modes.has(saved)) return saved;
+    return localStorage.getItem('finance_motion_v1') === 'off' ? 'off' : 'soft';
+  } catch { return 'soft'; }
+}
+let mode = readMode();
 const active = new Set();
-export const motionEnabled = () => enabled && !window.matchMedia('(prefers-reduced-motion: reduce)').matches;
-export function setMotionEnabled(value) {
-  enabled = Boolean(value);
-  try { localStorage.setItem(preferenceKey, enabled ? 'on' : 'off'); } catch { /* Keep the in-memory preference. */ }
-  document.documentElement.dataset.motion = enabled ? 'on' : 'off';
+export const getMotionMode = () => mode;
+export const motionEnabled = () => mode !== 'off' && !preference.matches;
+function applyPreference() {
+  document.documentElement.dataset.motion = motionEnabled() ? 'on' : 'off';
+  document.documentElement.dataset.motionMode = mode;
   if (!motionEnabled()) for (const animation of active) animation.finish();
+  const select = document.getElementById('motion-mode');
+  if (select) select.value = mode;
+  const status = document.getElementById('motion-mode-status');
+  if (status) status.textContent = preference.matches
+    ? 'Movimento reduzido do sistema ativo: as animações estão desativadas. Sua escolha permanece salva.'
+    : {off:'Sem animações. Todas as funções continuam disponíveis.',soft:'Transições breves e discretas. Recomendado para uso diário.',full:'Transições e efeitos visuais completos, sem efeitos 3D.'}[mode];
   window.dispatchEvent(new Event('finance:motion'));
 }
+export function setMotionMode(value) {
+  if (!modes.has(value)) return;
+  // Complete an in-flight transition before changing its motion policy.
+  for (const animation of active) animation.finish();
+  mode = value;
+  try { localStorage.setItem(preferenceKey, mode); } catch { /* Keep the in-memory preference. */ }
+  applyPreference();
+}
+// Keep existing integrations using the binary API compatible.
+export function setMotionEnabled(value) { setMotionMode(value ? 'soft' : 'off'); }
 const reduced = () => !motionEnabled();
 function initializePreference() {
-  document.documentElement.dataset.motion = enabled ? 'on' : 'off';
-  const target = document.querySelector('#settings-panel .help-row');
-  if (!target || document.getElementById('motion-toggle')) return;
-  const button = document.createElement('button');
-  button.id = 'motion-toggle'; button.type = 'button'; button.className = 'button secondary';
-  const update = () => { button.textContent = enabled ? 'Animações: ativadas' : 'Animações: desativadas'; button.setAttribute('aria-pressed', String(enabled)); };
-  update(); button.addEventListener('click', () => { setMotionEnabled(!enabled); update(); }); target.append(button);
+  applyPreference();
+  document.getElementById('motion-mode')?.addEventListener('change', event => setMotionMode(event.target.value));
 }
 if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', initializePreference, { once: true }); else initializePreference();
-window.matchMedia('(prefers-reduced-motion: reduce)').addEventListener('change', () => { if(reduced()) for(const animation of active) animation.finish(); });
+preference.addEventListener('change', applyPreference);
+window.addEventListener('storage', event => { if (event.key === preferenceKey || event.key === null) { mode = readMode(); applyPreference(); } });
 const running = new WeakMap(), installed = new WeakSet(), detailsInstalled = new WeakSet();
 let observer;
 function animate(element, frames, duration) {
   if (!element) return Promise.resolve();
   running.get(element)?.cancel();
   if (reduced() || !element.animate) return Promise.resolve();
-  const animation = element.animate(frames, { duration, easing:'cubic-bezier(.16,1,.3,1)' });
+  const soft = mode === 'soft';
+  if (soft) frames = frames.at(-1)?.opacity === 0 ? [{opacity:1},{opacity:0}] : [{opacity:.92},{opacity:1}];
+  const animation = element.animate(frames, { duration:soft ? Math.min(duration,140) : duration, easing:'cubic-bezier(.16,1,.3,1)' });
   running.set(element, animation);active.add(animation);
   return animation.finished.catch(() => {}).finally(() => { active.delete(animation);if(running.get(element) === animation) running.delete(element); });
 }
@@ -43,7 +65,7 @@ function installDetails(detail) {
   const summary=detail.querySelector(':scope > summary');if(!summary)return;
   detailsInstalled.add(detail);
   summary.addEventListener('click',event=>{
-    if(event.defaultPrevented || reduced() || !detail.animate || event.target.closest('a,button,input,select,textarea'))return;
+    if(event.defaultPrevented || reduced() || mode !== 'full' || !detail.animate || event.target.closest('a,button,input,select,textarea'))return;
     event.preventDefault();
     const previous=detailMotion.get(detail), opening=previous ? !previous.opening : !detail.open;
     const start=detail.getBoundingClientRect().height;
