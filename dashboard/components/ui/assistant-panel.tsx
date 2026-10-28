@@ -1,13 +1,9 @@
-import { useEffect, useRef, useState, lazy, Suspense, Component, type ReactNode } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import { MessageCircle, Mic, Square, Paperclip, Send, X, Trash2, Pencil } from 'lucide-react'
-const CanvasRevealEffect = lazy(() => import('./canvas-effect').then(m => ({ default: m.CanvasRevealEffect })))
 type Transaction = { id?: string; description: string; amount: number; transaction_date: string; deleted_at?: string }
 type Job = { id: string; status: string; created_at?: string; result?: { text: string; transcript?: string; transactions?: Transaction[]; confirmation_id?: string; changed?: boolean } }
 type Props = { reload: () => void }
 const MAX_FILE = 3 * 1024 * 1024
-class DecorationBoundary extends Component<{children:ReactNode},{failed:boolean}> {
-  state={failed:false}; static getDerivedStateFromError(){return {failed:true}}; render(){return this.state.failed?null:this.props.children}
-}
 async function request(path: string, body?: unknown, signal?: AbortSignal) {
   const response = await fetch(path, { method: body ? 'POST' : 'GET', credentials: 'same-origin', cache: 'no-store', signal,
     headers: body ? { 'Content-Type': 'application/json' } : {}, body: body ? JSON.stringify(body) : undefined })
@@ -70,7 +66,7 @@ export function AssistantPanel({reload}:Props) {
     <dialog ref={dialog} className="assistant-panel" aria-labelledby="assistant-title" onCancel={()=>setOpen(false)} onClose={()=>{setOpen(false);opener.current?.focus()}}>
       <header><div><h2 id="assistant-title">Assistente IA</h2><p>Texto, áudio ou PDF. Seu financeiro, em conversa.</p></div><button aria-label="Fechar assistente" className="assistant-icon" onClick={()=>setOpen(false)}><X/></button></header>
       <div className="assistant-messages" role="log" aria-live="polite" aria-relevant="additions text">
-        {!jobs.length&&<div className="assistant-empty"><DecorationBoundary><Suspense fallback={null}>{open&&<CanvasRevealEffect/>}</Suspense></DecorationBoundary><h3>O que vamos registrar?</h3><p>“Gastei R$ 45 no almoço” ou “Recebi meu salário”. Você também pode enviar um recibo.</p><small>A conversa acompanha sua conta no Telegram.</small></div>}
+        {!jobs.length&&<div className="assistant-empty"><h3>O que vamos registrar?</h3><p>“Gastei R$ 45 no almoço” ou “Recebi meu salário”. Você também pode enviar um recibo.</p><small>A conversa acompanha sua conta no Telegram.</small></div>}
         {jobs.map(job=><article key={job.id} className="assistant-message">
           {job.result?.transcript&&<details><summary>O que entendi do anexo</summary><p>{job.result.transcript}</p></details>}
           <p>{job.result?.text||(job.status==='failed'?'Não foi possível concluir este pedido. Confira os lançamentos antes de tentar novamente.':job.status==='queued'&&job.created_at&&Date.now()-Date.parse(job.created_at)>120000?'O processamento está demorando mais que o esperado. Confira os lançamentos antes de registrar manualmente para evitar duplicidade.':job.status==='queued'?'Na fila…':'Conferindo seu pedido…')}</p>

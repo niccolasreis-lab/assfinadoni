@@ -36,6 +36,7 @@ for(const width of [360,768,1024,1440]){
   }
   if(url.pathname==='/api/profile')return route.fulfill({json:{profile:{display_name:account.name,avatar_data_url:null},account}});
   if(url.pathname==='/api/reminders')return route.fulfill({json:{reminders:[],telegram_linked:true}});
+  if(url.pathname==='/api/assistant')return route.fulfill({json:{jobs:[]}});
   if(url.pathname==='/api/push')return route.fulfill({json:{publicKey:null,supported:true}});
   if(req.method()!=='GET')return route.fulfill({json:{transaction:{id:'qa-1'}}});
   if(fail)return route.fulfill({status:500,json:{error:'Falha simulada para teste'}});
@@ -49,6 +50,13 @@ for(const width of [360,768,1024,1440]){
  await page.locator('#password').fill('fixture-only');await page.locator('#toggle-password').click();assert.equal(await page.locator('#password').getAttribute('type'),'text');await page.locator('#toggle-password').click();
  await page.locator('#username').fill('qa_demo');await page.locator('#login-submit').click();await page.locator('.history-svg').waitFor();
  assert.equal(await page.locator('#dashboard-view').isVisible(),true);
+ await page.locator('.assistant-launch').click();await page.locator('.assistant-panel').waitFor({state:'visible'});
+ await page.locator('#assistant-message').fill('Rascunho de teste sem enviar');
+ assert.equal(await page.locator('.assistant-panel canvas').count(),0,'decorative WebGL must not be mounted');
+ await page.getByRole('button',{name:'Fechar assistente',exact:true}).click();await page.locator('.assistant-panel').waitFor({state:'hidden'});
+ await page.locator('.assistant-launch').click();assert.equal(await page.locator('#assistant-message').inputValue(),'Rascunho de teste sem enviar');
+ await page.getByRole('button',{name:'Fechar assistente',exact:true}).click();await page.locator('.assistant-panel').waitFor({state:'hidden'});
+
  await page.evaluate(async()=>{
    const d=document.createElement('dialog');d.id='qa-motion-card';const field=document.createElement('input');field.value='rascunho preservado';d.append(field);document.body.append(d);
    await new Promise(resolve=>requestAnimationFrame(resolve));
@@ -73,6 +81,16 @@ for(const width of [360,768,1024,1440]){
  });
  await page.screenshot({animations:'disabled',path:`${out}/dashboard-${width}.png`,fullPage:true});
  assert.equal(await page.evaluate(()=>document.documentElement.scrollWidth>innerWidth),false,`overflow ${width}`);
+ if(width<=900){
+   const metrics=await page.locator('#mobile-nav').evaluate(el=>{
+     const r=el.getBoundingClientRect(),s=getComputedStyle(el);
+     return {height:r.height,bottom:r.bottom,viewport:innerHeight,blur:s.backdropFilter,buttons:[...el.querySelectorAll('button')].map(b=>b.getBoundingClientRect().height)};
+   });
+   assert.equal(metrics.height,72,'navbar must not grow with safe-area padding');
+   assert(metrics.bottom<=metrics.viewport,'navbar outside viewport');
+   assert.equal(metrics.blur,'none');assert(metrics.buttons.every(h=>h>=44),'touch targets too small');
+ }
+
  assert.equal(await page.locator('#expense-total').evaluate(el=>el.scrollWidth>el.clientWidth),false,`expense total clipped ${width}`);
  assert.equal(await page.locator('#income-total').evaluate(el=>el.scrollWidth>el.clientWidth),false,`income total clipped ${width}`);
  await page.locator('#reminders-trigger').click();await page.locator('#rm-list .empty').waitFor();await page.screenshot({animations:'disabled',path:`${out}/reminders-${width}.png`});if(nativeMode){await page.locator('.reminders-preferences summary').click();await page.getByRole('button',{name:'Testar aviso',exact:true}).click();assert((await page.evaluate(()=>window.__nativeCommands)).includes('test'));await page.evaluate(()=>navigator.share({title:'Fixture',text:'Somente teste local'}));assert((await page.evaluate(()=>window.__nativeCommands)).includes('share'));assert.equal(await page.locator('#rm-enable-push').isVisible(),false);}await page.keyboard.press('Escape');await page.locator('#rm-center').waitFor({state:'hidden'});

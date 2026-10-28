@@ -1,0 +1,97 @@
+{
+  "date": "2026-10-28",
+  "base": "c812145cbffb5ee19cbca285d19fde69e74a7c9d",
+  "production_deployed": false,
+  "unit_tests": {
+    "pass": 246,
+    "fail": 0,
+    "skip": 1
+  },
+  "build": "passed",
+  "typecheck": "passed",
+  "lint_js_files": 117,
+  "browser": {
+    "result": [
+      {
+        "width": 360,
+        "passed": true,
+        "frameTiming": {
+          "off": {
+            "p50_ms": 16.69999999999891,
+            "p95_ms": 16.80000000000109,
+            "frames": 30
+          },
+          "on": {
+            "p50_ms": 16.69999999999891,
+            "p95_ms": 16.700000000000728,
+            "frames": 30
+          }
+        }
+      },
+      {
+        "width": 768,
+        "passed": true,
+        "frameTiming": {
+          "off": {
+            "p50_ms": 16.69999999999891,
+            "p95_ms": 16.700000000000728,
+            "frames": 30
+          },
+          "on": {
+            "p50_ms": 16.69999999999891,
+            "p95_ms": 16.700000000000728,
+            "frames": 30
+          }
+        }
+      },
+      {
+        "width": 1024,
+        "passed": true,
+        "frameTiming": {
+          "off": {
+            "p50_ms": 16.69999999999891,
+            "p95_ms": 16.80000000000109,
+            "frames": 30
+          },
+          "on": {
+            "p50_ms": 16.700000000000728,
+            "p95_ms": 16.700000000000728,
+            "frames": 30
+          }
+        }
+      },
+      {
+        "width": 1440,
+        "passed": true,
+        "frameTiming": {
+          "off": {
+            "p50_ms": 16.69999999999891,
+            "p95_ms": 16.799999999999272,
+            "frames": 30
+          },
+          "on": {
+            "p50_ms": 16.700000000000728,
+            "p95_ms": 16.799999999999272,
+            "frames": 30
+          }
+        }
+      }
+    ],
+    "errors": []
+  },
+  "bundle": {
+    "before_main_kb": 487.93,
+    "after_main_kb": 317.72,
+    "before_gzip_kb": 127.46,
+    "after_gzip_kb": 83.18,
+    "webgl_chunk_before_kb": 1116.37,
+    "webgl_chunk_after": "not generated"
+  },
+  "not_executed": [
+    "Physical phone performance/CPU/RAM/battery",
+    "Android keyboard and safe-area on affected phone",
+    "Production smoke test"
+  ],
+  "native_source_modified": false,
+  "new_apk_required_for_web_changes": false
+}
