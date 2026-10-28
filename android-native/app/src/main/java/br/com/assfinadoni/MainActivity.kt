@@ -39,6 +39,7 @@ import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.PasswordVisualTransformation
 import androidx.compose.ui.unit.dp
+import androidx.lifecycle.lifecycleScope
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.ViewModelProvider
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
@@ -68,15 +69,15 @@ import java.util.concurrent.TimeUnit
 import android.util.Base64
 import java.io.ByteArrayOutputStream
 
-private val Graphite = Color(0xFF080B12)
-private val Surface = Color(0xFF121722)
-private val SurfaceRaised = Color(0xFF171D29)
-private val Violet = Color(0xFF7C3AED)
-private val VioletContainer = Color(0xFF302347)
-private val Text = Color(0xFFF8FAFC)
-private val Muted = Color(0xFFA8B3C5)
-private val Income = Color(0xFF4ADE80)
-private val Expense = Color(0xFFFB7185)
+private val Graphite = Color(0xFFF7F8F7)
+private val Surface = Color(0xFFFFFFFF)
+private val SurfaceRaised = Color(0xFFEAF4ED)
+private val Violet = Color(0xFF075F43)
+private val VioletContainer = Color(0xFFDDEFE2)
+private val Text = Color(0xFF20352A)
+private val Muted = Color(0xFF63736A)
+private val Income = Color(0xFF16815C)
+private val Expense = Color(0xFFB64F60)
 
 data class Account(val id: String, val username: String, val name: String, val telegramLinked: Boolean)
 data class FinanceTransaction(
@@ -88,6 +89,7 @@ data class FinanceTransaction(
     val date: String,
     val shared: Boolean,
     val owner: Boolean,
+    val readOnly: Boolean = false,
     val payment: PaymentDetails = PaymentDetails()
 )
 data class PaymentDetails(
@@ -102,6 +104,7 @@ data class Summary(
     val byCategory: Map<String, BigDecimal> = emptyMap()
 )
 data class FinanceState(
+    val couple: Boolean = false,
     val loading: Boolean = true,
     val authenticated: Boolean = false,
     val account: Account? = null,
@@ -119,7 +122,7 @@ data class FinanceState(
 )
 data class AppUpdate(val versionCode: Int, val versionName: String, val downloadUrl: String)
 
-private class SecureCookieJar(context: Context) : CookieJar {
+internal class SecureCookieJar(context: Context) : CookieJar {
     private val prefs = EncryptedSharedPreferences.create(
         context,
         "finance_session",
@@ -142,7 +145,7 @@ private class SecureCookieJar(context: Context) : CookieJar {
             .filter { it.expiresAt > System.currentTimeMillis() && it.matches(url) }
 }
 
-private class FinanceApi(context: Context) {
+internal class FinanceApi(private val context: Context) {
     private val jsonType = "application/json; charset=utf-8".toMediaType()
     private val client = OkHttpClient.Builder()
         .cookieJar(SecureCookieJar(context))
@@ -151,7 +154,7 @@ private class FinanceApi(context: Context) {
         .build()
     private val base = BuildConfig.API_BASE_URL.trimEnd('/')
 
-    private suspend fun call(method: String, path: String, payload: JSONObject? = null): JSONObject =
+    internal suspend fun call(method: String, path: String, payload: JSONObject? = null): JSONObject =
         withContext(Dispatchers.IO) {
             val builder = Request.Builder().url(base + path).header("Accept", "application/json")
             if (method != "GET") builder.header("Origin", base)
@@ -190,10 +193,10 @@ private class FinanceApi(context: Context) {
         return parseAccount(json.getJSONObject("account"))
     }
 
-    suspend fun logout() { call("DELETE", "/api/session", JSONObject()) }
+    suspend fun logout() { call("DELETE", "/api/session", JSONObject()); ReminderScheduler.clear(context) }
 
-    suspend fun transactions(month: String): Pair<List<FinanceTransaction>, Summary> {
-        val json = call("GET", "/api/transactions?month=" + month + "&page=1&scope=all&include_shared_summary=false")
+    suspend fun transactions(month: String, couple: Boolean = false): Pair<List<FinanceTransaction>, Summary> {
+        val json = call("GET", (if (couple) "/api/couple" else "/api/transactions") + "?month=" + month + "&page=1" + (if (couple) "" else "&scope=all&include_shared_summary=false"))
         val rows = json.getJSONArray("transactions")
         val list = buildList {
             for (index in 0 until rows.length()) add(parseTransaction(rows.getJSONObject(index)))
@@ -254,6 +257,7 @@ private class FinanceApi(context: Context) {
         date = json.optString("transaction_date", LocalDate.now().toString()),
         shared = json.optBoolean("is_shared") || json.optBoolean("shared") || json.has("share_id"),
         owner = !json.has("is_owner") || json.optBoolean("is_owner"),
+        readOnly = json.optBoolean("read_only"),
         payment = PaymentDetails(
             method = payment?.optString("method", "nao_informado") ?: "nao_informado",
             cashAmount = payment?.optString("cash_amount", "0") ?: "0",
@@ -327,15 +331,16 @@ private class FinanceViewModel(private val api: FinanceApi) : ViewModel() {
     }
 
     fun refresh() = runTask { refreshInternal() }
+    fun scope(couple: Boolean) = runTask { mutableState.value = mutableState.value.copy(couple=couple,transactions=emptyList(),summary=Summary());refreshInternal() }
 
     private suspend fun refreshInternal() {
-        val (transactions, summary) = api.transactions(mutableState.value.month)
+        val (transactions, summary) = api.transactions(mutableState.value.month, mutableState.value.couple)
         val cats = api.categories().ifEmpty { mutableState.value.categories }
         mutableState.value = mutableState.value.copy(transactions = transactions, summary = summary, categories = cats, update = api.latestAppVersion()?.takeIf { it.versionCode > BuildConfig.VERSION_CODE && it.downloadUrl.isNotBlank() })
     }
 
     fun select(row: FinanceTransaction?) { mutableState.value = mutableState.value.copy(selected = row) }
-    fun edit(row: FinanceTransaction?) { mutableState.value = mutableState.value.copy(selected = null, editing = row, creating = row == null) }
+    fun edit(row: FinanceTransaction?) { if (mutableState.value.couple || row?.readOnly == true) return; mutableState.value = mutableState.value.copy(selected = null, editing = row, creating = row == null) }
     fun closeEditor() { mutableState.value = mutableState.value.copy(editing = null, creating = false) }
     fun requestDelete(row: FinanceTransaction) { mutableState.value = mutableState.value.copy(selected = null, pendingDelete = row) }
     fun cancelDelete() { mutableState.value = mutableState.value.copy(pendingDelete = null) }
@@ -376,9 +381,14 @@ private class FinanceViewModel(private val api: FinanceApi) : ViewModel() {
 }
 
 class MainActivity : ComponentActivity() {
+    override fun onStart() {
+        super.onStart()
+        lifecycleScope.launch { runCatching { ReminderScheduler.sync(applicationContext) } }
+    }
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         enableEdgeToEdge()
+        ReminderScheduler.initialize(applicationContext)
         val api = FinanceApi(applicationContext)
         setContent {
             val vm: FinanceViewModel = androidx.lifecycle.viewmodel.compose.viewModel(
@@ -394,7 +404,7 @@ class MainActivity : ComponentActivity() {
 
 @Composable
 private fun FinanceTheme(content: @Composable () -> Unit) {
-    val colors = darkColorScheme(
+    val colors = lightColorScheme(
         primary = Violet,
         onPrimary = Color.White,
         primaryContainer = VioletContainer,
@@ -425,7 +435,11 @@ private fun FinanceRoot(vm: FinanceViewModel) {
     }
 
     if (!state.authenticated) LoginScreen(state.loading, state.error, vm::login)
-    else FinanceShell(state, snackbar, vm)
+    else {
+        val context = LocalContext.current
+        LaunchedEffect(state.account?.id) { runCatching { ReminderScheduler.sync(context) } }
+        FinanceShell(state, snackbar, vm)
+    }
 
     if (state.selected != null) TransactionActions(state.selected!!, vm)
     if (state.editing != null || state.creating) TransactionEditor(state.editing, state.categories, vm)
@@ -459,7 +473,8 @@ private enum class Destination(val label: String) { Overview("Visão geral"), Tr
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 private fun FinanceShell(state: FinanceState, snackbar: SnackbarHostState, vm: FinanceViewModel) {
-    var destination by rememberSaveable { mutableStateOf(Destination.Overview) }
+    val activity = LocalContext.current as? android.app.Activity
+    var destination by rememberSaveable { mutableStateOf(if (activity?.intent?.getBooleanExtra("open_reminders", false) == true) Destination.More else Destination.Overview) }
     BoxWithConstraints(Modifier.fillMaxSize()) {
         val expanded = maxWidth >= 840.dp
         if (expanded) {
@@ -527,6 +542,10 @@ private fun DestinationIcon(destination: Destination) {
 @Composable
 private fun AppBody(destination: Destination, state: FinanceState, vm: FinanceViewModel, modifier: Modifier) {
     Column(modifier.fillMaxSize()) {
+        Row(Modifier.padding(horizontal=16.dp),horizontalArrangement=Arrangement.spacedBy(8.dp)) {
+            FilterChip(selected=!state.couple,onClick={vm.scope(false)},label={Text("Pessoal")},enabled=!state.loading)
+            FilterChip(selected=state.couple,onClick={vm.scope(true)},label={Text("Casal · WhatsApp")},enabled=!state.loading)
+        }
         state.update?.let { update -> UpdateCard(update, modifier = Modifier) }
         Box(Modifier.weight(1f).fillMaxWidth()) {
             when (destination) {
@@ -666,13 +685,14 @@ private fun TransactionActions(row: FinanceTransaction, vm: FinanceViewModel) {
             Text(row.description, style = MaterialTheme.typography.titleLarge, fontWeight = FontWeight.SemiBold)
             Text(money(row.amount) + " · " + formatDate(row.date), color = Muted)
             Spacer(Modifier.height(12.dp))
-            ActionButton(Icons.Outlined.Edit, "Editar lançamento") { vm.edit(row) }
+            if (!row.readOnly) ActionButton(Icons.Outlined.Edit, "Editar lançamento") { vm.edit(row) }
+            else Text("Carteira do casal: gerencie este lançamento pelo WhatsApp.")
             ActionButton(Icons.Outlined.Share, "Compartilhar em outro app") {
                 val text = "${row.description}\n${money(row.amount)} · ${formatDate(row.date)}\nCategoria: ${row.category}"
                 context.startActivity(Intent.createChooser(Intent(Intent.ACTION_SEND).apply { type = "text/plain"; putExtra(Intent.EXTRA_TEXT, text) }, "Compartilhar lançamento"))
                 vm.select(null)
             }
-            ActionButton(Icons.Outlined.Delete, "Excluir lançamento", destructive = true) { vm.requestDelete(row) }
+            if (!row.readOnly) ActionButton(Icons.Outlined.Delete, "Excluir lançamento", destructive = true) { vm.requestDelete(row) }
         }
     }
 }
@@ -786,9 +806,10 @@ private fun MoreScreen(state: FinanceState, vm: FinanceViewModel) {
         item {
             OutlinedButton(onClick = vm::logout, modifier = Modifier.fillMaxWidth().heightIn(min = 48.dp)) { Text("Sair da conta") }
         }
+        item { ReminderCenter() }
         item {
-            Text("Próximos módulos", style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.SemiBold)
-            Text("Lembretes, relatórios avançados, perfil com foto e notificações nativas serão integrados nesta mesma estrutura Compose.", color = Muted)
+            val context = LocalContext.current
+            OutlinedButton(onClick = { context.startActivity(Intent(Intent.ACTION_VIEW, Uri.parse(BuildConfig.API_BASE_URL))) }) { Text("Abrir dashboard completo") }
         }
     }
 }

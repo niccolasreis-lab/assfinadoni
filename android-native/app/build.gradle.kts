@@ -7,14 +7,33 @@ plugins {
 android {
     namespace = "br.com.assfinadoni"
     compileSdk = 35
+    buildToolsVersion = "35.0.0"
 
     defaultConfig {
         applicationId = "br.com.assfinadoni"
         minSdk = 26
         targetSdk = 35
-        versionCode = 2
-        versionName = "1.1.0"
+        versionCode = 3
+        versionName = "1.2.0"
         buildConfigField("String", "API_BASE_URL", "\"https://assfinadoni.vercel.app/\"")
+    }
+
+    signingConfigs {
+        create("directRelease") {
+            val keyPath = System.getenv("FINANCE_KEYSTORE")
+            if (keyPath != null) {
+                storeFile = file(keyPath)
+                storePassword = System.getenv("FINANCE_KEYSTORE_PASSWORD")
+                keyAlias = System.getenv("FINANCE_KEY_ALIAS")
+                keyPassword = System.getenv("FINANCE_KEY_PASSWORD")
+            }
+        }
+    }
+    buildTypes {
+        getByName("release") {
+            signingConfig = signingConfigs.getByName("directRelease")
+            isMinifyEnabled = false
+        }
     }
 
     buildFeatures {
@@ -34,6 +53,8 @@ android {
 }
 
 dependencies {
+    implementation("androidx.work:work-runtime-ktx:2.10.0")
+    testImplementation("junit:junit:4.13.2")
     val composeBom = platform("androidx.compose:compose-bom:2024.12.01")
     implementation(composeBom)
     androidTestImplementation(composeBom)
