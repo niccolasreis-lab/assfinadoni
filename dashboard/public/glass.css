@@ -264,3 +264,51 @@ dialog::backdrop { background:#16352766; }
   .card { min-width:0; }
   .card.balance { grid-column:1/-1; }
 }
+
+/* Native popover top-layer transitions retain focus and outside-click behavior. */
+@media(prefers-reduced-motion:no-preference) {
+  [popover] { opacity:0; transform:translateY(5px) scale(.99); transition:opacity 140ms ease,transform 180ms ease,display 180ms allow-discrete,overlay 180ms allow-discrete; }
+  [popover]:popover-open { opacity:1; transform:translateY(0) scale(1); }
+  @starting-style { [popover]:popover-open { opacity:0; transform:translateY(5px) scale(.99); } }
+  summary { transition:color 160ms ease; }
+}
+
+/* Optional effects can be disabled without changing navigation or data. */
+html[data-motion=off] *, html[data-motion=off] *::before, html[data-motion=off] *::after {
+  animation:none !important; transition:none !important; scroll-behavior:auto !important;
+}
+@media(prefers-reduced-motion:reduce) {
+  *, *::before, *::after { animation:none !important; transition:none !important; scroll-behavior:auto !important; }
+}
+@media(prefers-reduced-motion:no-preference) {
+  .history-svg { animation:chart-reveal 320ms ease-out both; }
+  #category-chart > svg { animation:panel-enter 260ms ease-out both; }
+  .toast:not([hidden]), [role=alert]:not(:empty) { animation:panel-enter 180ms ease-out; }
+  @keyframes chart-reveal { from { opacity:.35; transform:translateY(4px); } to { opacity:1; transform:translateY(0); } }
+}
+
+/* Mobile rendering budget: solid surfaces and a bounded navigation bar.
+   Safe area is outside the bar, never a large empty padding region inside it. */
+@media(max-width:900px) {
+  body { background-attachment:scroll; }
+  body::before { display:none; }
+  .mobile-nav {
+    box-sizing:border-box; height:72px; min-height:72px; max-height:72px;
+    left:12px; right:12px; bottom:max(8px,env(safe-area-inset-bottom,0px));
+    padding:6px; align-items:center; gap:4px; border-radius:20px;
+    background:#fff; backdrop-filter:none; -webkit-backdrop-filter:none;
+    box-shadow:0 3px 12px #143b2414;
+  }
+  .mobile-nav .nav-item {
+    flex:1 1 0; min-width:0; height:58px; min-height:58px;
+    justify-content:center; padding:6px 2px; line-height:1.2; gap:4px;
+  }
+  .mobile-nav .nav-item.add-action { padding-inline:2px; }
+  .content { padding-bottom:calc(112px + env(safe-area-inset-bottom,0px)); }
+  .assistant-launch { bottom:calc(92px + env(safe-area-inset-bottom,0px)); }
+  dialog::backdrop { backdrop-filter:none; -webkit-backdrop-filter:none; }
+  .dashboard:not([hidden]) .card,.dashboard:not([hidden]) .panel { animation:none; }
+  .card,.panel { transition:none; }
+  .button,.nav-item,.assistant-launch { transition:transform 120ms ease,background-color 120ms ease; }
+}
+.loading-label { color:#276b4c; }
