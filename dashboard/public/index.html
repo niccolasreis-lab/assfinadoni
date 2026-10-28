@@ -67,6 +67,16 @@
         </div>
         <section id="settings-panel" class="panel settings-panel" hidden aria-labelledby="settings-title">
           <h2 id="settings-title">Sua conta e preferências</h2><p id="telegram-status" class="muted"></p>
+          <section class="appearance-settings" aria-labelledby="appearance-title">
+            <h3 id="appearance-title">Aparência</h3>
+            <label for="motion-mode">Animações</label>
+            <select id="motion-mode" aria-describedby="motion-mode-status">
+              <option value="off">Desativadas</option>
+              <option value="soft" selected>Suaves</option>
+              <option value="full">Completas</option>
+            </select>
+            <p id="motion-mode-status" class="muted" role="status">Transições breves e discretas. Recomendado para uso diário.</p>
+          </section>
           <div class="help-row"><button id="settings-edit-profile" type="button" class="button secondary"><span data-icon="user"></span>Editar perfil</button><button id="install-app" class="button secondary" type="button"><span data-icon="download"></span>Instalar app</button><button id="open-tutorial" class="button secondary" type="button" aria-controls="tutorial-guide" aria-expanded="false">Como usar</button><button id="logout" class="button ghost" type="button">Sair da conta</button></div>
         </section>
         <section id="tutorial-guide" class="tutorial-guide" aria-labelledby="tutorial-title" hidden>

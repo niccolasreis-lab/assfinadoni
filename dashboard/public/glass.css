@@ -312,3 +312,17 @@ html[data-motion=off] *, html[data-motion=off] *::before, html[data-motion=off] 
   .button,.nav-item,.assistant-launch { transition:transform 120ms ease,background-color 120ms ease; }
 }
 .loading-label { color:#276b4c; }
+
+.appearance-settings { margin-block:20px; padding-block:16px; border-block:1px solid var(--line); }
+.appearance-settings label { display:block; margin-bottom:8px; }
+.appearance-settings select { width:min(100%,320px); min-height:44px; }
+@media(prefers-reduced-motion:no-preference) {
+  html[data-motion-mode=soft] .card, html[data-motion-mode=soft] .panel,
+  html[data-motion-mode=soft] .history-svg, html[data-motion-mode=soft] #category-chart > svg { animation:none; }
+  html[data-motion-mode=soft] .card, html[data-motion-mode=soft] .panel { transition:none; }
+  html[data-motion-mode=soft] .button:hover:not(:disabled), html[data-motion-mode=soft] .card:hover { transform:none; }
+  html[data-motion-mode=soft] [popover] { transform:none !important; }
+  html[data-motion-mode=soft] .button:active:not(:disabled), html[data-motion-mode=soft] .nav-item:active { transform:scale(.99); }
+  html[data-motion-mode=full] .dashboard:not([hidden]) .card,
+  html[data-motion-mode=full] .dashboard:not([hidden]) .panel { animation:panel-enter 260ms ease-out both; }
+}

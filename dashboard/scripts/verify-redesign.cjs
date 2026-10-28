@@ -104,7 +104,17 @@ for(const width of [360,768,1024,1440]){
  await nav('categories');assert.equal(await page.locator('#category-panel').isVisible(),true);
  await nav('reports');assert.equal(await page.locator('#history-panel').isVisible(),true);
  await nav('settings');assert.equal(await page.locator('#settings-panel').isVisible(),true);
- await page.locator('#motion-toggle').click();assert.equal(await page.locator('html').getAttribute('data-motion'),'off');await page.locator('#motion-toggle').click();
+ assert.equal(await page.locator('#motion-mode').inputValue(),'soft');
+ for(const mode of ['off','full','soft']) {
+   await page.locator('#motion-mode').selectOption(mode);
+   assert.equal(await page.locator('html').getAttribute('data-motion-mode'),mode);
+   assert.equal(await page.evaluate(()=>localStorage.getItem('finance_motion_v2')),mode);
+ }
+ await page.emulateMedia({reducedMotion:'reduce'});await page.locator('#motion-mode').selectOption('full');
+ assert.equal(await page.locator('html').getAttribute('data-motion'),'off');
+ assert.match(await page.locator('#motion-mode-status').innerText(),/reduzido do sistema/);
+ await page.emulateMedia({reducedMotion:'no-preference'});await page.locator('#motion-mode').selectOption('soft');
+
  if(nativeMode){await page.locator('#native-update-card').waitFor();await page.locator('#native-update-card button').click();await page.waitForFunction(()=>window.__nativeCommands.includes('update'));await page.locator('#native-check-updates').click();}
 
  await page.locator('#open-tutorial').click();assert.equal(await page.locator('#tutorial-guide').isVisible(),true);await page.locator('#finish-tutorial').click();

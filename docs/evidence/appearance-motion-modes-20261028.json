@@ -1,0 +1,91 @@
+{
+  "date": "2026-10-28",
+  "base_commit": "537366f3c6679089f303a7bb108a05a2a8647499",
+  "web_tests": {
+    "total": 253,
+    "passed": 252,
+    "failed": 0,
+    "skipped": 1
+  },
+  "preference_tests": {
+    "passed": 6,
+    "failed": 0
+  },
+  "build": "passed",
+  "typecheck": "passed",
+  "browser": {
+    "result": [
+      {
+        "width": 360,
+        "passed": true,
+        "frameTiming": {
+          "off": {
+            "p50_ms": 16.699999999999818,
+            "p95_ms": 16.700000000000728,
+            "frames": 30
+          },
+          "on": {
+            "p50_ms": 16.69999999999891,
+            "p95_ms": 16.799999999999272,
+            "frames": 30
+          }
+        }
+      },
+      {
+        "width": 768,
+        "passed": true,
+        "frameTiming": {
+          "off": {
+            "p50_ms": 16.69999999999891,
+            "p95_ms": 16.700000000000728,
+            "frames": 30
+          },
+          "on": {
+            "p50_ms": 16.69999999999891,
+            "p95_ms": 33.399999999999636,
+            "frames": 30
+          }
+        }
+      },
+      {
+        "width": 1024,
+        "passed": true,
+        "frameTiming": {
+          "off": {
+            "p50_ms": 16.69999999999891,
+            "p95_ms": 16.80000000000109,
+            "frames": 30
+          },
+          "on": {
+            "p50_ms": 16.700000000000728,
+            "p95_ms": 16.700000000000728,
+            "frames": 30
+          }
+        }
+      },
+      {
+        "width": 1440,
+        "passed": true,
+        "frameTiming": {
+          "off": {
+            "p50_ms": 16.700000000000728,
+            "p95_ms": 16.799999999999272,
+            "frames": 30
+          },
+          "on": {
+            "p50_ms": 16.69999999999709,
+            "p95_ms": 16.799999999999272,
+            "frames": 30
+          }
+        }
+      }
+    ],
+    "errors": []
+  },
+  "native_code_changed": false,
+  "new_dependencies": 0,
+  "not_executed": [
+    "Physical Android device test",
+    "Native cover animation per web preference (unchanged; follows Android system)"
+  ]
+}
