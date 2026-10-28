@@ -1,5 +1,5 @@
 import { requireAccount, sameOrigin, send, supabase, uuid } from '../lib/server.js';
-import { AssistantError, enqueue, publicJob, readAssistantBody, validateAssistantInput } from '../lib/assistant.js';
+import { AssistantError, cancelQueuedJob, enqueue, publicJob, readAssistantBody, validateAssistantInput } from '../lib/assistant.js';
 
 export default async function handler(req, res) {
   try {
@@ -11,6 +11,10 @@ export default async function handler(req, res) {
       const jobs = await supabase(`finance_assistant_jobs?${params}`);
       if (req.query?.id) return jobs[0] ? send(res,200,publicJob(jobs[0])) : send(res,404,{error:'Pedido não encontrado.'});
       return send(res,200,{jobs:jobs.reverse().map(publicJob)});
+    }
+    if (req.method === 'DELETE') {
+      if (!sameOrigin(req)) return send(res,403,{error:'Origem não autorizada.'});
+      return send(res,200,await cancelQueuedJob(account.finance_user_id,req.query?.id,{database:supabase}));
     }
     if (req.method !== 'POST') return send(res,405,{error:'Método não permitido.'});
     if (!sameOrigin(req)) return send(res,403,{error:'Origem não autorizada.'});

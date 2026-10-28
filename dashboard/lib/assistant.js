@@ -59,11 +59,39 @@ export function bridgeAuthenticated(req) {
 }
 
 export function publicJob(job) {
-  return { id: job.id, status: job.status, result: job.result || null, created_at: job.created_at };
+  return { id: job.id, status: job.status, result: job.result || null, created_at: job.created_at, stalled: queuedJobStalled(job) };
 }
 
 export async function enqueue(account, input, channel = 'dashboard', key = input.requestId) {
   const job = await rpc('finance_assistant_enqueue', { p_user_id: account.finance_user_id, p_account_id: account.id || null,
     p_channel: channel, p_key: key, p_payload: input.payload, p_hash: input.hash });
   return publicJob(job);
+}
+
+export function queuedJobStalled(job, now = Date.now()) {
+  const created = Date.parse(job.created_at || '');
+  return job.status === 'queued' && Number.isFinite(created) && now - created >= 120000;
+}
+
+// A worker claim and cancellation race on the same row. Only an untouched queue entry
+// may be cancelled; processing/uncertain financial outcomes must never be overwritten.
+export async function cancelQueuedJob(userId, jobId, { database, now = Date.now() } = {}) {
+  let id;
+  try { id = uuid(jobId); } catch { throw new AssistantError('Pedido inválido.'); }
+  const select = 'id,status,result,created_at,attempts,lease_token,lease_until';
+  const query = new URLSearchParams({ select, id:`eq.${id}`, user_id:`eq.${userId}`, limit:'1' });
+  const rows = await database(`finance_assistant_jobs?${query}`);
+  const job = rows[0];
+  if (!job) throw new AssistantError('Pedido não encontrado.',404);
+  if (job.status === 'failed' && job.result?.cancelled === true) return publicJob(job);
+  if (!queuedJobStalled(job,now) || job.attempts !== 0 || job.lease_token || job.lease_until) {
+    throw new AssistantError('Este pedido já começou a ser processado ou não pode ser cancelado. Atualize a conversa antes de tentar novamente.',409);
+  }
+  const conditions = new URLSearchParams({ id:`eq.${id}`,user_id:`eq.${userId}`,status:'eq.queued',attempts:'eq.0',lease_token:'is.null',lease_until:'is.null' });
+  const changed = await database(`finance_assistant_jobs?${conditions}`,{
+    method:'PATCH',prefer:'return=representation',
+    body:{status:'failed',payload:{},result:{cancelled:true,changed:false,text:'Pedido cancelado antes do processamento. Nenhum lançamento foi criado por este pedido.'},updated_at:new Date(now).toISOString()},
+  });
+  if (!changed[0]) throw new AssistantError('O processamento começou durante o cancelamento. Atualize a conversa; não reenvie para evitar duplicidade.',409);
+  return publicJob(changed[0]);
 }
