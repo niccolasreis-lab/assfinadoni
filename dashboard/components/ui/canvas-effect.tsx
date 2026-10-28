@@ -14,9 +14,9 @@ export function CanvasRevealEffect() {
   const [enabled, setEnabled] = useState(false)
   useEffect(() => {
     const preference = matchMedia('(prefers-reduced-motion: reduce)')
-    const update = () => { try { setEnabled(!preference.matches && Boolean(document.createElement('canvas').getContext('webgl2'))) } catch { setEnabled(false) } }
-    update(); preference.addEventListener('change', update)
-    return () => preference.removeEventListener('change', update)
+    const update = () => { try { setEnabled(!document.hidden && document.documentElement.dataset.motion !== 'off' && !preference.matches && Boolean(document.createElement('canvas').getContext('webgl2'))) } catch { setEnabled(false) } }
+    update(); preference.addEventListener('change', update); window.addEventListener('finance:motion', update); document.addEventListener('visibilitychange', update)
+    return () => { preference.removeEventListener('change', update); window.removeEventListener('finance:motion', update); document.removeEventListener('visibilitychange', update) }
   }, [])
   return enabled ? <div className="assistant-canvas" aria-hidden="true"><Canvas dpr={1} fallback={<span />}><Dots /></Canvas></div> : null
 }

@@ -39,16 +39,19 @@ internal object ReminderScheduler {
         prefs(c).edit().clear().putLong("generation",generation).apply()
         NotificationManagerCompat.from(c).cancelAll()
     }
+    @Synchronized fun pause(c:Context) { clear(c);prefs(c).edit().putBoolean("paused",true).commit() }
+    @Synchronized fun resume(c:Context) { prefs(c).edit().putBoolean("paused",false).commit() }
+    @Synchronized private fun capture(c:Context):Long? = if(prefs(c).getBoolean("paused",false)) null else prefs(c).getLong("generation",0)
     suspend fun sync(c: Context) {
-        val generation=prefs(c).getLong("generation",0)
+        val generation=capture(c) ?: return
         val api=FinanceApi(c)
         val account=api.session()
-        if(account==null) { clear(c);return }
+        if(account==null) { pause(c);return }
         val data=api.call("GET","/api/reminders").getJSONArray("reminders")
         reconcile(c,account.id,data,generation)
     }
     @Synchronized private fun reconcile(c:Context, owner:String, rows:JSONArray, generation:Long) {
-        if(prefs(c).getLong("generation",0)!=generation) return
+        if(prefs(c).getBoolean("paused",false) || prefs(c).getLong("generation",0)!=generation) return
         if(prefs(c).getString("owner",null)!=owner) clear(c)
         val alarms=c.getSystemService(AlarmManager::class.java)
         val old=JSONObject(prefs(c).getString("scheduled","{}")!!)

@@ -264,3 +264,25 @@ dialog::backdrop { background:#16352766; }
   .card { min-width:0; }
   .card.balance { grid-column:1/-1; }
 }
+
+/* Native popover top-layer transitions retain focus and outside-click behavior. */
+@media(prefers-reduced-motion:no-preference) {
+  [popover] { opacity:0; transform:translateY(5px) scale(.99); transition:opacity 140ms ease,transform 180ms ease,display 180ms allow-discrete,overlay 180ms allow-discrete; }
+  [popover]:popover-open { opacity:1; transform:translateY(0) scale(1); }
+  @starting-style { [popover]:popover-open { opacity:0; transform:translateY(5px) scale(.99); } }
+  summary { transition:color 160ms ease; }
+}
+
+/* Optional effects can be disabled without changing navigation or data. */
+html[data-motion=off] *, html[data-motion=off] *::before, html[data-motion=off] *::after {
+  animation:none !important; transition:none !important; scroll-behavior:auto !important;
+}
+@media(prefers-reduced-motion:reduce) {
+  *, *::before, *::after { animation:none !important; transition:none !important; scroll-behavior:auto !important; }
+}
+@media(prefers-reduced-motion:no-preference) {
+  .history-svg { animation:chart-reveal 320ms ease-out both; }
+  #category-chart > svg { animation:panel-enter 260ms ease-out both; }
+  .toast:not([hidden]), [role=alert]:not(:empty) { animation:panel-enter 180ms ease-out; }
+  @keyframes chart-reveal { from { opacity:.35; transform:translateY(4px); } to { opacity:1; transform:translateY(0); } }
+}

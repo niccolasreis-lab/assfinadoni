@@ -22,7 +22,7 @@ for(const width of [360,768,1024,1440]){
    const mime={'.js':'text/javascript','.css':'text/css','.html':'text/html','.png':'image/png','.jpg':'image/jpeg','.woff2':'font/woff2','.webmanifest':'application/manifest+json'}[path.extname(target)]||'application/octet-stream';
    return route.fulfill({path:target,contentType:mime,headers:{'content-security-policy':"default-src 'self';script-src 'self';style-src 'self';img-src 'self' data:;media-src 'self' blob:;connect-src 'self';worker-src 'self';object-src 'none'"}});
   });
-  await page.addInitScript({content:`window.__nativeCommands=[];window.FinanceAndroid={postMessage(raw){const data=JSON.parse(raw);window.__nativeCommands.push(data.action);setTimeout(()=>window.FinanceAndroid.onmessage?.({data:JSON.stringify({id:data.id,message:'Configuração de teste'})}),0)}};`+fs.readFileSync('../android-native/app/src/main/assets/dashboard-native.js','utf8')});
+  await page.addInitScript({content:`window.__nativeCommands=[];window.FinanceAndroid={postMessage(raw){const data=JSON.parse(raw);window.__nativeCommands.push(data.action);setTimeout(()=>window.FinanceAndroid.onmessage?.({data:JSON.stringify({id:data.id,message:'Configuração de teste',...(data.action==='updates'?{available:true,version:'9.0.0',notes:'Correção de teste'}:{})})}),0)}};`+fs.readFileSync('../android-native/app/src/main/assets/dashboard-native.js','utf8')});
  }
  let authenticated=false,empty=false,fail=false;
  const account={username:'qa_demo',name:'Conta de teste',telegram_linked:true};
@@ -49,6 +49,28 @@ for(const width of [360,768,1024,1440]){
  await page.locator('#password').fill('fixture-only');await page.locator('#toggle-password').click();assert.equal(await page.locator('#password').getAttribute('type'),'text');await page.locator('#toggle-password').click();
  await page.locator('#username').fill('qa_demo');await page.locator('#login-submit').click();await page.locator('.history-svg').waitFor();
  assert.equal(await page.locator('#dashboard-view').isVisible(),true);
+ await page.evaluate(async()=>{
+   const d=document.createElement('dialog');d.id='qa-motion-card';const field=document.createElement('input');field.value='rascunho preservado';d.append(field);document.body.append(d);
+   await new Promise(resolve=>requestAnimationFrame(resolve));
+   if(typeof d.closeImmediately!=='function')throw Error('Cartão dinâmico sem animação instalada');
+   d.showModal();const first=d.close('confirm');const repeated=d.close('confirm');
+   if(first!==repeated)throw Error('Fechamento repetido criou duas operações');
+   d.showModal();await first;if(!d.open)throw Error('Callback antigo fechou o cartão reaberto');
+   const late=d.close('confirm');d.closeImmediately();await late;
+   if(d.open || d.returnValue!=='cancel' || d.classList.contains('is-closing'))throw Error('Fechamento imediato não cancelou com segurança');if(field.value!=='rascunho preservado')throw Error('Animação apagou o formulário');d.remove();
+ });
+ const detail=page.locator('#history-panel details');const summaryControl=detail.locator('summary');
+ await summaryControl.click();await summaryControl.click();await summaryControl.click();
+ await page.waitForFunction(()=>{const d=document.querySelector('#history-panel details');return d.open && d.getAnimations().length===0});
+ assert.equal(await detail.evaluate(el=>el.style.overflow),'');
+ await summaryControl.click();await page.waitForFunction(()=>!document.querySelector('#history-panel details').open);
+
+ await page.evaluate(async()=>{
+   const motion=await import('/motion.js');motion.setMotionEnabled(false);
+   const d=document.getElementById('transaction-dialog');await d.showModal();await d.close('cancel');
+   if(d.open || document.documentElement.dataset.motion!=='off')throw Error('Movimento desativado não respeitado');
+   motion.setMotionEnabled(true);
+ });
  await page.screenshot({animations:'disabled',path:`${out}/dashboard-${width}.png`,fullPage:true});
  assert.equal(await page.evaluate(()=>document.documentElement.scrollWidth>innerWidth),false,`overflow ${width}`);
  assert.equal(await page.locator('#expense-total').evaluate(el=>el.scrollWidth>el.clientWidth),false,`expense total clipped ${width}`);
@@ -64,13 +86,24 @@ for(const width of [360,768,1024,1440]){
  await nav('categories');assert.equal(await page.locator('#category-panel').isVisible(),true);
  await nav('reports');assert.equal(await page.locator('#history-panel').isVisible(),true);
  await nav('settings');assert.equal(await page.locator('#settings-panel').isVisible(),true);
+ await page.locator('#motion-toggle').click();assert.equal(await page.locator('html').getAttribute('data-motion'),'off');await page.locator('#motion-toggle').click();
+ if(nativeMode){await page.locator('#native-update-card').waitFor();await page.locator('#native-update-card button').click();await page.waitForFunction(()=>window.__nativeCommands.includes('update'));await page.locator('#native-check-updates').click();}
+
  await page.locator('#open-tutorial').click();assert.equal(await page.locator('#tutorial-guide').isVisible(),true);await page.locator('#finish-tutorial').click();
  empty=true;await nav('transactions');await page.waitForFunction(()=>!document.querySelector('#dashboard-view').hasAttribute('aria-busy'));assert.equal(await page.locator('#empty-state').isVisible(),true);await page.screenshot({animations:'disabled',path:`${out}/empty-${width}.png`});
  fail=true;await page.locator('#clear-filters').click();await page.locator('#page-message.error').waitFor();assert.equal(await page.locator('#income-total').innerText(),'—');await page.screenshot({animations:'disabled',path:`${out}/error-${width}.png`});
  await page.emulateMedia({reducedMotion:'reduce'});assert.equal(await page.locator('.card').first().evaluate(el=>getComputedStyle(el).animationName),'none');
  await nav('settings');await page.locator('#logout').click();await page.locator('#login-view').waitFor({state:'visible'});assert.equal(await page.locator('#password').getAttribute('type'),'password');
  assert.equal(await page.locator('#username').evaluate(el=>getComputedStyle(el).outlineStyle),'solid');
- if(nativeMode)assert((await page.evaluate(()=>window.__nativeCommands)).includes('sync'));result.push({width,passed:true});await context.close();
+ if(nativeMode){await page.waitForFunction(()=>window.__nativeCommands.includes('logout'));const commands=await page.evaluate(()=>window.__nativeCommands);assert(commands.includes('sync'));assert(commands.includes('ready'));}await page.emulateMedia({reducedMotion:'no-preference'});const frameTiming=await page.evaluate(async()=>{
+ const motion=await import('/motion.js');const results={};
+ for(const enabled of [false,true]){
+  motion.setMotionEnabled(enabled);const samples=[];let last;
+  for(let i=0;i<31;i++)await new Promise(resolve=>requestAnimationFrame(now=>{if(last!==undefined)samples.push(now-last);last=now;if(enabled)motion.reveal(document.querySelector('#login-view'));resolve();}));
+  samples.sort((a,b)=>a-b);results[enabled?'on':'off']={p50_ms:samples[15],p95_ms:samples[28],frames:samples.length};
+ }
+ motion.setMotionEnabled(true);return results;
+ });result.push({width,passed:true,frameTiming});await context.close();
 }
 await browser.close();fs.writeFileSync(`${out}/results.json`,JSON.stringify({result,errors},null,2));assert.deepEqual(errors,[]);console.log(JSON.stringify({result,errors,output:out},null,2));
 })().catch(e=>{console.error(e);process.exit(1)});
