@@ -1,11 +1,11 @@
 import { useEffect, useRef, useState } from 'react'
 import { MessageCircle, Mic, Square, Paperclip, Send, X, Trash2, Pencil } from 'lucide-react'
 type Transaction = { id?: string; description: string; amount: number; transaction_date: string; deleted_at?: string }
-type Job = { id: string; status: string; created_at?: string; result?: { text: string; transcript?: string; transactions?: Transaction[]; confirmation_id?: string; changed?: boolean } }
+type Job = { id: string; status: string; created_at?: string; stalled?: boolean; result?: { text: string; transcript?: string; transactions?: Transaction[]; confirmation_id?: string; changed?: boolean } }
 type Props = { reload: () => void }
 const MAX_FILE = 3 * 1024 * 1024
-async function request(path: string, body?: unknown, signal?: AbortSignal) {
-  const response = await fetch(path, { method: body ? 'POST' : 'GET', credentials: 'same-origin', cache: 'no-store', signal,
+async function request(path: string, body?: unknown, signal?: AbortSignal, method?: string) {
+  const response = await fetch(path, { method: method || (body ? 'POST' : 'GET'), credentials: 'same-origin', cache: 'no-store', signal,
     headers: body ? { 'Content-Type': 'application/json' } : {}, body: body ? JSON.stringify(body) : undefined })
   const data = await response.json()
   if (!response.ok) throw new Error(data.error || 'Não consegui concluir. Tente novamente.')
@@ -20,6 +20,7 @@ export function AssistantPanel({reload}:Props) {
   const dialog=useRef<HTMLDialogElement>(null), input=useRef<HTMLTextAreaElement>(null), picker=useRef<HTMLInputElement>(null), opener=useRef<HTMLButtonElement>(null)
   const recorder=useRef<MediaRecorder|null>(null), stream=useRef<MediaStream|null>(null), timer=useRef<ReturnType<typeof setInterval>|null>(null)
   const abort=useRef(new AbortController()), changed=useRef(new Set<string>()), alive=useRef(true), discard=useRef(false)
+  const revision=useRef(0)
   const busy=jobs.some(j=>['queued','processing'].includes(j.status))
   function stop() { if(timer.current) clearInterval(timer.current); timer.current=null; if(recorder.current?.state==='recording') recorder.current.stop(); stream.current?.getTracks().forEach(t=>t.stop()); stream.current=null }
   useEffect(()=>()=>{alive.current=false;discard.current=true;stop();abort.current.abort()},[])
@@ -27,16 +28,21 @@ export function AssistantPanel({reload}:Props) {
   useEffect(()=>{
     if(open) dialog.current?.showModal(); else {dialog.current?.close();discard.current=true;stop()}
   },[open])
-  function merge(incoming:Job[]) {
-    setJobs(old=>{const map=new Map(old.map(j=>[j.id,j]));incoming.forEach(j=>map.set(j.id,j));return [...map.values()].slice(-16)})
+  function merge(incoming:Job[],replace=false) {
+    setJobs(old=>{const map=new Map((replace?[]:old).map(j=>[j.id,j]));incoming.forEach(j=>map.set(j.id,j));return [...map.values()].slice(-16)})
     for(const job of incoming) if(job.result?.changed&&!changed.current.has(job.id)){changed.current.add(job.id);reload()}
   }
   useEffect(()=>{
     if(!open) return
     let active=true, timeout:ReturnType<typeof setTimeout>
-    const poll=async()=>{try{const data=await request('/api/assistant',undefined,abort.current.signal);if(active){setError('');merge(data.jobs)}}catch(e){if(active)setError((e as Error).message)}finally{if(active)timeout=setTimeout(poll,2500)}}
+    const poll=async()=>{const expected=revision.current;try{const data=await request('/api/assistant',undefined,abort.current.signal);if(active&&expected===revision.current){setError('');merge(data.jobs,true)}}catch(e){if(active)setError((e as Error).message)}finally{if(active)timeout=setTimeout(poll,2500)}}
     void poll();return()=>{active=false;clearTimeout(timeout)}
   },[open])
+  async function cancelWaiting(job:Job) {
+    if(sending)return;setSending(true);setError('')
+    try { const result=await request(`/api/assistant?id=${encodeURIComponent(job.id)}`,undefined,abort.current.signal,'DELETE');if(alive.current){revision.current++;merge([result])} }
+    catch(e){if(alive.current)setError((e as Error).message)}finally{if(alive.current)setSending(false)}
+  }
   function selectFile(f?:File){setError('');setRetry(null);if(!f)return;if(f.size>MAX_FILE){setError('O arquivo deve ter no máximo 3 MB.');return}if(!/\.pdf$/i.test(f.name)){setError('Anexe um PDF. Para áudio, use o microfone.');return}setFile(f)}
   async function record(){
     setError('');setRetry(null);discard.current=false
@@ -59,7 +65,7 @@ export function AssistantPanel({reload}:Props) {
     try {
       const payload=action?{request_id:crypto.randomUUID(),text:'',action,confirmation_id:confirmationId}:retry||{request_id:crypto.randomUUID(),text,...(file?{file:{name:file.name,base64:await base64(file)}}:{})}
       setRetry(payload);const job=await request('/api/assistant',payload,abort.current.signal)
-      if(!alive.current)return;merge([job]);setRetry(null);setText('');setFile(null)
+      if(!alive.current)return;revision.current++;merge([job]);setRetry(null);setText('');setFile(null)
     }catch(e){if(alive.current)setError((e as Error).message)}finally{if(alive.current)setSending(false)}
   }
   return <><button ref={opener} className="assistant-launch" onClick={()=>setOpen(true)} aria-haspopup="dialog" aria-label="Abrir assistente financeiro" title="Assistente financeiro"><MessageCircle size={20}/>Assistente IA</button>
@@ -68,8 +74,9 @@ export function AssistantPanel({reload}:Props) {
       <div className="assistant-messages" role="log" aria-live="polite" aria-relevant="additions text">
         {!jobs.length&&<div className="assistant-empty"><h3>O que vamos registrar?</h3><p>“Gastei R$ 45 no almoço” ou “Recebi meu salário”. Você também pode enviar um recibo.</p><small>A conversa acompanha sua conta no Telegram.</small></div>}
         {jobs.map(job=><article key={job.id} className="assistant-message">
+          {job.stalled&&<button type="button" disabled={sending} onClick={()=>void cancelWaiting(job)}>Cancelar pedido parado</button>}
           {job.result?.transcript&&<details><summary>O que entendi do anexo</summary><p>{job.result.transcript}</p></details>}
-          <p>{job.result?.text||(job.status==='failed'?'Não foi possível concluir este pedido. Confira os lançamentos antes de tentar novamente.':job.status==='queued'&&job.created_at&&Date.now()-Date.parse(job.created_at)>120000?'O processamento está demorando mais que o esperado. Confira os lançamentos antes de registrar manualmente para evitar duplicidade.':job.status==='queued'?'Na fila…':'Conferindo seu pedido…')}</p>
+          <p>{job.result?.text||(job.status==='failed'?'Não foi possível concluir este pedido. Confira os lançamentos antes de tentar novamente.':job.status==='queued'&&job.created_at&&Date.now()-Date.parse(job.created_at)>120000?'Este pedido está parado na fila e ainda não começou a ser processado. O serviço pode estar indisponível. Você pode cancelar este pedido antes de tentar novamente; isso não reativa o serviço.':job.status==='queued'?'Na fila…':'Conferindo seu pedido…')}</p>
           {job.result?.transactions?.map((t,index)=><div className="assistant-receipt" key={t.id||index}><strong>{t.description}</strong><span>{Number(t.amount).toLocaleString('pt-BR',{style:'currency',currency:'BRL'})} · {t.transaction_date?.split('-').reverse().join('/')}</span>
             {t.id&&!t.deleted_at&&job.status==='done'&&<div className="assistant-actions"><button onClick={()=>{setRetry(null);setText(`Altere o lançamento ${t.id}: `);input.current?.focus()}}><Pencil size={15}/>Alterar</button><button disabled={sending||busy} onClick={()=>{setRetry(null);setText(`Exclua o lançamento ${t.id}`);input.current?.focus()}}><Trash2 size={15}/>Excluir</button></div>}</div>)}
           {job.status==='awaiting_confirmation'&&job.result?.confirmation_id&&<div className="assistant-actions"><button disabled={sending||busy} onClick={()=>send('confirm',job.result?.confirmation_id)}>Confirmar</button><button disabled={sending||busy} onClick={()=>send('cancel',job.result?.confirmation_id)}>Cancelar</button></div>}
