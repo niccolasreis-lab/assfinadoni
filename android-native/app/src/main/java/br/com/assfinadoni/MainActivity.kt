@@ -12,6 +12,12 @@ import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
+import androidx.compose.foundation.Image
+import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.verticalScroll
+import androidx.compose.ui.res.painterResource
+import androidx.compose.ui.layout.ContentScale
+import androidx.compose.ui.draw.clip
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
@@ -451,9 +457,10 @@ private fun LoginScreen(loading: Boolean, error: String?, onLogin: (String, Stri
     var username by rememberSaveable { mutableStateOf("") }
     var password by rememberSaveable { mutableStateOf("") }
     Surface(Modifier.fillMaxSize(), color = Graphite) {
-        Box(Modifier.fillMaxSize().windowInsetsPadding(WindowInsets.safeDrawing).padding(24.dp), contentAlignment = Alignment.Center) {
+        Box(Modifier.fillMaxSize().windowInsetsPadding(WindowInsets.safeDrawing).verticalScroll(rememberScrollState()).padding(24.dp), contentAlignment = Alignment.Center) {
             Card(colors = CardDefaults.cardColors(containerColor = Surface), shape = RoundedCornerShape(20.dp), modifier = Modifier.widthIn(max = 440.dp)) {
                 Column(Modifier.padding(24.dp), verticalArrangement = Arrangement.spacedBy(18.dp)) {
+                    Image(painterResource(R.drawable.cover_image), contentDescription = "Finanças — Nicolas e Ionara", contentScale = ContentScale.Fit, modifier = Modifier.fillMaxWidth().heightIn(max = 260.dp).clip(RoundedCornerShape(16.dp)))
                     Text("Assistente de Finanças", style = MaterialTheme.typography.headlineSmall, fontWeight = FontWeight.SemiBold)
                     Text("Nicolas & Ionara", color = MaterialTheme.colorScheme.secondary)
                     OutlinedTextField(username, { username = it }, Modifier.fillMaxWidth(), label = { Text("Usuário") }, singleLine = true)

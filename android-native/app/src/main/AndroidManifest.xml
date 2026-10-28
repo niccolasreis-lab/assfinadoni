@@ -6,7 +6,7 @@
     <uses-permission android:name="android.permission.SCHEDULE_EXACT_ALARM" />
     <application
         android:allowBackup="false" android:usesCleartextTraffic="false"
-        android:label="@string/app_name" android:icon="@drawable/app_icon"
+        android:label="@string/app_name" android:icon="@drawable/cover_image"
         android:supportsRtl="true"
         android:theme="@style/Theme.Assfinadoni">
         <activity
