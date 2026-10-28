@@ -1,0 +1,100 @@
+{
+  "date": "2026-10-28",
+  "base_commit": "ddf18d2d0528cffef4b2a3463c2528398dfa6915",
+  "production_deployed": false,
+  "tests": {
+    "total": 254,
+    "pass": 253,
+    "fail": 0,
+    "skip": 1
+  },
+  "build": "passed",
+  "typecheck": "passed",
+  "lint_js_files": 120,
+  "browser": {
+    "result": [
+      {
+        "width": 360,
+        "passed": true,
+        "frameTiming": {
+          "off": {
+            "p50_ms": 16.699999999999818,
+            "p95_ms": 16.800000000000182,
+            "frames": 30
+          },
+          "on": {
+            "p50_ms": 16.699999999999818,
+            "p95_ms": 16.700000000000728,
+            "frames": 30
+          }
+        }
+      },
+      {
+        "width": 768,
+        "passed": true,
+        "frameTiming": {
+          "off": {
+            "p50_ms": 16.699999999999818,
+            "p95_ms": 16.800000000000182,
+            "frames": 30
+          },
+          "on": {
+            "p50_ms": 16.699999999999818,
+            "p95_ms": 16.800000000000182,
+            "frames": 30
+          }
+        }
+      },
+      {
+        "width": 1024,
+        "passed": true,
+        "frameTiming": {
+          "off": {
+            "p50_ms": 16.69999999999891,
+            "p95_ms": 16.700000000000728,
+            "frames": 30
+          },
+          "on": {
+            "p50_ms": 16.69999999999891,
+            "p95_ms": 16.700000000000728,
+            "frames": 30
+          }
+        }
+      },
+      {
+        "width": 1440,
+        "passed": true,
+        "frameTiming": {
+          "off": {
+            "p50_ms": 16.69999999999891,
+            "p95_ms": 16.700000000000728,
+            "frames": 30
+          },
+          "on": {
+            "p50_ms": 16.69999999999891,
+            "p95_ms": 16.799999999999272,
+            "frames": 30
+          }
+        }
+      }
+    ],
+    "errors": []
+  },
+  "new_verified_constraints": [
+    "footer bottom equals viewport bottom",
+    "left=0 right=viewport width",
+    "native footer height=64 CSS px",
+    "footer position unchanged after scrolling",
+    "last visible transaction scrolls above footer",
+    "28px browser safe-area yields 92px total height; native insets yield 64px",
+    "footer hidden for focused input plus simulated keyboard resize; restored afterwards",
+    "full page entrance animation never changes footer bottom",
+    "navigation preserves footer docking"
+  ],
+  "native_code_changed": false,
+  "not_executed": [
+    "Physical Android system buttons and insets",
+    "Real IME/keyboard rotation and suspension on phone"
+  ],
+  "csp": "preserved; fixture uses CSSOM instead of injecting inline stylesheet"
+}

@@ -86,9 +86,38 @@ for(const width of [360,768,1024,1440]){
      const r=el.getBoundingClientRect(),s=getComputedStyle(el);
      return {height:r.height,bottom:r.bottom,viewport:innerHeight,blur:s.backdropFilter,buttons:[...el.querySelectorAll('button')].map(b=>b.getBoundingClientRect().height)};
    });
-   assert.equal(metrics.height,72,'navbar must not grow with safe-area padding');
+   assert.equal(metrics.height,64,'native footer height');
+   assert.equal(metrics.bottom,metrics.viewport,'footer must touch the bottom of the usable viewport');
    assert(metrics.bottom<=metrics.viewport,'navbar outside viewport');
    assert.equal(metrics.blur,'none');assert(metrics.buttons.every(h=>h>=44),'touch targets too small');
+   const position=()=>page.locator('#mobile-nav').evaluate(el=>{const r=el.getBoundingClientRect();return {top:r.top,bottom:r.bottom,left:r.left,right:r.right};});
+   const before=await position();
+   await page.evaluate(()=>scrollTo(0,document.documentElement.scrollHeight));
+   assert.deepEqual(await position(),before,'footer moved while scrolling');
+   assert.equal(before.left,0);assert.equal(before.right,width);
+   const last=await page.locator('#transaction-rows tr:visible').last().boundingBox();
+   assert(last,'last visible row missing');assert(last.y+last.height<=before.top,'last row is trapped beneath the footer');
+   await page.evaluate(()=>scrollTo(0,0));
+   const animationPositions=await page.evaluate(async()=>{
+     const motion=await import('/motion.js'),old=motion.getMotionMode();motion.setMotionMode('full');
+     window.FinanceUI.authChanged(true);const positions=[];
+     for(let i=0;i<5;i++){await new Promise(requestAnimationFrame);positions.push(document.getElementById('mobile-nav').getBoundingClientRect().bottom);}
+     motion.setMotionMode(old);return positions;
+   });assert(animationPositions.every(value=>value===1000),'page entrance moved the footer');
+   const safe=await page.evaluate(()=>{
+     document.documentElement.style.setProperty('--browser-safe-bottom','28px');
+     const nav=document.getElementById('mobile-nav');const native=nav.getBoundingClientRect().height;
+     document.documentElement.dataset.nativeViewport='false';const browser=nav.getBoundingClientRect().height;
+     document.documentElement.dataset.nativeViewport='true';document.documentElement.style.removeProperty('--browser-safe-bottom');return {native,browser};
+   });assert.deepEqual(safe,{native:64,browser:92},'safe area must be applied once');
+   await page.evaluate(()=>{const input=document.createElement('input');input.id='qa-keyboard';document.body.append(input);input.focus();});
+   await page.setViewportSize({width,height:650});await page.waitForFunction(()=>document.documentElement.dataset.keyboard==='open');
+   assert.equal(await page.locator('#mobile-nav').isVisible(),false,'footer must not jump above the keyboard');
+   await page.setViewportSize({width,height:1000});await page.waitForFunction(()=>document.documentElement.dataset.keyboard==='closed');
+   await page.evaluate(()=>document.getElementById('qa-keyboard').remove());
+   assert.equal(await page.locator('#mobile-nav').isVisible(),true);
+   await page.evaluate(()=>scrollTo(0,0));
+
  }
 
  assert.equal(await page.locator('#expense-total').evaluate(el=>el.scrollWidth>el.clientWidth),false,`expense total clipped ${width}`);
@@ -103,7 +132,7 @@ for(const width of [360,768,1024,1440]){
  await nav('income');await page.waitForFunction(()=>document.querySelector('#filter-type').value==='receita');await page.locator('#clear-filters').click();await page.waitForFunction(()=>!document.querySelector('#dashboard-view').hasAttribute('aria-busy'));assert.equal(await page.locator('#filter-type').inputValue(),'receita');
  await nav('categories');assert.equal(await page.locator('#category-panel').isVisible(),true);
  await nav('reports');assert.equal(await page.locator('#history-panel').isVisible(),true);
- await nav('settings');assert.equal(await page.locator('#settings-panel').isVisible(),true);
+ await nav('settings');assert.equal(await page.locator('#settings-panel').isVisible(),true);if(width<=900)assert.equal(await page.locator('#mobile-nav').evaluate(el=>el.getBoundingClientRect().bottom),1000);
  assert.equal(await page.locator('#motion-mode').inputValue(),'soft');
  for(const mode of ['off','full','soft']) {
    await page.locator('#motion-mode').selectOption(mode);

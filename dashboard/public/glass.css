@@ -326,3 +326,24 @@ html[data-motion=off] *, html[data-motion=off] *::before, html[data-motion=off] 
   html[data-motion-mode=full] .dashboard:not([hidden]) .card,
   html[data-motion-mode=full] .dashboard:not([hidden]) .panel { animation:panel-enter 260ms ease-out both; }
 }
+
+/* App-style footer: pinned to the viewport, with exactly one owner for safe areas. */
+:root { --app-safe-bottom:var(--browser-safe-bottom,env(safe-area-inset-bottom,0px)); }
+html[data-native-viewport=true] { --app-safe-bottom:0px; }
+@media(max-width:900px) {
+  .mobile-nav {
+    position:fixed; inset:auto 0 0; margin:0; width:100%;
+    height:calc(64px + var(--app-safe-bottom));
+    min-height:calc(64px + var(--app-safe-bottom));
+    max-height:calc(64px + var(--app-safe-bottom));
+    padding:4px 12px calc(4px + var(--app-safe-bottom));
+    border:0; border-top:1px solid #dce8df; border-radius:0;
+    box-shadow:0 -2px 8px #143b2409; z-index:40;
+    transform:none; animation:none; transition:none;
+  }
+  .mobile-nav .nav-item { height:56px; min-height:56px; border-radius:14px; }
+  .content { padding-bottom:calc(88px + var(--app-safe-bottom)); }
+  .assistant-launch { bottom:calc(80px + var(--app-safe-bottom)); }
+  html { scroll-padding-bottom:calc(88px + var(--app-safe-bottom)); }
+  html[data-keyboard=open] .mobile-nav,html[data-keyboard=open] .assistant-launch { display:none; }
+}

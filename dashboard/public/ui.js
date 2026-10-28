@@ -1,3 +1,4 @@
+import { installViewportPolicy } from './viewport.js';
 import { categoryMarkup, comparison, createHistoryLoader, historyMarkup, validSummary } from './charts.js';
 import { installDialogMotion, reveal } from './motion.js';
 import { createProfileController } from './profile-ui.js';
@@ -105,7 +106,7 @@ async function loadCentral() {
 function resetHistory() { history.reset(); historyContext = ''; lastState = null; renderedPoints = null; }
 window.FinanceUI = {
   init(callbacks) {
-    api = callbacks; drawIcons(); installDialogMotion(); profile=createProfileController(api.request); reminders=createRemindersController({request:api.request,onChanged:api.reload});
+    api = callbacks; installViewportPolicy(); drawIcons(); installDialogMotion(); profile=createProfileController(api.request); reminders=createRemindersController({request:api.request,onChanged:api.reload});
     new ResizeObserver(() => {
       if (renderedPoints && $('history-chart').clientWidth) $('history-chart').innerHTML=historyMarkup(renderedPoints,$('history-chart').clientWidth).svg;
     }).observe($('history-chart'));
@@ -142,7 +143,7 @@ window.FinanceUI = {
   },
   identity(account) { profile?.sync(account); reminders?.sync(account); },
   beforeLogout() { return reminders?.beforeLogout(); },
-  authChanged(authenticated) { if(!authenticated) { profile?.reset(); reminders?.reset(); } reveal($(authenticated ? 'dashboard-view' : 'login-view')); },
+  authChanged(authenticated) { if(!authenticated) { profile?.reset(); reminders?.reset(); } reveal(authenticated ? document.querySelector('#dashboard-view .workspace') : $('login-view')); },
   loaded(state) { loadHistory({ month:state.month, includeSharedSummary:state.includeSharedSummary, summary:state.summary, account:state.account, scope:state.scope }); if (section === 'central') loadCentral(); },
   invalidate() { resetHistory(); },
   loading() {
