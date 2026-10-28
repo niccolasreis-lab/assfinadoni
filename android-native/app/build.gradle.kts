@@ -13,8 +13,8 @@ android {
         applicationId = "br.com.assfinadoni"
         minSdk = 26
         targetSdk = 35
-        versionCode = 4
-        versionName = "1.2.1"
+        versionCode = 5
+        versionName = "1.3.0"
         buildConfigField("String", "API_BASE_URL", "\"https://assfinadoni.vercel.app/\"")
     }
 
@@ -53,6 +53,7 @@ android {
 }
 
 dependencies {
+    implementation("androidx.webkit:webkit:1.12.1")
     implementation("androidx.work:work-runtime-ktx:2.10.0")
     testImplementation("junit:junit:4.13.2")
     val composeBom = platform("androidx.compose:compose-bom:2024.12.01")

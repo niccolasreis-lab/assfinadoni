@@ -4,13 +4,26 @@ const { chromium }=require(process.env.PLAYWRIGHT_MODULE || 'playwright');
 const assert=require('node:assert/strict');
 const fs=require('node:fs');
 const out=process.env.QA_OUTPUT || '/tmp/finance-redesign-qa';fs.mkdirSync(out,{recursive:true});
-const base=process.env.QA_URL || 'http://127.0.0.1:4173';
+const nativeMode=process.env.QA_ANDROID === '1';
+const base=nativeMode ? 'https://assfinadoni.vercel.app' : process.env.QA_URL || 'http://127.0.0.1:4173';
 (async()=>{
 const browser=await chromium.launch({headless:true, ...(process.env.CHROMIUM_EXECUTABLE ? {executablePath:process.env.CHROMIUM_EXECUTABLE} : {})});
 const errors=[]; const result=[];
 for(const width of [360,768,1024,1440]){
  const context=await browser.newContext({viewport:{width,height:1000},locale:'pt-BR',serviceWorkers:'block'});const page=await context.newPage();
  page.on('pageerror',e=>errors.push(e.message));page.on('console',m=>{if(m.type()==='error' && !(fail && m.text().includes('500 (Internal Server Error)')))errors.push(m.text());});
+ if(nativeMode){
+  const path=require('node:path'), dist=path.resolve(process.env.QA_DIST||'dist');
+  await page.route(base+'/**',async route=>{
+   const pathname=new URL(route.request().url()).pathname;
+   if(pathname.startsWith('/api/'))return route.fallback();
+   const target=path.resolve(dist,'.'+(pathname==='/'?'/index.html':pathname));
+   if(!target.startsWith(dist+path.sep)||!fs.existsSync(target))return route.fulfill({status:404,body:''});
+   const mime={'.js':'text/javascript','.css':'text/css','.html':'text/html','.png':'image/png','.jpg':'image/jpeg','.woff2':'font/woff2','.webmanifest':'application/manifest+json'}[path.extname(target)]||'application/octet-stream';
+   return route.fulfill({path:target,contentType:mime,headers:{'content-security-policy':"default-src 'self';script-src 'self';style-src 'self';img-src 'self' data:;media-src 'self' blob:;connect-src 'self';worker-src 'self';object-src 'none'"}});
+  });
+  await page.addInitScript({content:`window.__nativeCommands=[];window.FinanceAndroid={postMessage(raw){const data=JSON.parse(raw);window.__nativeCommands.push(data.action);setTimeout(()=>window.FinanceAndroid.onmessage?.({data:JSON.stringify({id:data.id,message:'Configuração de teste'})}),0)}};`+fs.readFileSync('../android-native/app/src/main/assets/dashboard-native.js','utf8')});
+ }
  let authenticated=false,empty=false,fail=false;
  const account={username:'qa_demo',name:'Conta de teste',telegram_linked:true};
  await page.addInitScript(()=>localStorage.setItem('finance_tutorial_v1_qa_demo','seen'));
@@ -38,12 +51,14 @@ for(const width of [360,768,1024,1440]){
  assert.equal(await page.locator('#dashboard-view').isVisible(),true);
  await page.screenshot({animations:'disabled',path:`${out}/dashboard-${width}.png`,fullPage:true});
  assert.equal(await page.evaluate(()=>document.documentElement.scrollWidth>innerWidth),false,`overflow ${width}`);
- await page.locator('#reminders-trigger').click();await page.locator('#rm-list .empty').waitFor();await page.screenshot({animations:'disabled',path:`${out}/reminders-${width}.png`});await page.keyboard.press('Escape');await page.locator('#rm-center').waitFor({state:'hidden'});
+ assert.equal(await page.locator('#expense-total').evaluate(el=>el.scrollWidth>el.clientWidth),false,`expense total clipped ${width}`);
+ assert.equal(await page.locator('#income-total').evaluate(el=>el.scrollWidth>el.clientWidth),false,`income total clipped ${width}`);
+ await page.locator('#reminders-trigger').click();await page.locator('#rm-list .empty').waitFor();await page.screenshot({animations:'disabled',path:`${out}/reminders-${width}.png`});if(nativeMode){await page.locator('.reminders-preferences summary').click();await page.getByRole('button',{name:'Testar aviso',exact:true}).click();assert((await page.evaluate(()=>window.__nativeCommands)).includes('test'));await page.evaluate(()=>navigator.share({title:'Fixture',text:'Somente teste local'}));assert((await page.evaluate(()=>window.__nativeCommands)).includes('share'));assert.equal(await page.locator('#rm-enable-push').isVisible(),false);}await page.keyboard.press('Escape');await page.locator('#rm-center').waitFor({state:'hidden'});
  await page.locator('#account-trigger').click();await page.locator('#edit-profile').click();await page.locator('#profile-name').waitFor();assert.equal(await page.locator('#profile-name').inputValue(),account.name);await page.screenshot({animations:'disabled',path:`${out}/profile-${width}.png`});await page.keyboard.press('Escape');await page.locator('#profile-dialog').waitFor({state:'hidden'});
  const nav=async id=>{if(width<=900&&!['overview','transactions'].includes(id)){await page.locator('#mobile-nav [data-section=more]').click();await page.locator(`#more-nav [data-section=${id}]`).click();}else await page.locator(`${width<=900?'#mobile-nav':'#desktop-nav'} [data-section=${id}]`).click();await page.waitForFunction(expected=>document.querySelector('#dashboard-view').dataset.section===expected,id);};
  await page.locator('#quick-income').click();assert.equal(await page.locator('#transaction-type').inputValue(),'receita');await page.locator('#cancel-dialog').click();
  await nav('transactions');await page.locator('#filter-form').waitFor({state:'visible'});
- await page.locator('#transaction-rows .danger').first().click();await page.locator('#confirm-dialog').waitFor({state:'visible'});assert.equal(await page.locator('#confirm-cancel').evaluate(el=>el===document.activeElement),true);await page.keyboard.press('Tab');assert.equal(await page.locator('#confirm-accept').evaluate(el=>el===document.activeElement),true);await page.keyboard.press('Escape');await page.locator('#confirm-dialog').waitFor({state:'hidden'});assert.equal(await page.locator('#confirm-dialog').isVisible(),false);
+ await page.locator('#transaction-rows .danger').first().click();await page.locator('#confirm-dialog').waitFor({state:'visible'});assert.equal(await page.locator('#confirm-cancel').evaluate(el=>el===document.activeElement),true);await page.keyboard.press('Tab');assert.equal(await page.locator('#confirm-accept').evaluate(el=>el===document.activeElement),true);await page.keyboard.press('Escape');await page.locator('#confirm-dialog').waitFor({state:'hidden'});assert.equal(await page.locator('#confirm-dialog').isVisible(),false);if(nativeMode){await page.locator('#transaction-rows .danger').first().click();await page.locator('#confirm-dialog').waitFor({state:'visible'});await page.evaluate(()=>{document.getElementById('confirm-dialog').returnValue='confirm'});await page.evaluate(fs.readFileSync('../android-native/app/src/main/assets/dashboard-back.js','utf8'));await page.locator('#confirm-dialog').waitFor({state:'hidden'});assert.equal(await page.locator('#confirm-dialog').evaluate(el=>el.returnValue),'cancel');}
  await page.locator('#new-transaction').click();await page.screenshot({animations:'disabled',path:`${out}/form-${width}.png`});await page.keyboard.press('Escape');await page.locator('#transaction-dialog').waitFor({state:'hidden'});assert.equal(await page.locator('#transaction-dialog').isVisible(),false);
  await nav('income');await page.waitForFunction(()=>document.querySelector('#filter-type').value==='receita');await page.locator('#clear-filters').click();await page.waitForFunction(()=>!document.querySelector('#dashboard-view').hasAttribute('aria-busy'));assert.equal(await page.locator('#filter-type').inputValue(),'receita');
  await nav('categories');assert.equal(await page.locator('#category-panel').isVisible(),true);
@@ -55,7 +70,7 @@ for(const width of [360,768,1024,1440]){
  await page.emulateMedia({reducedMotion:'reduce'});assert.equal(await page.locator('.card').first().evaluate(el=>getComputedStyle(el).animationName),'none');
  await nav('settings');await page.locator('#logout').click();await page.locator('#login-view').waitFor({state:'visible'});assert.equal(await page.locator('#password').getAttribute('type'),'password');
  assert.equal(await page.locator('#username').evaluate(el=>getComputedStyle(el).outlineStyle),'solid');
- result.push({width,passed:true});await context.close();
+ if(nativeMode)assert((await page.evaluate(()=>window.__nativeCommands)).includes('sync'));result.push({width,passed:true});await context.close();
 }
 await browser.close();fs.writeFileSync(`${out}/results.json`,JSON.stringify({result,errors},null,2));assert.deepEqual(errors,[]);console.log(JSON.stringify({result,errors,output:out},null,2));
 })().catch(e=>{console.error(e);process.exit(1)});

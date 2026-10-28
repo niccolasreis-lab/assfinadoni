@@ -137,6 +137,12 @@ internal class SecureCookieJar(context: Context) : CookieJar {
         EncryptedSharedPreferences.PrefValueEncryptionScheme.AES256_GCM
     )
 
+    fun replace(url: HttpUrl, cookies: List<Cookie>) {
+        val editor = prefs.edit().clear()
+        cookies.filter { it.matches(url) && it.expiresAt > System.currentTimeMillis() }.forEach { editor.putString(it.name,it.toString()) }
+        editor.commit()
+    }
+
     override fun saveFromResponse(url: HttpUrl, cookies: List<Cookie>) {
         val editor = prefs.edit()
         cookies.forEach { cookie ->

@@ -257,3 +257,10 @@ dialog::backdrop { background:#16352766; }
  .button:active:not(:disabled),.nav-item:active { transform:scale(.98); }
  @keyframes panel-enter { from { opacity:0; transform:translateY(8px); } to { opacity:1; transform:translateY(0); } }
 }
+
+/* Keep both monthly totals legible on narrow screens. */
+@media(max-width:600px) {
+  .cards { grid-template-columns:repeat(2,minmax(0,1fr)); }
+  .card { min-width:0; }
+  .card.balance { grid-column:1/-1; }
+}

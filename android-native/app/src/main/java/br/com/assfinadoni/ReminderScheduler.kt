@@ -75,7 +75,7 @@ internal object ReminderScheduler {
     fun show(c:Context,key:String) {
         if(Build.VERSION.SDK_INT>=33 && ContextCompat.checkSelfPermission(c,Manifest.permission.POST_NOTIFICATIONS)!=PackageManager.PERMISSION_GRANTED) return
         if(!NotificationManagerCompat.from(c).areNotificationsEnabled()) return
-        val open=PendingIntent.getActivity(c,0,Intent(c,MainActivity::class.java).putExtra("open_reminders",true),PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE)
+        val open=PendingIntent.getActivity(c,0,Intent(c,DashboardActivity::class.java).putExtra("open_reminders",true),PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE)
         val n=NotificationCompat.Builder(c,CHANNEL).setSmallIcon(android.R.drawable.ic_popup_reminder).setContentTitle("Assistente de Finanças").setContentText("Você tem um lembrete para conferir. Abra seu financeiro.").setContentIntent(open).addAction(0,"Abrir lembretes",open).setAutoCancel(true).setVisibility(NotificationCompat.VISIBILITY_PRIVATE).build()
         NotificationManagerCompat.from(c).notify(key.hashCode(),n)
         prefs(c).edit().putBoolean("fired_$key",true).apply()

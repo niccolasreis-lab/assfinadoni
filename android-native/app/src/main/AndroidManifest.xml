@@ -4,15 +4,17 @@
     <uses-permission android:name="android.permission.POST_NOTIFICATIONS" />
     <uses-permission android:name="android.permission.RECEIVE_BOOT_COMPLETED" />
     <uses-permission android:name="android.permission.SCHEDULE_EXACT_ALARM" />
+    <uses-permission android:name="android.permission.RECORD_AUDIO" />
+    <queries><intent><action android:name="android.media.action.IMAGE_CAPTURE" /></intent></queries>
     <application
         android:allowBackup="false" android:usesCleartextTraffic="false"
         android:label="@string/app_name" android:icon="@drawable/cover_image"
         android:supportsRtl="true"
         android:theme="@style/Theme.Assfinadoni">
         <activity
-            android:name=".MainActivity"
+            android:name=".DashboardActivity" android:launchMode="singleTop"
             android:exported="true"
-            android:screenOrientation="unspecified">
+            android:configChanges="orientation|screenSize|keyboardHidden" android:screenOrientation="unspecified" android:windowSoftInputMode="adjustResize">
             <intent-filter>
                 <action android:name="android.intent.action.MAIN" />
                 <category android:name="android.intent.category.LAUNCHER" />
