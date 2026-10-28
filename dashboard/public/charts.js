@@ -45,7 +45,7 @@ export function categoryMarkup(summary) {
   const entries = Object.entries(summary.byCategory || {}).map(([key,value]) => [key, Number(value)]).filter(([,value]) => Number.isFinite(value) && value > 0).sort((a,b) => b[1]-a[1]);
   const total = entries.reduce((sum,[,value]) => sum+value,0);
   if (!total) return '<p class="muted">Sem despesas no período.</p>';
-  const colors = ['#a78bfa','#60a5fa','#fbbf24','#2dd4bf'];
+  const colors = ['#145c3e','#3c9165','#b24f5a','#8bb69b'];
   let offset = 0;
   let svg = '<svg viewBox="0 0 160 160" role="img" aria-label="Distribuição de despesas; valores por categoria na lista abaixo.">';
   for (const [index,[name,value]] of entries.entries()) {
