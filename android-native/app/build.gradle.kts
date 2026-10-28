@@ -13,8 +13,8 @@ android {
         applicationId = "br.com.assfinadoni"
         minSdk = 26
         targetSdk = 35
-        versionCode = 6
-        versionName = "1.3.1"
+        versionCode = 7
+        versionName = "1.3.2"
         buildConfigField("String", "API_BASE_URL", "\"https://assfinadoni.vercel.app/\"")
     }
 
