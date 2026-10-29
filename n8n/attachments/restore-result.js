@@ -1,0 +1,1 @@
+const original=$('Preparar conteúdo do comprovante').item.json;const result=$input.first().json;const {attachmentPayload,attachmentCandidate,...current}=original;return [{json:{...current,attachmentStatus:result.error?'pending':'stored'}}];
