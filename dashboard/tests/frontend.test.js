@@ -179,6 +179,8 @@ test('scope e inclusão nos totais são controles independentes, com filtros por
     return json({ transactions: [], summary: { income: 100, expense: path.includes('include_shared_summary=true') ? 40 : 20, balance: 80, byCategory: {} } });
   });
   await until(() => calls.length === 2);
+  ui.element('scope-mine').dispatch('click');
+  await until(() => calls.at(-1).includes('scope=mine'));
   ui.element('filter-search').value = 'Mercado';
   ui.element('scope-shared').dispatch('click');
   await until(() => calls.some((path) => path.includes('scope=shared')));
@@ -202,7 +204,7 @@ test('destinatário vê proprietário e ações completas, mas edição/exclusã
   await until(() => ui.element('transaction-rows').children.length === 1);
   const row = ui.element('transaction-rows').children[0];
   const actions = row.children[4].children;
-  assert.deepEqual(actions.map((action) => action.textContent), ['Editar', 'Excluir', 'Parar de compartilhar']);
+  assert.deepEqual(actions.map((action) => action.textContent), ['Editar', 'Excluir', 'Parar de compartilhar', 'Comprovantes']);
   assert.match(row.children[0].children[0].children.map((element) => element.textContent).join(' '), /Iônara|ionararosendo/);
   actions[0].dispatch('click');
   actions[1].dispatch('click');
@@ -210,7 +212,7 @@ test('destinatário vê proprietário e ações completas, mas edição/exclusã
   assert.equal(mutations.length, 0);
 });
 
-test('Casal é optativo, usa sua API e mantém consulta sem ações de escrita', async () => {
+test('Casal é a visão inicial e mantém consulta financeira sem escrita', async () => {
   const calls=[];
   const ui=mount(async(path)=>{
     calls.push(path);
@@ -220,16 +222,16 @@ test('Casal é optativo, usa sua API e mantém consulta sem ações de escrita',
     return json({transactions:couple?[{id:'couple',read_only:true,is_owner:false,owner_name:'Finanças do casal',description:'Mercado casal',amount:40,category:'Alimentação',transaction_type:'despesa',transaction_date:'2026-10-10'}]:[],summary:{income:0,expense:couple?40:900,balance:couple?-40:-900,byCategory:{}}});
   });
   await until(()=>calls.includes('/api/categories'));
-  assert.ok(calls.some(path=>path.startsWith('/api/transactions?')&&path.includes('scope=mine')));
-  ui.element('scope-couple').dispatch('click');
+  assert.ok(calls.some(path=>path.startsWith('/api/couple?')&&path.includes('scope=couple')));
   await until(()=>ui.element('transaction-rows').children[0]?.children[0]?.textContent==='Mercado casal');
   assert.ok(calls.some(path=>path.startsWith('/api/couple?')));
   assert.equal(ui.element('new-transaction').hidden,true);
   assert.equal(ui.element('shared-summary-control').hidden,true);
   const row=ui.element('transaction-rows').children[0];
-  assert.deepEqual(row.children[4].children.map(action=>action.textContent),['Gerenciar no WhatsApp']);
+  assert.deepEqual(row.children[4].children.map(action=>action.textContent),['Gerenciar no WhatsApp','Comprovantes']);
   assert.equal(row.listeners.has('click'),false);
   ui.element('scope-mine').dispatch('click');
   await until(()=>ui.element('new-transaction').hidden===false);
   assert.ok(calls.at(-1).startsWith('/api/transactions?'));
 });
+

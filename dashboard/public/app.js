@@ -3,7 +3,7 @@ const defaultCategories = ['Alimentação', 'Transporte', 'Moradia', 'Saúde', '
 const $ = (id) => document.getElementById(id);
 const money = (value) => Number(value || 0).toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' });
 const state = { transactions: [], summary: null, month: '', view: 'active', page: 1, hasMore: false, datesCustomized: false, loadId: 0, deleting: new Set(), categories: [...defaultCategories] };
-state.scope = 'mine'; state.includeSharedSummary = false; state.account = null;
+state.scope = 'couple'; state.includeSharedSummary = false; state.account = null;
 state.scopeFilters = {}; state.section = 'overview'; state.payerFilter = 'all'; state.payerParticipants = [];
 function payerFilterParams() {
   if (state.scope !== 'couple') return [];
@@ -56,7 +56,7 @@ function setIdentity(account) {
   const username = account.username || '';
   const person = account.name || account.display_name || '';
   $('welcome-title').textContent = person ? `Olá, ${person}. Seu mês, sem complicação.` : 'Seu mês, sem complicação.';
-  $('welcome-copy').textContent = 'Organize seus lançamentos e compartilhe só o que escolher.';
+  $('welcome-copy').textContent = 'A carteira do casal é a mesma do WhatsApp. Seus registros pessoais continuam em Minhas.';
   $('telegram-status').textContent = account.telegram_linked === true
     ? 'Seu Telegram está conectado. Você pode lançar por aqui ou conversar com o assistente.'
     : account.telegram_linked === false ? 'Seu vínculo com o Telegram está pendente. Você já pode lançar e organizar tudo por aqui.' : '';
@@ -263,6 +263,10 @@ function render() {
     amount.textContent = `${row.transaction_type === 'receita' ? '+' : '−'} ${money(row.amount)}`;
     const actions = document.createElement('td');
     actions.className = 'right row-actions';
+    const receipts = document.createElement('button');
+    receipts.type = 'button'; receipts.className = 'text-button'; receipts.textContent = 'Comprovantes';
+    receipts.setAttribute('aria-label', `Comprovantes de ${row.description}, ${money(row.amount)}`);
+    receipts.addEventListener('click', () => openAttachments(row));
     if (row.read_only) {
       const note = document.createElement('span'); note.className = 'muted'; note.textContent = 'Gerenciar no WhatsApp'; actions.append(note);
     } else if (state.view === 'trash') {
@@ -297,6 +301,7 @@ function render() {
         openTransactionActions(row);
       });
     }
+    actions.append(receipts);
     tr.append(description, category, date, amount, actions);
     body.append(tr);
   }
@@ -393,7 +398,7 @@ function openForm(row = null) {
   else $('transaction-date').removeAttribute('max');
   $('transaction-image').value = '';
   $('transaction-image-preview').hidden = true;
-  $('transaction-image-status').textContent = 'JPG, PNG ou WebP · até 1 MB';
+  $('transaction-image-status').textContent = 'PDF, JPG, PNG ou WebP · até 900 KB';
   $('transaction-dialog').showModal();
 }
 
@@ -437,7 +442,7 @@ async function saveTransaction(event) {
       $('month').value = month;
       if (!state.datesCustomized) syncMonthDates();
     }
-    if (!id) { state.view = 'active'; state.scope = 'mine'; remember('finance_scope', 'mine'); }
+    if (!id) { state.view = 'active'; state.scope = 'mine'; remember('finance_scope_v2', 'mine'); }
     state.page = 1;
     await loadTransactions();
     message('page-message', id ? 'Lançamento atualizado.' : 'Lançamento adicionado.');
@@ -450,9 +455,42 @@ function readImageDataUrl(file) {
 }
 
 async function uploadAttachment(transactionId, file) {
-  if (!/^image\/(jpeg|png|webp)$/.test(file.type) || file.size > 900000) throw new Error('A imagem deve ser JPG, PNG ou WebP e ter até 900 KB.');
+  if (! /^(?:image\/(jpeg|png|webp)|application\/pdf)$/.test(file.type) || file.size > 900000) throw new Error('O comprovante deve ser PDF, JPG, PNG ou WebP e ter até 900 KB.');
   const data_url = await readImageDataUrl(file);
   await request('/api/transaction-attachments', { method: 'POST', body: JSON.stringify({ transaction_id: transactionId, filename: file.name, content_type: file.type, data_url }) });
+}
+
+async function openAttachments(row) {
+  let dialog = $('attachments-dialog');
+  if (!dialog) { dialog = document.createElement('dialog'); dialog.id = 'attachments-dialog'; dialog.setAttribute('aria-labelledby', 'attachments-title'); document.body.append(dialog); }
+  const body = document.createElement('div'); body.className = 'dialog-body';
+  const title = document.createElement('h2'); title.id = 'attachments-title'; title.textContent = 'Comprovantes';
+  const description = document.createElement('p'); description.textContent = row.description;
+  const close = document.createElement('button'); close.type = 'button'; close.className = 'text-button'; close.textContent = 'Fechar'; close.addEventListener('click', () => dialog.close());
+  const status = document.createElement('p'); status.setAttribute('role', 'status'); status.textContent = 'Carregando comprovantes…';
+  const list = document.createElement('ul');
+  const label = document.createElement('label'); label.textContent = 'Adicionar comprovante (PDF ou imagem, até 900 KB)';
+  const file = document.createElement('input'); file.type = 'file'; file.accept = 'application/pdf,image/jpeg,image/png,image/webp'; label.append(file);
+  const upload = document.createElement('button'); upload.type = 'button'; upload.className = 'primary'; upload.textContent = 'Anexar arquivo';
+  const refresh = async () => {
+    const data = await request('/api/transaction-attachments?transaction_id=' + encodeURIComponent(row.id));
+    list.replaceChildren(); const attachments = Array.isArray(data.attachments) ? data.attachments : [];
+    for (const item of attachments) {
+      if (!/^data:(?:image\/(?:jpeg|png|webp)|application\/pdf);base64,[A-Za-z0-9+/]+={0,2}$/.test(item.data_url || '')) continue;
+      const li = document.createElement('li'); const link = document.createElement('a');
+      link.textContent = 'Baixar ' + item.filename; link.href = item.data_url; link.download = item.filename; li.append(link); list.append(li);
+    }
+    status.textContent = attachments.length ? 'Arquivos deste lançamento:' : 'Nenhum comprovante anexado. Você pode adicionar o arquivo abaixo.';
+  };
+  upload.addEventListener('click', async () => {
+    if (!file.files?.[0]) { status.textContent = 'Escolha um arquivo primeiro.'; return; }
+    upload.disabled = true;
+    try { await uploadAttachment(row.id, file.files[0]); file.value = ''; await refresh(); }
+    catch (error) { status.textContent = error.message; }
+    finally { upload.disabled = false; }
+  });
+  body.append(title, description, status, list, label, upload, close); dialog.replaceChildren(body); dialog.showModal();
+  try { await refresh(); } catch (error) { status.textContent = error.message; }
 }
 
 async function loadCategories() {
@@ -553,8 +591,8 @@ async function init() {
       loadTransactions();
     },
   });
-  const scope = remembered('finance_scope', 'mine');
-  state.scope = ['mine', 'shared', 'all', 'couple'].includes(scope) ? scope : 'mine';
+  const scope = remembered('finance_scope_v2', 'couple');
+  state.scope = ['mine', 'shared', 'all', 'couple'].includes(scope) ? scope : 'couple';
   state.includeSharedSummary = remembered('finance_include_shared', 'false') === 'true';
   $('month').value = saoPauloToday().slice(0, 7);
   syncMonthDates();
@@ -565,9 +603,9 @@ async function init() {
     try {
       const data = await request('/api/session', { method: 'POST', body: JSON.stringify({ username: $('username').value.trim().toLowerCase(), password: $('password').value }) });
       state.loadId++; state.transactions = []; state.summary = null; state.page = 1; state.hasMore = false;
-      state.view = 'active'; state.scope = 'mine'; state.includeSharedSummary = false; state.scopeFilters = {}; state.datesCustomized = false;
+      state.view = 'active'; state.scope = 'couple'; state.includeSharedSummary = false; state.scopeFilters = {}; state.datesCustomized = false;
       state.payerFilter = 'all'; state.payerParticipants = [];
-      restoreScopeFilters('mine'); remember('finance_scope', 'mine'); remember('finance_include_shared', 'false');
+      restoreScopeFilters('couple'); remember('finance_scope_v2', 'couple'); remember('finance_include_shared', 'false');
       state.section = 'overview'; window.FinanceUI?.reset();
       setIdentity(data.account || data.user); $('password').value = ''; render(); showDashboard(true); await loadTransactions(); await loadCategories();
     }
@@ -604,7 +642,7 @@ async function init() {
   });
   $('active-view').addEventListener('click', () => { if (state.view !== 'active') { state.view = 'active'; state.page = 1; loadTransactions(); } });
   $('trash-view').addEventListener('click', () => { if (state.view !== 'trash') { state.view = 'trash'; state.page = 1; loadTransactions(); } });
-  for (const scope of ['mine', 'shared', 'all', 'couple']) $('scope-' + scope).addEventListener('click', () => { if (state.scope !== scope) { saveScopeFilters(); state.scope = scope; restoreScopeFilters(scope); remember('finance_scope', scope); loadTransactions(); } });
+  for (const scope of ['mine', 'shared', 'all', 'couple']) $('scope-' + scope).addEventListener('click', () => { if (state.scope !== scope) { saveScopeFilters(); state.scope = scope; restoreScopeFilters(scope); remember('finance_scope_v2', scope); loadTransactions(); } });
   $('include-shared-summary').addEventListener('change', () => { state.includeSharedSummary = Boolean($('include-shared-summary').checked); remember('finance_include_shared', String(state.includeSharedSummary)); loadTransactions(); });
   $('filter-form').addEventListener('submit', (event) => { event.preventDefault(); state.page = 1; loadTransactions(); });
   for (const id of ['filter-category', 'filter-type']) $(id).addEventListener('change', () => { state.page = 1; loadTransactions(); });
@@ -627,7 +665,7 @@ async function init() {
   $('category-form').addEventListener('submit', createCategory);
   $('close-category-dialog').addEventListener('click', () => $('category-dialog').close());
   $('cancel-category-dialog').addEventListener('click', () => $('category-dialog').close());
-  $('transaction-image').addEventListener('change', () => { const file = $('transaction-image').files?.[0]; $('transaction-image-status').textContent = file ? `${file.name} · ${(file.size / 1024).toFixed(0)} KB` : 'JPG, PNG ou WebP · até 1 MB'; });
+  $('transaction-image').addEventListener('change', () => { const file = $('transaction-image').files?.[0]; $('transaction-image-status').textContent = file ? `${file.name} · ${(file.size / 1024).toFixed(0)} KB` : 'PDF, JPG, PNG ou WebP · até 900 KB'; });
   $('payment-method').addEventListener('change', () => { $('payment-breakdown').hidden = !['misto', 'cartao'].includes($('payment-method').value); });
   $('close-dialog').addEventListener('click', () => $('transaction-dialog').close());
   $('cancel-dialog').addEventListener('click', () => $('transaction-dialog').close());
@@ -639,3 +677,4 @@ async function init() {
 }
 
 init();
+
