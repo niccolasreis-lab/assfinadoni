@@ -76,7 +76,7 @@ test('pagador filtra no servidor antes da página e não altera resumo mensal', 
 });
 
 test('pagador só viaja para Casal e datas continuam independentes por escopo',async()=>{
-  const ui=mount();await ui.settled();
+  const ui=mount();await ui.settled();await ui.action('scope-mine');
   ui.element('filter-from').value='2026-08-01';await ui.action('filter-from','change');
   const personalFrom=ui.element('filter-from').value;
   await ui.action('scope-couple');ui.element('filter-from').value='2026-09-01';await ui.action('filter-from','change');
@@ -96,3 +96,4 @@ test('labels distinguem histórico, receitas e conjunto sem executar texto receb
   const unsafe=ui.element('filter-payer').children.find(option=>option.value==='participant:'+B);assert.equal(unsafe.textContent,'<img src=x> (inativo)');assert.equal(unsafe.innerHTML,undefined);
   await ui.action('scope-mine');assert.equal(ui.element('transaction-rows').children[0].children[0].children[0].children.some(b=>b.className==='badge payer-badge'),false);
 });
+
