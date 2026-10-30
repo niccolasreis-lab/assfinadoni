@@ -209,7 +209,7 @@ function render() {
   renderPayerFilter();
   $('include-shared-summary').disabled = couple;
   $('shared-summary-control').hidden = couple;
-  $('new-transaction').hidden = couple;
+  $('new-transaction').hidden = false;
   const summaryAvailable = state.summary && ['income','expense','balance'].every(key => (typeof state.summary[key] === 'number' || typeof state.summary[key] === 'string' && state.summary[key].trim() !== '') && Number.isFinite(Number(state.summary[key])));
   const income = summaryAvailable ? Number(state.summary.income) : null;
   const expense = summaryAvailable ? Number(state.summary.expense) : null;
@@ -377,11 +377,12 @@ async function loadTransactions() {
 
 function openForm(row = null) {
   if (row?.read_only) return;
-  if (!row && state.scope === 'couple') { message('page-message', 'Para registrar na carteira do casal, envie o gasto ao bot no grupo. Para um lançamento pessoal, selecione Minhas.'); return; }
+  $('transaction-form').dataset.scope = !row && state.scope === 'couple' ? 'couple' : 'mine';
+  $('transaction-form').dataset.requestId = row ? '' : crypto.randomUUID();
   $('transaction-form').reset();
   message('form-error', '');
   $('transaction-id').value = row?.id || '';
-  $('dialog-title').textContent = row ? 'Editar lançamento' : 'Novo lançamento';
+  $('dialog-title').textContent = row ? 'Editar lançamento' : state.scope === 'couple' ? 'Novo lançamento do casal' : 'Novo lançamento pessoal';
   $('save-transaction').textContent = row ? 'Salvar alterações' : 'Adicionar lançamento';
   $('transaction-type').value = row?.transaction_type || 'despesa';
   $('amount').value = row?.amount || '';
@@ -394,7 +395,7 @@ function openForm(row = null) {
   $('installments').value = payment.installments || '';
   $('card-name').value = payment.card_name || '';
   $('payment-breakdown').hidden = !['misto', 'cartao'].includes($('payment-method').value);
-  if (row) $('transaction-date').max = saoPauloToday();
+  if (row || state.scope === 'couple') $('transaction-date').max = saoPauloToday();
   else $('transaction-date').removeAttribute('max');
   $('transaction-image').value = '';
   $('transaction-image-preview').hidden = true;
@@ -410,10 +411,12 @@ async function saveTransaction(event) {
   const body = { transaction_type: $('transaction-type').value, amount: Number($('amount').value), category: $('category').value, description: $('description').value.trim(), transaction_date: $('transaction-date').value, payment_method: $('payment-method').value, cash_amount: Number($('cash-amount').value || 0), installments: Number($('installments').value || 0) };
   body.card_name = $('card-name').value.trim();
   if (id) body.id = id;
+  else { body.scope = $('transaction-form').dataset.scope; body.request_id = $('transaction-form').dataset.requestId; }
   const button = $('save-transaction'); button.disabled = true;
   button.textContent = id ? 'Salvando alterações...' : 'Adicionando...';
+  let attachmentPending = false;
   try {
-    const scheduled = !id && body.transaction_type === 'despesa' && body.transaction_date > saoPauloToday();
+    const scheduled = !id && body.scope !== 'couple' && body.transaction_type === 'despesa' && body.transaction_date > saoPauloToday();
     if (scheduled) {
       await request('/api/reminders', { method: 'POST', body: JSON.stringify({
         kind: 'bill',
@@ -430,7 +433,10 @@ async function saveTransaction(event) {
       const result = await request('/api/transactions', { method: id ? 'PATCH' : 'POST', body: JSON.stringify(body) });
       const image = $('transaction-image').files?.[0];
       const transactionId = id || result?.transaction?.id || result?.id;
-      if (image && transactionId) await uploadAttachment(transactionId, image);
+      if (image && transactionId) {
+        try { await uploadAttachment(transactionId, image); }
+        catch { attachmentPending = true; }
+      }
     }
     $('transaction-dialog').close();
     if (scheduled) {
@@ -442,10 +448,10 @@ async function saveTransaction(event) {
       $('month').value = month;
       if (!state.datesCustomized) syncMonthDates();
     }
-    if (!id) { state.view = 'active'; state.scope = 'mine'; remember('finance_scope_v2', 'mine'); }
+    if (!id) { state.view = 'active'; state.scope = body.scope || 'mine'; remember('finance_scope_v2', state.scope); }
     state.page = 1;
     await loadTransactions();
-    message('page-message', id ? 'Lançamento atualizado.' : 'Lançamento adicionado.');
+    message('page-message', attachmentPending ? 'Lançamento salvo. O comprovante ficou pendente; use Comprovantes para anexar novamente, sem repetir o lançamento.' : id ? 'Lançamento atualizado.' : 'Lançamento adicionado.');
   } catch (error) { message('form-error', error.message, true); }
   finally { button.disabled = false; button.textContent = id ? 'Salvar alterações' : 'Adicionar lançamento'; }
 }

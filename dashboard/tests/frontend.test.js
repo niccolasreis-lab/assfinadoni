@@ -2,6 +2,7 @@ import assert from 'node:assert/strict';
 import { readFileSync } from 'node:fs';
 import { runInNewContext } from 'node:vm';
 import test from 'node:test';
+import { randomUUID } from 'node:crypto';
 
 const source = readFileSync(new URL('../public/app.js', import.meta.url), 'utf8').replace("import { icon } from './ui.js';", "const icon = () => '';\n");
 
@@ -37,6 +38,7 @@ class Element {
     this.listeners = new Map();
     this.attributes = new Map();
     this.classList = { add() {}, remove() {}, toggle() {} };
+    this.dataset = {};
     this.value = '';
     this.textContent = '';
     this.style = {};
@@ -73,7 +75,7 @@ function mount(fetch) {
     },
     createElement(tagName) { return new Element(tagName); },
   };
-  runInNewContext(source, { document, fetch, Intl, Date, Number, Object, Map, Error, window: { confirm: () => false } });
+  runInNewContext(source, { document, fetch, crypto: { randomUUID }, Intl, Date, Number, Object, Map, Error, window: { confirm: () => false } });
   return { element: (id) => document.getElementById(id) };
 }
 
@@ -212,7 +214,7 @@ test('destinatário vê proprietário e ações completas, mas edição/exclusã
   assert.equal(mutations.length, 0);
 });
 
-test('Casal é a visão inicial e mantém consulta financeira sem escrita', async () => {
+test('Casal é a visão inicial, permite cadastro e mantém edição antiga somente para consulta', async () => {
   const calls=[];
   const ui=mount(async(path)=>{
     calls.push(path);
@@ -225,7 +227,10 @@ test('Casal é a visão inicial e mantém consulta financeira sem escrita', asyn
   assert.ok(calls.some(path=>path.startsWith('/api/couple?')&&path.includes('scope=couple')));
   await until(()=>ui.element('transaction-rows').children[0]?.children[0]?.textContent==='Mercado casal');
   assert.ok(calls.some(path=>path.startsWith('/api/couple?')));
-  assert.equal(ui.element('new-transaction').hidden,true);
+  assert.equal(ui.element('new-transaction').hidden,false);
+  ui.element('new-transaction').dispatch('click');
+  assert.equal(ui.element('dialog-title').textContent,'Novo lançamento do casal');
+  assert.equal(ui.element('transaction-form').dataset.scope,'couple');
   assert.equal(ui.element('shared-summary-control').hidden,true);
   const row=ui.element('transaction-rows').children[0];
   assert.deepEqual(row.children[4].children.map(action=>action.textContent),['Gerenciar no WhatsApp','Comprovantes']);
@@ -235,3 +240,22 @@ test('Casal é a visão inicial e mantém consulta financeira sem escrita', asyn
   assert.ok(calls.at(-1).startsWith('/api/transactions?'));
 });
 
+
+
+test('cadastro do casal preserva carteira e chave de repetição após falha de rede',async()=>{
+ const writes=[];let fail=true;
+ const ui=mount(async(path,options={})=>{
+  if(path==='/api/session')return json({authenticated:true,account:{username:'nicolasreis'}});
+  if(path==='/api/categories')return json({categories:[]});
+  if(options.method==='POST'){writes.push(JSON.parse(options.body));if(fail)throw new Error('Rede indisponível');return json({transaction:{id:writes.at(-1).request_id}});}
+  return json({transactions:[],summary:{income:0,expense:0,balance:0,byCategory:{}}});
+ });
+ await until(()=>ui.element('new-transaction').listeners.has('click'));
+ ui.element('new-transaction').dispatch('click');
+ ui.element('amount').value='18.50';ui.element('description').value='Padaria';
+ await ui.element('transaction-form').dispatch('submit');
+ assert.equal(writes.length,1);assert.equal(writes[0].scope,'couple');
+ fail=false;await ui.element('transaction-form').dispatch('submit');
+ assert.equal(writes.length,2);assert.equal(writes[0].request_id,writes[1].request_id);
+ assert.equal(ui.element('scope-couple').getAttribute('aria-pressed'),'true');
+});
