@@ -63,6 +63,12 @@ export default async function handler(req, res) {
     const body = readBody(req);
     if (req.method === 'POST') {
       const values = validatedTransaction(body);
+      if (body.scope !== undefined && !['mine', 'couple'].includes(body.scope)) throw new Error('Escopo inválido.');
+      if (body.scope === 'couple') {
+        const created = await rpc('finance_dashboard_couple_create_transaction', { p_account_id: account.id, p_request_id: uuid(body.request_id), p_values: values });
+        if (!created) throw new Error('Não foi possível criar o lançamento.');
+        return send(res, 201, { transaction: created });
+      }
       const created = await rpc('finance_dashboard_create_transaction', { p_account_id: account.id, p_transaction_type: values.transaction_type,
         p_amount: values.amount, p_category: values.category, p_description: values.description, p_transaction_date: values.transaction_date, p_payment_details: values.payment_details });
       if (!created) throw new Error('Não foi possível criar o lançamento.');
@@ -86,6 +92,7 @@ export default async function handler(req, res) {
     if (!deleted) return send(res, 404, { error: 'Lançamento não encontrado.' });
     return send(res, 200, { deleted: true, transaction: deleted });
   } catch (error) {
+    if (error.code === '42501') return send(res, 403, { error: 'Sua conta não tem uma carteira do casal autorizada para cadastro.' });
     const validation = /inválid|Informe|Selecione|Descreva|Mês|Visão|Escopo|Página|Busca|Categoria|Tipo|Intervalo|Resumo|Envie JSON|Dados inválidos/.test(error.message);
     return send(res, error.status === 403 ? 403 : validation ? 400 : 500,
       { error: validation ? error.message : 'Não consegui concluir a operação. Tente novamente.' });
