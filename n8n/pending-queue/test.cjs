@@ -1,0 +1,26 @@
+const fs=require('node:fs'),path=require('node:path'),assert=require('node:assert/strict');
+const code=name=>fs.readFileSync(path.join(__dirname,name+'.js'),'utf8');
+const run=(name,input,refs,state={})=>new Function('$input','$','$getWorkflowStaticData',code(name))({first:()=>({json:input}),all:()=>input},name=>({first:()=>({json:refs[name]})}),()=>state);
+for(const f of fs.readdirSync(__dirname).filter(n=>n.endsWith('.js')))new Function('$input','$','$getWorkflowStaticData',fs.readFileSync(path.join(__dirname,f),'utf8'));
+const base={chatId:'group',senderId:'person-a',messageId:'confirmation',user:{id:'wallet'},today:'2026-10-31'};
+const tx=amount=>({amount,description:'Compra',category:'Alimentação',transaction_type:'despesa',transaction_date:'2026-10-30'});
+const receipts=[{source_message_id:'receiptA',version:1,transactions:[tx('95.86')],attachment:{fileName:'a.jpg'}},{source_message_id:'receiptB',version:2,transactions:[tx('58.06')],attachment:{fileName:'b.jpg'}}];
+const state={};const loaded=run('load',{ok:true,receipts},{'Contexto antes da fila':base},state)[0].json;
+assert.equal(loaded.queuePending.transactions.length,2);assert(state.pending['group:person-a']);assert(!state.pending.group);
+const confirmed={...loaded,transactions:loaded.queuePending.transactions,pendingConfirmation:true,queueClaimed:true};
+const refs={'Preparar contexto seguro':loaded};
+const claim=run('claim',confirmed,refs,state)[0].json;assert.equal(claim.queueClaimPayload.receipts.length,2);
+const items=run('items',confirmed,refs,state);assert.deepEqual(items.map(r=>r.json.sourceEventId),['wa:receiptA:0','wa:receiptB:0']);
+state.pending['group:person-a']={sourceMessageId:'newer',transactions:[tx('99')]};
+for(const item of items){item.json.status='registrado';item.json.savedId='saved';const candidate=run('attachment',item.json,refs,state)[0].json.attachmentCandidate;assert.equal(candidate.fileName,item.json.sourceMessageId==='receiptA'?'a.jpg':'b.jpg');}
+const ack=run('ack',items,{'Interpretar lançamento':confirmed},state)[0].json;assert.equal(ack.queueAckPayload.receipts.length,2);assert(ack.queueAckPayload.receipts.every(r=>r.complete));assert(!ack.queueAckPayload.receipts.some(r=>r.source_message_id==='newer'));
+items[1].json.status='falha';const partial=run('ack',items,{'Interpretar lançamento':confirmed},state)[0].json;assert.equal(partial.queueAckPayload.receipts[1].complete,false);
+run('load',{ok:true,receipts:[]},{'Contexto antes da fila':{...base,senderId:'person-b'}},state);assert(state.pending['group:person-a']);assert(!state.pending['group:person-b']);
+assert.throws(()=>run('load',{error:'timeout'},{'Contexto antes da fila':base},state));
+const failure=run('claim-result',{error:'stale'},{'Preparar confirmação da fila':confirmed},state)[0].json;assert.equal(failure.queueClaimed,false);assert.equal(failure.route,'reply');
+const multi={...loaded,queueReceipts:[{...receipts[0],transactions:[tx('1'),tx('2')]}]};
+assert.throws(()=>run('claim',{...confirmed,transactions:[confirmed.transactions[0],confirmed.transactions[0]]},{'Preparar contexto seguro':multi},state),/itens/);
+const proposal={...base,queueNewProposal:{sourceMessageId:'new-receipt',transactions:[tx('12')],attachment:{fileName:'new.jpg'}}};
+const put=run('prepare-reply',proposal,refs,state)[0].json;assert.equal(put.queueAction,'put');assert.equal(put.queuePayload.source_message_id,'new-receipt');
+const result=run('reply-result',{ok:true,pending_count:3},{'Preparar persistência da fila':{...put,replyText:'Confira.'}},state)[0].json;assert.match(result.replyText,/3 itens/);assert.equal(result.queuePayload,undefined);assert.equal(result.queueNewProposal,undefined);
+console.log('PASS: individual queue, immutable source snapshots, original event IDs, attachment association, exact-source acknowledgement, partial failure, stale claim, invalid indices and new-proposal persistence; no network or financial writes.');
