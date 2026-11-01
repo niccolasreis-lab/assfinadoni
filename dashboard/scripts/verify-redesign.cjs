@@ -25,6 +25,7 @@ for(const width of [360,768,1024,1440]){
   await page.addInitScript({content:`window.__nativeCommands=[];window.FinanceAndroid={postMessage(raw){const data=JSON.parse(raw);window.__nativeCommands.push(data.action);setTimeout(()=>window.FinanceAndroid.onmessage?.({data:JSON.stringify({id:data.id,message:'Configuração de teste',...(data.action==='updates'?{available:true,version:'9.0.0',notes:'Correção de teste'}:{})})}),0)}};`+fs.readFileSync('../android-native/app/src/main/assets/dashboard-native.js','utf8')});
  }
  let authenticated=false,empty=false,fail=false;
+ let assistantJobs=[{id:'33333333-3333-4333-8333-333333333333',status:'queued',stalled:true,created_at:new Date(Date.now()-180000).toISOString()}];
  const account={username:'qa_demo',name:'Conta de teste',telegram_linked:true};
  await page.addInitScript(()=>localStorage.setItem('finance_tutorial_v1_qa_demo','seen'));
  await page.route('**/api/**',async route=>{
@@ -36,7 +37,11 @@ for(const width of [360,768,1024,1440]){
   }
   if(url.pathname==='/api/profile')return route.fulfill({json:{profile:{display_name:account.name,avatar_data_url:null},account}});
   if(url.pathname==='/api/reminders')return route.fulfill({json:{reminders:[],telegram_linked:true}});
-  if(url.pathname==='/api/assistant')return route.fulfill({json:{jobs:[]}});
+  if(url.pathname==='/api/assistant'){
+   if(req.method()==='DELETE'){assert.equal(url.searchParams.get('id'),assistantJobs[0].id);assistantJobs=[{...assistantJobs[0],status:'failed',stalled:false,result:{cancelled:true,changed:false,text:'Pedido cancelado antes do processamento.'}}];return route.fulfill({json:assistantJobs[0]});}
+   if(req.method()==='POST'){const data=req.postDataJSON();assert(data.file.base64);assistantJobs.push({id:'qa-pdf',status:'done',created_at:new Date().toISOString(),result:{text:'PDF recebido no teste.',changed:false}});return route.fulfill({status:202,json:assistantJobs.at(-1)});}
+   return route.fulfill({json:{jobs:assistantJobs}});
+  }
   if(url.pathname==='/api/push')return route.fulfill({json:{publicKey:null,supported:true}});
   if(req.method()!=='GET')return route.fulfill({json:{transaction:{id:'qa-1'}}});
   if(fail)return route.fulfill({status:500,json:{error:'Falha simulada para teste'}});
@@ -52,6 +57,17 @@ for(const width of [360,768,1024,1440]){
  assert.equal(await page.locator('#dashboard-view').isVisible(),true);
  await page.locator('.assistant-launch').click();await page.locator('.assistant-panel').waitFor({state:'visible'});
  await page.locator('#assistant-message').fill('Rascunho de teste sem enviar');
+ await page.getByRole('button',{name:'Cancelar pedido parado',exact:true}).waitFor();
+ assert.equal(await page.locator('.assistant-send').isDisabled(),true);
+ await page.getByRole('button',{name:'Cancelar pedido parado',exact:true}).click();
+ await page.locator('.assistant-message').getByText('Pedido cancelado antes do processamento.',{exact:true}).waitFor();
+ assert.equal(await page.locator('#assistant-message').inputValue(),'Rascunho de teste sem enviar');
+ await page.locator('.assistant-compose input[type=file]').setInputFiles({name:'recibo.pdf',mimeType:'application/pdf',buffer:Buffer.from('%PDF-1.7\nfixture only')});
+ await page.locator('.assistant-file').getByText('recibo.pdf',{exact:true}).waitFor();
+ await page.locator('.assistant-send').click();await page.getByText('PDF recebido no teste.',{exact:true}).waitFor();
+ assert.equal(await page.locator('.assistant-file').count(),0);
+ await page.locator('#assistant-message').fill('Rascunho de teste sem enviar');
+
  assert.equal(await page.locator('.assistant-panel canvas').count(),0,'decorative WebGL must not be mounted');
  await page.getByRole('button',{name:'Fechar assistente',exact:true}).click();await page.locator('.assistant-panel').waitFor({state:'hidden'});
  await page.locator('.assistant-launch').click();assert.equal(await page.locator('#assistant-message').inputValue(),'Rascunho de teste sem enviar');

@@ -1,0 +1,102 @@
+{
+  "date": "2026-10-28",
+  "base_commit": "866333763794122ee30b3cf87bca3886f23827bb",
+  "incident_resolved": false,
+  "worker_restored": false,
+  "live_findings": {
+    "queued_jobs": 3,
+    "attempts_each": 0,
+    "jobs_with_pdf": 0,
+    "job_payload_read": false,
+    "financial_writes": 0,
+    "job_cancellations": 0
+  },
+  "tests": {
+    "total": 262,
+    "pass": 261,
+    "fail": 0,
+    "skip": 1
+  },
+  "build": "passed",
+  "typecheck": "passed",
+  "lint_js_files": 122,
+  "browser_fixture_results": {
+    "result": [
+      {
+        "width": 360,
+        "passed": true,
+        "frameTiming": {
+          "off": {
+            "p50_ms": 16.699999999999818,
+            "p95_ms": 16.800000000000182,
+            "frames": 30
+          },
+          "on": {
+            "p50_ms": 16.699999999999818,
+            "p95_ms": 16.699999999999818,
+            "frames": 30
+          }
+        }
+      },
+      {
+        "width": 768,
+        "passed": true,
+        "frameTiming": {
+          "off": {
+            "p50_ms": 16.699999999999818,
+            "p95_ms": 16.700000000000728,
+            "frames": 30
+          },
+          "on": {
+            "p50_ms": 16.699999999999818,
+            "p95_ms": 16.700000000000728,
+            "frames": 30
+          }
+        }
+      },
+      {
+        "width": 1024,
+        "passed": true,
+        "frameTiming": {
+          "off": {
+            "p50_ms": 16.699999999999818,
+            "p95_ms": 16.700000000000728,
+            "frames": 30
+          },
+          "on": {
+            "p50_ms": 16.699999999999818,
+            "p95_ms": 16.699999999999818,
+            "frames": 30
+          }
+        }
+      },
+      {
+        "width": 1440,
+        "passed": true,
+        "frameTiming": {
+          "off": {
+            "p50_ms": 16.69999999999891,
+            "p95_ms": 16.700000000000728,
+            "frames": 30
+          },
+          "on": {
+            "p50_ms": 16.700000000000728,
+            "p95_ms": 16.700000000000728,
+            "frames": 30
+          }
+        }
+      }
+    ],
+    "errors": []
+  },
+  "production_deployed": false,
+  "blocked": [
+    "VPS/EasyPanel access to inspect and restore queue worker",
+    "Real PDF processing and result confirmation"
+  ],
+  "not_executed": [
+    "Real worker recovery",
+    "Real PDF import",
+    "Real financial mutations"
+  ]
+}
