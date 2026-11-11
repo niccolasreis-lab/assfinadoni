@@ -3,6 +3,7 @@ import { categoryMarkup, comparison, createHistoryLoader, historyMarkup, validSu
 import { installDialogMotion, reveal } from './motion.js';
 import { createProfileController } from './profile-ui.js';
 import { createRemindersController } from './reminders-ui.js';
+import { createWorkspaceController } from './workspace.js';
 let reminders;
 import { telegramBotUrl } from './config.js';
 const $ = id => document.getElementById(id);
@@ -28,7 +29,7 @@ const paths = {
 };
 export const icon = name => `<svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">${paths[name] || paths.wallet}</svg>`;
 const sections = [['overview','Visão geral','overview'],['central','Central financeira','wallet'],['transactions','Transações','transactions'],['income','Receitas','up'],['expense','Despesas','down'],['categories','Categorias','categories'],['reports','Relatórios','reports'],['settings','Configurações','settings']];
-let profile;
+let profile, workspace;
 let api, section = 'overview', historyContext = '', lastState, renderedPoints;
 const history = createHistoryLoader(async (month, shared, scope) => {
   const result = await api.request(`/api/${scope === 'couple' ? 'couple' : 'transactions'}?month=${month}&page=1&scope=mine&include_shared_summary=${shared}`);
@@ -41,6 +42,7 @@ function navButton(id, text, symbol, action) {
   button.addEventListener('click', action || (() => navigate(id))); return button;
 }
 function updatePanels() {
+  workspace?.navigate(section);
   $('dashboard-view').dataset.section = section;
   const overview = section === 'overview', listing = ['transactions','income','expense'].includes(section);
   $('history-panel').hidden = !overview && section !== 'reports';
@@ -81,6 +83,13 @@ async function loadHistory(state, force = false) {
   renderedPoints = points;
   const markup = historyMarkup(points, $('history-chart').clientWidth);
   $('history-chart').innerHTML = markup.svg; $('history-table').innerHTML = markup.table;
+  $('history-months').replaceChildren(...points.map(point => {
+    const button = document.createElement('button'); button.type = 'button'; button.className = 'history-month';
+    const label = new Intl.DateTimeFormat('pt-BR', { month: 'short', year: '2-digit', timeZone: 'UTC' }).format(new Date(`${point.month}-01T12:00:00Z`));
+    button.textContent = label; button.setAttribute('aria-pressed', String(point.month === state.month));
+    button.setAttribute('aria-label', `Ver ${label}${point.summary ? '' : ' — tentar carregar dados'}`);
+    button.addEventListener('click', () => api.month(point.month)); return button;
+  }));
   const missing = points.filter(p => !p.summary).length;
   $('history-status').textContent = missing ? 'Parte do histórico está indisponível. Os meses sem dados não foram tratados como zero.' : '';
   $('retry-history').hidden = !missing;
@@ -105,8 +114,10 @@ async function loadCentral() {
 }
 function resetHistory() { history.reset(); historyContext = ''; lastState = null; renderedPoints = null; }
 window.FinanceUI = {
+  category(name) { navigate('transactions', false); api.category(name); },
   init(callbacks) {
     api = callbacks; installViewportPolicy(); drawIcons(); installDialogMotion(); profile=createProfileController(api.request); reminders=createRemindersController({request:api.request,onChanged:api.reload});
+    workspace = createWorkspaceController(api);
     new ResizeObserver(() => {
       if (renderedPoints && $('history-chart').clientWidth) $('history-chart').innerHTML=historyMarkup(renderedPoints,$('history-chart').clientWidth).svg;
     }).observe($('history-chart'));
@@ -131,6 +142,7 @@ window.FinanceUI = {
     updatePanels();
   },
   render(state) {
+    workspace?.render({ ...state, section });
     const name = state.account?.display_name || state.account?.name || state.account?.username || '';
     profile.sync(state.account);
     $('category-chart').innerHTML=categoryMarkup(state.summary); $('category-list').hidden=false;
@@ -143,19 +155,21 @@ window.FinanceUI = {
   },
   identity(account) { profile?.sync(account); reminders?.sync(account); },
   beforeLogout() { return reminders?.beforeLogout(); },
-  authChanged(authenticated) { if(!authenticated) { profile?.reset(); reminders?.reset(); } reveal(authenticated ? document.querySelector('#dashboard-view .workspace') : $('login-view')); },
-  loaded(state) { loadHistory({ month:state.month, includeSharedSummary:state.includeSharedSummary, summary:state.summary, account:state.account, scope:state.scope }); if (section === 'central') loadCentral(); },
+  authChanged(authenticated) { workspace?.auth(authenticated); if(!authenticated) { profile?.reset(); reminders?.reset(); } reveal(authenticated ? document.querySelector('#dashboard-view .workspace') : $('login-view')); },
+  loaded(state) { workspace?.loaded({ ...state, section }); loadHistory({ month:state.month, includeSharedSummary:state.includeSharedSummary, summary:state.summary, account:state.account, scope:state.scope }); if (section === 'central') loadCentral(); },
   invalidate() { resetHistory(); },
-  loading() {
+  loading(state) {
+    workspace?.loading(state ? { ...state, section } : null);
     // Hide the previous context immediately, including while the main request is pending.
     history.cancel(); historyContext=''; lastState=null; renderedPoints=null;
     $('category-chart').innerHTML='<div class="skeleton" aria-label="Carregando categorias"></div>'; $('category-list').hidden=true;
     $('retry-history').hidden=true;
     $('history-chart').innerHTML='<div class="skeleton" aria-label="Carregando histórico"></div>';
     $('history-table').replaceChildren(); $('history-status').textContent='Carregando histórico...';
+    $('history-months').replaceChildren();
     $('balance-insight').textContent='Comparando com o mês anterior...';
   },
-  failed() { resetHistory(); $('history-chart').replaceChildren(); $('history-table').replaceChildren(); $('history-status').textContent='Não foi possível carregar os dados deste período.'; $('balance-insight').textContent='Comparação indisponível.'; $('retry-history').hidden=false; },
+  failed() { workspace?.failed(); resetHistory(); $('history-months').replaceChildren(); $('history-chart').replaceChildren(); $('history-table').replaceChildren(); $('history-status').textContent='Não foi possível carregar os dados deste período.'; $('balance-insight').textContent='Comparação indisponível.'; $('retry-history').hidden=false; },
   reset() {
     resetHistory(); profile?.reset(); reminders?.reset(); section='overview'; updatePanels();
     $('history-chart').replaceChildren(); $('history-table').replaceChildren(); $('history-status').textContent=''; $('balance-insight').textContent='';
