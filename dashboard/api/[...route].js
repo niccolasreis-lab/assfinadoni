@@ -1,4 +1,5 @@
 import couple from '../handlers/couple.js';
+import whatsapp from '../handlers/whatsapp.js';
 import accounts from '../handlers/accounts.js';
 import alerts from '../handlers/alerts.js';
 import assistantTelegram from '../handlers/assistant-telegram.js';
@@ -22,6 +23,8 @@ import appTransactions from './transactions.js';
 import appReminders from './reminders.js';
 
 const routes = {
+  whatsapp,
+  'v1/whatsapp': whatsapp,
   couple,
   'v1/couple': couple,
   accounts,

@@ -226,7 +226,7 @@ function render() {
   $('list-context').textContent = state.view === 'trash'
     ? 'Lançamentos excluídos podem ser restaurados por até 30 dias. Eles não entram nos totais.'
     : state.datesCustomized ? 'A lista usa o período escolhido. Os cartões continuam mostrando o mês selecionado.' : 'A lista mostra o mês selecionado.';
-  if (couple) $('list-context').textContent = 'Carteira do casal, sincronizada com o WhatsApp. Os filtros alteram a lista; os cartões continuam mostrando o mês selecionado. Pagamentos conjuntos não pressupõem divisão de valores. Para editar, excluir ou restaurar, converse com o bot no grupo.';
+  if (couple) $('list-context').textContent = 'Os mesmos lançamentos do grupo no WhatsApp. Você pode adicionar por aqui ou pelo bot. Os filtros alteram a lista; os cartões continuam mostrando o mês selecionado. Pagamentos conjuntos não pressupõem divisão de valores.';
   $('active-view').setAttribute('aria-pressed', state.view === 'active');
   $('trash-view').setAttribute('aria-pressed', state.view === 'trash');
   for (const scope of ['mine', 'shared', 'all', 'couple']) $('scope-' + scope).setAttribute('aria-pressed', state.scope === scope);
@@ -268,7 +268,7 @@ function render() {
     receipts.setAttribute('aria-label', `Comprovantes de ${row.description}, ${money(row.amount)}`);
     receipts.addEventListener('click', () => openAttachments(row));
     if (row.read_only) {
-      const note = document.createElement('span'); note.className = 'muted'; note.textContent = 'Gerenciar no WhatsApp'; actions.append(note);
+      const note = document.createElement('span'); note.className = 'muted'; note.textContent = 'Consulta do casal'; actions.append(note);
     } else if (state.view === 'trash') {
       const restore = document.createElement('button');
       restore.type = 'button'; restore.className = 'text-button'; restore.textContent = 'Restaurar'; restore.setAttribute('aria-label', `Restaurar ${row.description}, ${money(row.amount)}`); restore.disabled = state.deleting.has(row.id); restore.addEventListener('click', () => restoreTransaction(row));
@@ -313,7 +313,10 @@ function render() {
   list.replaceChildren();
   if (!byCategory.size) { const p = document.createElement('p'); p.className = 'muted'; p.textContent = summaryAvailable ? 'Sem despesas neste mês.' : 'Resumo indisponível. Tente carregar novamente.'; list.append(p); }
   for (const [name, value] of [...byCategory.entries()].sort((a, b) => b[1] - a[1])) {
-    const item = document.createElement('div'); item.className = 'category-item';
+    if (!Number.isFinite(value) || value <= 0) continue;
+    const item = document.createElement('button'); item.type = 'button'; item.className = 'category-item category-filter';
+    item.setAttribute('aria-label', `Ver despesas em ${name}: ${money(value)}`);
+    item.addEventListener('click', () => { window.FinanceUI?.category?.(name); });
     const top = document.createElement('div'); top.className = 'category-top';
     const label = document.createElement('span'); label.textContent = name;
     const total = document.createElement('strong'); total.textContent = money(value);
@@ -349,7 +352,7 @@ async function loadTransactions() {
     if (from) params.push(`date_from=${encodeURIComponent(from)}`);
     if (to) params.push(`date_to=${encodeURIComponent(to)}`);
   }
-  window.FinanceUI?.loading();
+  window.FinanceUI?.loading(state);
   $('dashboard-view').setAttribute('aria-busy', 'true');
   message('page-message', state.view === 'trash' ? 'Carregando lixeira...' : 'Carregando lançamentos...');
   try {
@@ -588,6 +591,16 @@ async function init() {
   window.FinanceUI?.init({
     request,
     reload: loadTransactions,
+    scope(scope) { $('scope-' + scope).dispatchEvent(new Event('click')); },
+    month(month) { $('month').value = month; $('month').dispatchEvent(new Event('change')); },
+    category(name) {
+      state.section = 'transactions'; state.view = 'active'; state.page = 1;
+      $('filter-search').value = ''; $('filter-type').value = 'despesa';
+      if (![...$('filter-category').options].some(option => option.value === name)) {
+        const option = document.createElement('option'); option.value = name; option.textContent = name; $('filter-category').append(option);
+      }
+      $('filter-category').value = name; state.datesCustomized = false; syncMonthDates(); loadTransactions();
+    },
     add(type) { openForm(); $('transaction-type').value = type; },
     navigate(section) {
       state.section = section;

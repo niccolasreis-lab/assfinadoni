@@ -233,7 +233,7 @@ test('Casal é a visão inicial, permite cadastro e mantém edição antiga some
   assert.equal(ui.element('transaction-form').dataset.scope,'couple');
   assert.equal(ui.element('shared-summary-control').hidden,true);
   const row=ui.element('transaction-rows').children[0];
-  assert.deepEqual(row.children[4].children.map(action=>action.textContent),['Gerenciar no WhatsApp','Comprovantes']);
+  assert.deepEqual(row.children[4].children.map(action=>action.textContent),['Consulta do casal','Comprovantes']);
   assert.equal(row.listeners.has('click'),false);
   ui.element('scope-mine').dispatch('click');
   await until(()=>ui.element('new-transaction').hidden===false);

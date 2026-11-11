@@ -9,6 +9,7 @@
   <link rel="stylesheet" href="/reminders.css">
   <link rel="stylesheet" href="/react.css">
   <link rel="stylesheet" href="/glass.css">
+  <link rel="stylesheet" href="/workspace.css">
   <link rel="manifest" href="/manifest.webmanifest">
   <link rel="apple-touch-icon" href="/icons/icon-192.png">
   <meta name="apple-mobile-web-app-capable" content="yes">
@@ -29,12 +30,12 @@
           <div class="art-chip art-income"><span data-icon="up"></span><div>Receitas<strong>Tudo no seu lugar</strong></div></div>
           <div class="art-chip art-expense"><span data-icon="down"></span><div>Despesas<strong>Uma visão mais clara</strong></div></div>
         </div>
-        <p class="art-caption">Seu dia a dia, conectado.<br>Na web e pelo assistente no Telegram.</p>
+        <p class="art-caption">Seu dia a dia, conectado.<br>No painel e no seu grupo do WhatsApp.</p>
       </div>
       <div class="login-card">
         <div id="login-brand" class="login-brand brand-lockup"><span class="brand-symbol" aria-hidden="true"><img src="/logo.png" alt="" width="1536" height="1024"></span><span><strong>Assistente de Finanças</strong><small>Nicolas &amp; Ionara</small></span></div>
         <h1>Seu financeiro em um só lugar.</h1>
-        <p class="muted">Organize suas receitas e despesas, aqui ou pelo assistente no Telegram.</p>
+        <p class="muted">Suas finanças e as do casal, aqui e no WhatsApp. Tudo no mesmo lugar.</p>
         <form id="login-form">
           <label for="username">Usuário</label>
           <div class="input-with-icon"><span data-icon="user"></span><input id="username" name="username" type="text" autocomplete="username" autocapitalize="none" spellcheck="false" required maxlength="64" placeholder="Digite seu usuário"></div>
@@ -51,7 +52,7 @@
       <aside class="sidebar">
         <a class="sidebar-brand" href="#overview" aria-label="Assistente de Finanças — Nicolas & Ionara"><span class="brand-symbol" aria-hidden="true"><img src="/logo.png" width="1536" height="1024" alt=""></span><strong>Assistente de Finanças</strong><span>Nicolas &amp; Ionara</span></a>
         <nav id="desktop-nav" aria-label="Navegação principal"></nav>
-        <div class="sidebar-footer"><span class="connection-dot"></span> Seu financeiro, conectado.<small>Web + Telegram</small></div>
+        <div class="sidebar-footer">Seu financeiro, conectado.<small>Painel + WhatsApp</small></div>
       </aside>
       <div class="workspace">
       <header class="topbar">
@@ -63,8 +64,13 @@
       <div class="content">
         <div class="heading-row" id="workspace-heading" tabindex="-1">
           <div><p class="workspace-kicker">SEU ESPAÇO FINANCEIRO</p><h1 id="welcome-title">Seu mês, sem complicação.</h1><p id="welcome-copy" class="muted">Organize seus lançamentos e compartilhe só o que escolher.</p></div>
-          <div class="heading-actions"><label class="month-label" for="month">Mês</label><input id="month" type="month"><button id="new-transaction" class="button primary" type="button"><span data-icon="plus"></span> Novo lançamento</button></div>
+          <div class="heading-actions"><label class="month-label" for="month">Mês</label><div class="month-picker"><button id="previous-month" class="icon-button" type="button" aria-label="Mês anterior">‹</button><input id="month" type="month"><button id="next-month" class="icon-button" type="button" aria-label="Próximo mês">›</button></div><button id="new-transaction" class="button primary" type="button"><span data-icon="plus"></span> Novo lançamento</button></div>
         </div>
+        <section class="wallet-toolbar" aria-label="Carteira e atualização">
+          <div class="wallet-copy"><strong id="wallet-name">Carteira do casal</strong><p id="wallet-description">Os mesmos lançamentos do seu grupo no WhatsApp.</p></div>
+          <div class="wallet-toggle" role="group" aria-label="Trocar carteira"><button id="wallet-couple" type="button" aria-pressed="true">Casal</button><button id="wallet-mine" type="button" aria-pressed="false">Minhas</button></div>
+          <div class="sync-actions"><span id="sync-status" role="status">Aguardando atualização</span><button id="refresh-dashboard" type="button" class="button secondary"><span aria-hidden="true">↻</span> Atualizar</button></div>
+        </section>
         <section id="settings-panel" class="panel settings-panel" hidden aria-labelledby="settings-title">
           <h2 id="settings-title">Sua conta e preferências</h2><p id="telegram-status" class="muted"></p>
           <section class="appearance-settings" aria-labelledby="appearance-title">
@@ -82,12 +88,13 @@
         <section id="tutorial-guide" class="tutorial-guide" aria-labelledby="tutorial-title" hidden>
           <div class="tutorial-heading"><div><h2 id="tutorial-title" tabindex="-1">Seu financeiro, passo a passo</h2><p class="muted">Um guia rápido. Você pode fechar e consultar novamente em “Como usar”.</p></div><button id="close-tutorial" class="button ghost" type="button">Fechar guia</button></div>
           <dl class="tutorial-steps">
-            <div><dt>Adicionar receita ou despesa</dt><dd>Use “Novo lançamento”, escolha o tipo, informe valor, categoria, descrição e data. O registro fica privado por padrão.</dd></div>
+            <div><dt>Escolher sua carteira</dt><dd>“Casal” mostra os mesmos lançamentos do grupo no WhatsApp. “Minhas” mantém seus registros pessoais separados. Confira a carteira antes de adicionar.</dd></div>
+            <div><dt>Adicionar receita ou despesa</dt><dd>Use “Novo lançamento”, escolha o tipo, informe valor, categoria, descrição e data. No WhatsApp, envie os dados e responda “confirmar” depois de conferir a proposta.</dd></div>
             <div><dt>Corrigir um registro</dt><dd>Toque em “Editar” na lista e salve as alterações. Em lançamentos compartilhados, a mudança vale para as duas contas.</dd></div>
             <div><dt>Excluir e recuperar</dt><dd>“Excluir” move o lançamento para a “Lixeira” e retira o valor dos totais. Use “Restaurar” em até 30 dias; depois desse prazo, a remoção é definitiva.</dd></div>
             <div><dt>Compartilhar com a outra pessoa</dt><dd>Use “Compartilhar” no registro desejado. A outra pessoa poderá visualizar, editar, excluir e restaurar. “Parar de compartilhar” encerra o acesso.</dd></div>
             <div><dt>Encontrar seus lançamentos</dt><dd>Alterne entre “Minhas”, “Compartilhadas comigo” e “Todas”. Busque uma descrição ou combine categoria, tipo e datas; “Limpar filtros” volta ao mês selecionado.</dd></div>
-            <div><dt>Entender os totais</dt><dd>Os cartões e categorias mostram o mês escolhido, mesmo ao filtrar a lista. Por padrão, contam só seus registros. Ative “Incluir compartilhados nos totais” para somar os recebidos.</dd></div>
+            <div><dt>Entender os totais</dt><dd>Os cartões e categorias mostram o mês inteiro da carteira escolhida, mesmo ao filtrar a lista. Toque em uma categoria para ver suas despesas. Use os meses abaixo do gráfico para navegar pelo histórico.</dd></div>
           </dl>
           <div class="tutorial-actions"><button id="tutorial-new-transaction" class="button primary" type="button">Adicionar um lançamento</button><button id="finish-tutorial" class="button subtle" type="button">Entendi, continuar</button></div>
         </section>
@@ -100,6 +107,13 @@
           <article class="card card-expense"><div class="metric-label"><span>Despesas</span><span class="metric-icon expense" data-icon="down"></span></div><strong id="expense-total">—</strong><small>Saídas do mês</small></article>
         </section>
         <div id="quick-actions" class="quick-actions"><button id="quick-income" class="button secondary" type="button"><span class="income" data-icon="plus"></span>Adicionar receita</button><button id="quick-expense" class="button secondary" type="button"><span class="expense" data-icon="plus"></span>Adicionar despesa</button><a id="open-telegram" class="button ghost" target="_blank" rel="noopener noreferrer" hidden><span data-icon="send"></span>Abrir Telegram</a><span id="telegram-link-status" class="muted">Link do assistente não configurado</span></div>
+        <section id="whatsapp-panel" class="panel whatsapp-panel" aria-labelledby="whatsapp-title">
+          <div class="whatsapp-heading"><div class="whatsapp-mark" aria-hidden="true">↗</div><div><p class="workspace-kicker">DO GRUPO PARA O PAINEL</p><h2 id="whatsapp-title">Seu WhatsApp, organizado.</h2></div><span id="whatsapp-service" class="service-badge">Conferindo o bot…</span></div>
+          <p class="muted">Mande texto, áudio, imagem ou PDF no grupo. Confira os dados e responda <strong>confirmar</strong> para salvar na carteira do casal.</p>
+          <p id="whatsapp-status" class="whatsapp-status" role="status">Conferindo suas pendências…</p>
+          <ul id="whatsapp-proposals" class="whatsapp-proposals" aria-label="Suas propostas do WhatsApp"></ul>
+          <div class="whatsapp-actions"><button id="whatsapp-help" class="button secondary" type="button">Como enviar um comprovante <span aria-hidden="true">→</span></button><button id="whatsapp-retry" class="button ghost" type="button" hidden>Tentar novamente</button><small>Propostas só entram nos totais depois de salvas.</small></div>
+        </section>
         <section id="central-panel" class="panel central-panel" hidden aria-labelledby="central-title">
           <div class="panel-heading"><div><h2 id="central-title">Central financeira</h2><p class="muted">Fontes de recursos e compromissos cadastrados.</p></div><span id="central-status" class="muted" role="status"></span></div>
           <div class="central-grid">
@@ -111,10 +125,10 @@
         <div class="analytics-grid">
         <section id="history-panel" class="panel history-panel" aria-labelledby="history-title">
           <div class="panel-heading"><div><h2 id="history-title">Seu financeiro ao longo do tempo</h2><p class="muted">Receitas e despesas · últimos 6 meses</p></div><div class="chart-legend"><span class="income">Receitas</span><span class="expense">Despesas</span></div></div>
-          <div id="history-chart" class="chart-host" aria-live="polite"></div><div id="history-status" class="muted" role="status"></div><button id="retry-history" class="button ghost" type="button" hidden>Tentar novamente</button>
+          <div id="history-chart" class="chart-host" aria-live="polite"></div><div id="history-months" class="history-months" role="group" aria-label="Ver outro mês do histórico"></div><div id="history-status" class="muted" role="status"></div><button id="retry-history" class="button ghost" type="button" hidden>Tentar novamente</button>
           <details class="chart-details"><summary>Ver valores por mês</summary><div id="history-table" class="table-wrap"></div></details>
         </section>
-          <section id="category-panel" class="panel category-panel"><div class="panel-heading"><h2>Despesas por categoria</h2></div><div id="category-chart" class="category-chart"></div><div id="category-list" class="category-list"></div></section>
+          <section id="category-panel" class="panel category-panel"><div class="panel-heading"><div><h2>Despesas por categoria</h2><p class="muted">Toque em uma categoria para ver os lançamentos.</p></div></div><div id="category-chart" class="category-chart"></div><div id="category-list" class="category-list"></div></section>
         </div>
         <div class="columns">
           <section id="transactions-panel" class="panel transactions-panel" aria-label="Lançamentos e lixeira">
@@ -141,6 +155,13 @@
       <nav id="mobile-nav" class="mobile-nav" aria-label="Navegação no celular"></nav>
     </section>
   </main>
+  <dialog id="whatsapp-guide" aria-labelledby="whatsapp-guide-title">
+    <div class="dialog-body"><div class="dialog-heading"><div><p class="workspace-kicker">SEM COMPLICAÇÃO</p><h2 id="whatsapp-guide-title">Do comprovante ao lançamento.</h2></div><button id="close-whatsapp-guide" class="icon-button" type="button" aria-label="Fechar guia do WhatsApp"><span data-icon="close"></span></button></div>
+      <ol class="whatsapp-steps"><li><strong>Envie no grupo do casal.</strong><p>Escreva o gasto, grave um áudio ou envie uma foto ou PDF legível. Exemplo: “Paguei 25 reais no mercado hoje no Pix”.</p></li><li><strong>Confira a proposta do bot.</strong><p>Revise valor, descrição, data, pagamento e pagador. Se algo estiver errado, diga o que corrigir.</p></li><li><strong>Responda “confirmar”.</strong><p>Depois da confirmação de gravação, o lançamento aparece aqui. Use “Atualizar” para conferir.</p></li></ol>
+      <p class="muted">Arquivos de até 8 MiB, PDFs de até 10 páginas e áudios de até 5 minutos. Também lê TXT, CSV e DOCX. Imagens e PDFs de aproximadamente 1 MiB podem ficar anexados ao lançamento.</p>
+      <div class="dialog-actions"><button id="guide-add-expense" class="button primary" type="button">Prefiro adicionar por aqui</button></div>
+    </div>
+  </dialog>
   <div id="account-menu" class="account-menu" popover="auto" aria-label="Meu perfil">
     <div class="profile-menu-heading"><span id="menu-avatar" class="avatar" aria-hidden="true"></span><div><strong id="menu-name"></strong><p id="menu-username" class="muted"></p></div></div>
     <p id="profile-load-status" class="muted" role="status">Carregando perfil...</p>
